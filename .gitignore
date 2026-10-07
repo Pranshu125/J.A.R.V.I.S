@@ -1,0 +1,7 @@
+OllamaSetup.exe
+venv/
+.venv/
+__pycache__/
+*.mp3
+jarvis_state.md
+jarvis_memory.json
