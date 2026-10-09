@@ -8,7 +8,9 @@ import requests
 import subprocess
 import webbrowser
 import speech_recognition as sr
-import edge_tts
+from faster_whisper import WhisperModel
+import wave
+from piper.voice import PiperVoice
 import pygame
 import psutil
 import webview
@@ -78,11 +80,13 @@ class ToolModule:
             return True, "Opening Calculator."
 
         # 4. Core System Hooks
-        elif "switch to friday" in cmd or "friday mode" in cmd:
+                elif "switch to friday" in cmd or "friday mode" in cmd:
+            pipeline.voice_mode = 'FRIDAY'
             window.evaluate_js("switchMode('FRIDAY')")
             return True, "Switching to F.R.I.D.A.Y. mode, boss. All systems red."
             
         elif "switch to jarvis" in cmd or "jarvis mode" in cmd:
+            pipeline.voice_mode = 'JARVIS'
             window.evaluate_js("switchMode('JARVIS')")
             return True, "Reverting to J.A.R.V.I.S. mode, sir. Back in blue."
             
@@ -137,6 +141,15 @@ class JarvisPipeline:
         self.response_queue = queue.Queue()
         self.running = True
         self.gesture_mode = False 
+        self.voice_mode = 'JARVIS'
+        try:
+            self.window.evaluate_js("addLog('SYSTEM', 'Loading Offline STT Model...')")
+            self.stt_model = WhisperModel('base.en', device='cpu', compute_type='int8')
+            self.window.evaluate_js("addLog('SYSTEM', 'Loading Offline TTS Models...')")
+            self.jarvis_voice = PiperVoice('models/en_GB-alan-medium.onnx')
+            self.friday_voice = PiperVoice('models/en_GB-jenny_dioco-medium.onnx')
+        except Exception as e:
+            print(f"Model Load Error: {e}")
 
     def start_services(self):
         threading.Thread(target=self.stt_worker, daemon=True).start()
@@ -234,25 +247,25 @@ class JarvisPipeline:
                 safe_resp = json.dumps(response)
                 self.window.evaluate_js(f"addLog('JARVIS', {safe_resp})")
                 
-                async def _speak():
-                    communicate = edge_tts.Communicate(response, VOICE_MODEL)
-                    audio_file = f"temp_{int(time.time())}.mp3"
-                    await communicate.save(audio_file)
-                    try:
-                        if not pygame.mixer.get_init(): pygame.mixer.init()
-                        pygame.mixer.music.load(audio_file)
-                        pygame.mixer.music.play()
-                        while pygame.mixer.music.get_busy():
-                            pygame.time.Clock().tick(10)
-                    except: pass
-                    try:
-                        pygame.mixer.music.unload()
-                        os.remove(audio_file)
-                    except: pass
+                audio_file = f"temp_{int(time.time())}.wav"
+                with wave.open(audio_file, "w") as f:
+                    if getattr(self, "voice_mode", "JARVIS") == "FRIDAY":
+                        self.friday_voice.synthesize(response, f)
+                    else:
+                        self.jarvis_voice.synthesize(response, f)
+                
+                try:
+                    if not pygame.mixer.get_init(): pygame.mixer.init()
+                    pygame.mixer.music.load(audio_file)
+                    pygame.mixer.music.play()
+                    while pygame.mixer.music.get_busy():
+                        pygame.time.Clock().tick(10)
+                except: pass
+                try:
+                    pygame.mixer.music.unload()
+                    os.remove(audio_file)
+                except: pass
 
-                if os.name == 'nt':
-                    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-                asyncio.run(_speak())
                 self.window.evaluate_js("updateState('ONLINE')")
             except Exception as e:
                 self.window.evaluate_js(f"addLog('SYSTEM', 'TTS Error: {e}')")
@@ -288,3 +301,6 @@ if __name__ == '__main__':
     
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
+
+
+
