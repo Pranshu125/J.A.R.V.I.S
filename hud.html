@@ -204,11 +204,20 @@
         </div>
         
         <div class="panel-header">COMMAND INPUT</div>
-        <input type="text" class="command-input" placeholder="Type a command..." id="cmd-input" disabled>
+        <input type="text" class="command-input" placeholder="Type a command..." id="cmd-input">
         <button class="mic-btn active" id="mic-btn">MICROPHONE ACTIVE</button>
     </div>
 
     <script>
+        // Command Input Wiring
+        const cmdInput = document.getElementById('cmd-input');
+        cmdInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && this.value.trim() !== '') {
+                pywebview.api.send_command(this.value.trim());
+                this.value = '';
+            }
+        });
+
         // Clock Update
         setInterval(() => {
             const now = new Date();

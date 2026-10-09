@@ -78,6 +78,16 @@ class ToolModule:
             return True, "Opening Calculator."
 
         # 4. Core System Hooks
+        elif "morning brief" in cmd or "status report" in cmd:
+            sys_time = time.strftime('%I:%M %p')
+            cpu = psutil.cpu_percent()
+            ram = psutil.virtual_memory().percent
+            brief = (f"Good morning, sir. It is currently {sys_time}. "
+                     f"System telemetry indicates CPU is at {cpu} percent, and memory at {ram} percent. "
+                     "All core subsystems are online and your calendar is clear. What would you like to focus on today?")
+            window.evaluate_js(f"addLog('SYSTEM', 'Generated Morning Brief')")
+            return True, brief
+
         elif "lock system" in cmd:
             os.system("rundll32.exe user32.dll,LockWorkStation")
             return True, "Workstation locked."
@@ -157,15 +167,11 @@ class JarvisPipeline:
                     text = recognizer.recognize_google(audio).lower()
                     
                     if text:
-                        if "jarvis" in text or "system" in text:
-                            if pygame.mixer.get_init() and pygame.mixer.music.get_busy():
-                                pygame.mixer.music.stop()
-                            cmd = text.replace("jarvis", "").replace("system", "").strip()
-                            if cmd:
-                                self.window.evaluate_js(f"addLog('USER', `{cmd}`)")
-                                self.text_queue.put(cmd)
-                        else:
-                            self.window.evaluate_js(f"addLog('SYSTEM', `[Ambient]: {text}`)")
+                        # Removed strict wake-word so it responds instantly
+                        cmd = text.replace("jarvis", "").replace("system", "").strip()
+                        if cmd:
+                            self.window.evaluate_js(f"addLog('USER', `{cmd}`)")
+                            self.text_queue.put(cmd)
                 except: pass
 
     def llm_worker(self):
@@ -220,9 +226,20 @@ class JarvisPipeline:
             self.window.evaluate_js("updateState('ONLINE')")
             self.response_queue.task_done()
 
+class Api:
+    def __init__(self, pipeline):
+        self.pipeline = pipeline
+    
+    def send_command(self, text):
+        self.pipeline.window.evaluate_js(f"addLog('USER', `{text}`)")
+        self.pipeline.text_queue.put(text)
+
 if __name__ == '__main__':
     html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hud.html')
-    window = webview.create_window('JARVIS Master', html_path, transparent=True, frameless=True, width=1050, height=600, on_top=True)
+    # Create window without API first to get the instance
+    window = webview.create_window('JARVIS Master', html_path, transparent=True, frameless=True, fullscreen=True, on_top=True)
     pipeline = JarvisPipeline(window)
+    window.expose(Api(pipeline).send_command) # expose API
+    
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
