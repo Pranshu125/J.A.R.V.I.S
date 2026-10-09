@@ -78,6 +78,14 @@ class ToolModule:
             return True, "Opening Calculator."
 
         # 4. Core System Hooks
+        elif "switch to friday" in cmd or "friday mode" in cmd:
+            window.evaluate_js("switchMode('FRIDAY')")
+            return True, "Switching to F.R.I.D.A.Y. mode, boss. All systems red."
+            
+        elif "switch to jarvis" in cmd or "jarvis mode" in cmd:
+            window.evaluate_js("switchMode('JARVIS')")
+            return True, "Reverting to J.A.R.V.I.S. mode, sir. Back in blue."
+            
         elif "morning brief" in cmd or "status report" in cmd:
             sys_time = time.strftime('%I:%M %p')
             cpu = psutil.cpu_percent()
@@ -260,13 +268,23 @@ class Api:
         safe_text = json.dumps(text)
         self.pipeline.window.evaluate_js(f"addLog('USER', {safe_text})")
         self.pipeline.text_queue.put(text)
+        
+    def minimize(self):
+        self.pipeline.window.minimize()
+        
+    def toggle_fullscreen(self):
+        self.pipeline.window.toggle_fullscreen()
+        
+    def destroy(self):
+        self.pipeline.window.destroy()
+        os._exit(0)
 
 if __name__ == '__main__':
     html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hud.html')
     # Create window without API first to get the instance
     window = webview.create_window('JARVIS Master', html_path, transparent=True, frameless=True, fullscreen=True, on_top=True)
     pipeline = JarvisPipeline(window)
-    window.expose(Api(pipeline).send_command) # expose API
+    window.expose(Api(pipeline)) # expose whole API class
     
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
