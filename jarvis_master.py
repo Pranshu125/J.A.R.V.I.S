@@ -323,6 +323,34 @@ class JarvisPipeline:
                                     "required": ["action"]
                                 }
                             }
+                        },
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "execute_terminal",
+                                "description": "Execute a shell/terminal command on the developer's machine (e.g. git status, dir, ping).",
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {
+                                        "command": {"type": "string", "description": "The exact powershell/cmd command to run."}
+                                    },
+                                    "required": ["command"]
+                                }
+                            }
+                        },
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "analyze_screen",
+                                "description": "Take a screenshot of the user's active screen and analyze it to see what they are looking at or reading.",
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {
+                                        "query": {"type": "string", "description": "What to look for on the screen."}
+                                    },
+                                    "required": ["query"]
+                                }
+                            }
                         }
                     ]
                     
@@ -363,6 +391,36 @@ class JarvisPipeline:
                                 self.is_sleeping = True
                                 self.window.evaluate_js("toggleMiniMode(true)")
                                 self.window.resize(350, 350)
+                                break
+                            elif tool["function"]["name"] == "execute_terminal":
+                                cmd_str = tool["function"]["arguments"].get("command")
+                                try:
+                                    import subprocess
+                                    out = subprocess.check_output(cmd_str, shell=True, text=True, stderr=subprocess.STDOUT, timeout=10)
+                                    clean_out = out.replace('\n', ' ')[:200]
+                                    response = f"{ack} Terminal command executed. Result: {clean_out}"
+                                except Exception as e:
+                                    response = f"Terminal command failed, sir. Error: {e}"
+                                break
+                            elif tool["function"]["name"] == "analyze_screen":
+                                query = tool["function"]["arguments"].get("query", "Describe this screen.")
+                                try:
+                                    import pyautogui, base64, requests
+                                    pyautogui.screenshot("vision_cache.png")
+                                    with open("vision_cache.png", "rb") as img:
+                                        b64 = base64.b64encode(img.read()).decode('utf-8')
+                                    
+                                    payload = {
+                                        "model": "moondream",
+                                        "prompt": query,
+                                        "images": [b64],
+                                        "stream": False
+                                    }
+                                    res = requests.post("http://localhost:11434/api/generate", json=payload).json()
+                                    vis_text = res.get('response', '')
+                                    response = f"I am looking at your screen, sir. {vis_text}"
+                                except Exception as e:
+                                    response = "Vision module offline. Please ensure moondream is installed and pyautogui is available."
                                 break
                     
                     if not response:
