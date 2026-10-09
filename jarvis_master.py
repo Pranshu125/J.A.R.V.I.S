@@ -174,6 +174,14 @@ class JarvisPipeline:
         # Vision offloaded to JS (barehands architecture)
 
 
+    def idle_worker(self):
+        while self.running:
+            if not getattr(self, "is_sleeping", False) and time.time() - self.last_active > 45:
+                self.is_sleeping = True
+                self.window.evaluate_js("toggleMiniMode(true)")
+                self.window.resize(350, 350)
+            time.sleep(2)
+            
     def fetch_weather(self):
         try:
             loc = requests.get('http://ip-api.com/json/', timeout=3).json()
@@ -230,8 +238,19 @@ class JarvisPipeline:
                     text = recognizer.recognize_google(audio).lower()
                     
                     if text:
-                        # Removed strict wake-word so it responds instantly
-                        cmd = text.replace("jarvis", "").replace("system", "").strip()
+                        mode_name = getattr(self, "voice_mode", "JARVIS").lower()
+                        
+                        if getattr(self, "is_sleeping", False):
+                            if mode_name in text or "wake" in text:
+                                self.is_sleeping = False
+                                self.last_active = time.time()
+                                self.window.evaluate_js("toggleMiniMode(false)")
+                                self.window.toggle_fullscreen()
+                                self.response_queue.put(f"I am awake, sir. How can I help?")
+                            continue # Ignore all background noise while sleeping
+                            
+                        self.last_active = time.time()
+                        cmd = text.replace(mode_name, "").replace("system", "").strip()
                         if cmd:
                             safe_cmd = json.dumps(cmd)
                             self.window.evaluate_js(f"addLog('USER', {safe_cmd})")
@@ -295,6 +314,9 @@ class JarvisPipeline:
                                 url = tool["function"]["arguments"].get("url")
                                 webbrowser.open(url)
                                 response = f"{ack} Accessing {url}."
+                                self.is_sleeping = True
+                                self.window.evaluate_js("toggleMiniMode(true)")
+                                self.window.resize(350, 350)
                                 break
                     
                     if not response:
@@ -368,6 +390,16 @@ class Api:
     def force_weather_update(self):
         import threading
         threading.Thread(target=self.pipeline.fetch_weather, daemon=True).start()
+
+    def enter_mini(self):
+        self.pipeline.window.resize(400, 400)
+        self.pipeline.is_sleeping = True
+        
+    def exit_mini(self):
+        self.pipeline.window.toggle_fullscreen()
+        self.pipeline.is_sleeping = False
+        self.pipeline.last_active = time.time()
+        self.pipeline.window.evaluate_js("toggleMiniMode(false)")
         os._exit(0)
 
 if __name__ == '__main__':
@@ -376,7 +408,7 @@ if __name__ == '__main__':
     window = webview.create_window('JARVIS Master', html_path, transparent=True, frameless=False, fullscreen=True, on_top=True)
     pipeline = JarvisPipeline(window)
     api = Api(pipeline)
-    window.expose(api.send_command, api.minimize, api.toggle_fullscreen, api.destroy, api.force_weather_update)
+    window.expose(api.send_command, api.minimize, api.toggle_fullscreen, api.destroy, api.force_weather_update, api.enter_mini, api.exit_mini)
     
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
