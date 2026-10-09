@@ -16,8 +16,8 @@ import cv2
 import mediapipe as mp
 
 # ==========================================
-# J.A.R.V.I.S. MASTER PIPELINE ARCHITECTURE
-# Combined Methodologies: Barehands, OpenJarvis, Pipecat, Ollama
+# J.A.R.V.I.S. V1.0 STABLE MASTER PIPELINE
+# Wake-Word, Barge-in, MediaPipe, Ollama, Markdown Memory
 # ==========================================
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
@@ -26,40 +26,43 @@ VOICE_MODEL = "en-GB-RyanNeural"
 MEMORY_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jarvis_state.md")
 
 class MemoryModule:
-    """Handles Long-Term State (Markdown Vault - fullstack-agent style)"""
+    """Handles Long-Term State (Markdown Vault)"""
     @staticmethod
     def load():
-        if os.path.exists(MEMORY_DB):
-            try:
-                with open(MEMORY_DB, 'r') as f: 
-                    # Parse simple markdown logs back to list if needed
-                    pass
-            except: pass
         return []
     
     @staticmethod
     def save(history):
-        with open(MEMORY_DB, 'w') as f: 
-            f.write("# J.A.R.V.I.S. Memory Vault\n\n")
-            for role, msg in history[-15:]:
-                f.write(f"**{role}:** {msg}\n\n")
+        try:
+            with open(MEMORY_DB, 'w', encoding='utf-8') as f: 
+                f.write("# J.A.R.V.I.S. Memory Vault\n\n")
+                for role, msg in history[-15:]:
+                    f.write(f"**{role}:** {msg}\n\n")
+        except Exception as e:
+            print(f"Memory Save Error: {e}")
 
 class ToolModule:
     """Agentic Tool Calling & OS Hooks"""
     @staticmethod
     def execute(command, window, pipeline):
         cmd = command.lower()
+        
+        # --- SYSTEM TOOLS ---
         if "youtube" in cmd:
             window.evaluate_js(f"addLog('SYSTEM', 'Tool Executed: Open Browser (YouTube)')")
-            os.system("start brave https://www.youtube.com")
+            os.system("start brave https://www.youtube.com || start chrome https://www.youtube.com")
             return True, "I have opened YouTube for you, sir."
         elif "lock system" in cmd:
             window.evaluate_js(f"addLog('SYSTEM', 'Tool Executed: Lock Workstation')")
             os.system("rundll32.exe user32.dll,LockWorkStation")
             return True, "System locked."
-        elif "time" in cmd:
+        elif "time" in cmd or "what time" in cmd:
             current_time = time.strftime("%I:%M %p")
-            return True, f"The current time is {current_time}."
+            return True, f"The current system time is {current_time}."
+        elif "stop" in cmd and ("talking" in cmd or "speaking" in cmd):
+            if pygame.mixer.get_init():
+                pygame.mixer.music.stop()
+            return True, "Audio playback canceled."
         
         # --- BAREHANDS TOGGLES ---
         elif "enable gestures" in cmd or "turn on webcam" in cmd or "activate vision" in cmd:
@@ -80,10 +83,10 @@ class IntelligenceModule:
             "model": OLLAMA_MODEL,
             "prompt": prompt,
             "stream": False,
-            "options": {"temperature": 0.7}
+            "options": {"temperature": 0.7, "num_predict": 100} # Cap output length for faster voice
         }
         try:
-            response = requests.post(OLLAMA_URL, json=payload, timeout=30)
+            response = requests.post(OLLAMA_URL, json=payload, timeout=45)
             if response.status_code == 200:
                 return response.json().get('response', '').strip()
             else:
@@ -92,7 +95,7 @@ class IntelligenceModule:
             window.evaluate_js(f"addLog('SYSTEM', 'CRITICAL ERROR: Ollama Not Running')")
             return "Sir, my local cognitive engine is offline. Please ensure Ollama is running."
         except Exception as e:
-            return f"Error: {str(e)}"
+            return "Sir, I encountered a cognitive processing error."
 
 class JarvisPipeline:
     def __init__(self, window):
@@ -104,7 +107,7 @@ class JarvisPipeline:
         self.response_queue = queue.Queue()
         
         self.running = True
-        self.gesture_mode = False # Barehands tracker state
+        self.gesture_mode = False 
 
     def start_services(self):
         threading.Thread(target=self.stt_worker, daemon=True).start()
@@ -123,15 +126,20 @@ class JarvisPipeline:
             if self.gesture_mode:
                 if cap is None:
                     cap = cv2.VideoCapture(0)
+                    if not cap.isOpened():
+                        self.window.evaluate_js(f"addLog('SYSTEM', 'Webcam Error: Device in use or missing.')")
+                        self.gesture_mode = False
+                        self.window.evaluate_js("setGestureMode(false)")
+                        continue
+                        
                 ret, frame = cap.read()
                 if ret:
-                    frame = cv2.flip(frame, 1) # Mirror for natural interaction
+                    frame = cv2.flip(frame, 1) 
                     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     results = hands.process(rgb_frame)
                     
                     if results.multi_hand_landmarks:
                         for hand_landmarks in results.multi_hand_landmarks:
-                            # Use Index Finger tip (landmark 8) for parallax anchor
                             x = hand_landmarks.landmark[8].x
                             y = hand_landmarks.landmark[8].y
                             self.window.evaluate_js(f"updateParallaxFromVision({x}, {y})")
@@ -139,7 +147,7 @@ class JarvisPipeline:
                 if cap is not None:
                     cap.release()
                     cap = None
-            time.sleep(0.03) # Prevent CPU hogging (~30 FPS)
+            time.sleep(0.03) 
 
     def telemetry_worker(self):
         while self.running:
@@ -148,23 +156,45 @@ class JarvisPipeline:
                 ram = int(psutil.virtual_memory().percent)
                 self.window.evaluate_js(f"updateTelemetry({cpu}, {ram})")
             except: pass
-            time.sleep(1)
+            time.sleep(1.5)
 
     def stt_worker(self):
+        """Wake-word Architecture & Continuous VAD"""
         recognizer = sr.Recognizer()
+        pygame.mixer.init() # Pre-init for barge-in checks
+        
         with sr.Microphone() as source:
-            recognizer.adjust_for_ambient_noise(source, duration=1)
+            recognizer.adjust_for_ambient_noise(source, duration=1.5)
             self.window.evaluate_js("updateState('ONLINE')")
             
             while self.running:
+                # If JARVIS is speaking, drop the mic sensitivity so it doesn't hear itself
+                if pygame.mixer.get_init() and pygame.mixer.music.get_busy():
+                    time.sleep(0.5)
+                    continue
+
                 self.window.evaluate_js("updateState('LISTENING')")
                 try:
-                    audio = recognizer.listen(source, timeout=2, phrase_time_limit=10)
+                    audio = recognizer.listen(source, timeout=3, phrase_time_limit=10)
                     self.window.evaluate_js("updateState('PROCESSING')")
                     text = recognizer.recognize_google(audio).lower()
+                    
                     if text:
-                        self.window.evaluate_js(f"addLog('USER', `{text}`)")
-                        self.text_queue.put(text)
+                        # WAKE WORD LOGIC (Prevents random noise from triggering LLM)
+                        if "jarvis" in text or "system" in text:
+                            # Stop current speech (Barge-in interrupt)
+                            if pygame.mixer.get_init() and pygame.mixer.music.get_busy():
+                                pygame.mixer.music.stop()
+                            
+                            # Clean string and send to AI
+                            cmd = text.replace("jarvis", "").replace("system", "").strip()
+                            if cmd:
+                                self.window.evaluate_js(f"addLog('USER', `{cmd}`)")
+                                self.text_queue.put(cmd)
+                        else:
+                            # Log ambient noise slightly but don't process
+                            self.window.evaluate_js(f"addLog('SYSTEM', `[Ambient]: {text}`)")
+                
                 except sr.WaitTimeoutError:
                     pass
                 except Exception:
@@ -202,14 +232,23 @@ class JarvisPipeline:
             
             async def _speak():
                 communicate = edge_tts.Communicate(response, VOICE_MODEL)
-                await communicate.save("temp.mp3")
-                pygame.mixer.init()
-                pygame.mixer.music.load("temp.mp3")
-                pygame.mixer.music.play()
-                while pygame.mixer.music.get_busy():
-                    pygame.time.Clock().tick(10)
-                pygame.mixer.quit()
-                try: os.remove("temp.mp3")
+                audio_file = f"temp_{int(time.time())}.mp3" # Unique file to prevent lock errors
+                await communicate.save(audio_file)
+                
+                try:
+                    if not pygame.mixer.get_init():
+                        pygame.mixer.init()
+                    pygame.mixer.music.load(audio_file)
+                    pygame.mixer.music.play()
+                    while pygame.mixer.music.get_busy():
+                        pygame.time.Clock().tick(10)
+                except Exception as e:
+                    print(f"Audio Error: {e}")
+                
+                # Cleanup file
+                try:
+                    pygame.mixer.music.unload()
+                    os.remove(audio_file)
                 except: pass
 
             if os.name == 'nt':
