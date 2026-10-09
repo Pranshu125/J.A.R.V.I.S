@@ -57,10 +57,14 @@ class ToolModule:
             window.evaluate_js(f"addLog('SYSTEM', 'Web Search: {query}')")
             return True, f"I have pulled up the search results for {query}, sir."
             
-        elif "play" in cmd and "on youtube" in cmd:
-            query = cmd.replace("play", "").replace("on youtube", "").strip()
-            webbrowser.open(f"https://www.youtube.com/results?search_query={query}")
-            return True, f"Searching YouTube for {query}."
+                elif "youtube" in cmd:
+            query = cmd.replace("play", "").replace("open", "").replace("on youtube", "").replace("youtube", "").strip()
+            if query:
+                webbrowser.open(f"https://www.youtube.com/results?search_query={query}")
+                return True, f"Searching YouTube for {query}."
+            else:
+                webbrowser.open("https://www.youtube.com")
+                return True, "Opening YouTube."
 
         # 2. Keyboard & Screen Automation
         elif "type this" in cmd or "dictate" in cmd:
@@ -303,6 +307,7 @@ if __name__ == '__main__':
     
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
+
 
 
 
