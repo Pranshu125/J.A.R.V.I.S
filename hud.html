@@ -2,253 +2,258 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>J.A.R.V.I.S. Mixed Reality HUD</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J.A.R.V.I.S - MARK XXXIX CLONE</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background-color: transparent;
-            font-family: 'JetBrains Mono', monospace;
-            color: #00BFFF;
-            text-transform: uppercase;
-            height: 100vh; width: 100vw;
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        
+        :root {
+            --cyan: #00ffff;
+            --dark-cyan: #003333;
+            --bg: #010a0f;
+            --red: #ff3333;
+            --orange: #ff9900;
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100vw; height: 100vh;
+            background-color: var(--bg);
+            color: var(--cyan);
+            font-family: 'Share Tech Mono', monospace;
             overflow: hidden;
-            position: relative;
-        }
-
-        .drag-region { position: absolute; top: 0; left: 0; width: 100%; height: 20px; -webkit-app-region: drag; z-index: 9999; }
-
-        /* =========================================
-           LAYER 1: The Spatial 3D Parallax Background
-           ========================================= */
-        .scene {
-            perspective: 1200px;
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            display: flex; justify-content: center; align-items: center;
-            z-index: 1; 
-            pointer-events: none;
-        }
-
-        #parallax-core {
-            position: relative;
-            transform-style: preserve-3d;
-            transition: transform 0.1s ease-out;
-            display: flex; justify-content: center; align-items: center;
-        }
-
-        .ring { position: absolute; border-radius: 50%; mix-blend-mode: screen; transform-style: preserve-3d; }
-        
-        .ring-1 { width: 500px; height: 500px; border: 1px solid rgba(0,191,255,0.1); border-top: 3px solid #00BFFF; border-bottom: 3px solid #00BFFF; animation: spin 20s linear infinite; transform: translateZ(-50px); }
-        .ring-2 { width: 420px; height: 420px; border: 2px dashed rgba(0,191,255,0.3); animation: spin-reverse 25s linear infinite; transform: translateZ(0px); }
-        .ring-3 { width: 340px; height: 340px; border: 15px solid rgba(0,191,255,0.02); border-left: 15px solid rgba(0,191,255,0.2); border-right: 15px solid rgba(0,191,255,0.2); animation: spin 12s cubic-bezier(0.4,0,0.2,1) infinite; transform: translateZ(50px); }
-        
-        .core-orb {
-            position: absolute; width: 180px; height: 180px; border-radius: 50%;
-            background: radial-gradient(circle, rgba(0,191,255,0.15) 0%, transparent 70%);
-            box-shadow: 0 0 50px rgba(0,191,255,0.3), inset 0 0 20px rgba(0,191,255,0.2);
-            transform: translateZ(100px); 
-            transition: all 0.4s ease;
-        }
-
-        /* =========================================
-           LAYER 2: The 2D Tactical Screen (Glassmorphism)
-           ========================================= */
-        .grid-container {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            padding: 20px;
             display: grid;
-            grid-template-columns: 280px 1fr 280px;
-            grid-template-rows: 1fr 40px;
-            gap: 15px;
-            z-index: 10; 
-            pointer-events: none; 
+            grid-template-columns: 280px 1fr 320px;
+            grid-template-rows: 50px 1fr;
         }
 
-        .tile {
-            background: rgba(2, 8, 16, 0.4);
-            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(0, 191, 255, 0.2);
-            box-shadow: inset 0 0 15px rgba(0, 191, 255, 0.05);
-            border-radius: 6px; padding: 20px; display: flex; flex-direction: column;
-            pointer-events: auto; 
+        /* Top Bar */
+        .top-bar {
+            grid-column: 1 / 4;
+            grid-row: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 1px solid var(--dark-cyan);
+            background: linear-gradient(90deg, rgba(0,255,255,0.05) 0%, transparent 100%);
+        }
+        .top-bar h1 { font-size: 18px; letter-spacing: 2px; margin: 0; }
+        .clock { font-size: 20px; text-align: right; }
+        .clock-date { font-size: 10px; color: #888; }
+
+        /* Left Panel - Sys Monitor */
+        .left-panel {
+            grid-column: 1;
+            grid-row: 2;
+            border-right: 1px solid var(--dark-cyan);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .panel-header {
+            font-size: 12px;
+            letter-spacing: 2px;
+            border-bottom: 1px solid var(--cyan);
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+        .stat-box { font-size: 12px; }
+        .stat-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .progress-bg { width: 100%; height: 4px; background: #111; border: 1px solid var(--dark-cyan); }
+        .progress-fill { height: 100%; background: var(--cyan); transition: width 0.3s; }
+        .progress-fill.danger { background: var(--red); }
+        .progress-fill.warn { background: var(--orange); }
+
+        /* Center - Radar HUD */
+        .center-panel {
+            grid-column: 2;
+            grid-row: 2;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at center, rgba(0,50,50,0.1) 0%, transparent 70%);
+        }
+        .radar-ring {
+            position: absolute;
+            border: 1px solid rgba(0, 255, 255, 0.15);
+            border-radius: 50%;
+        }
+        .ring-1 { width: 300px; height: 300px; border-top: 2px solid var(--cyan); animation: spin 4s linear infinite; }
+        .ring-2 { width: 450px; height: 450px; border-right: 2px solid var(--cyan); border-left: 2px solid var(--cyan); animation: spin-reverse 8s linear infinite; }
+        .ring-3 { width: 600px; height: 600px; border: 1px dashed rgba(0, 255, 255, 0.3); }
+        
+        .core-status {
+            position: absolute;
+            bottom: 30px;
+            text-align: center;
+            width: 100%;
+            font-size: 14px;
+            letter-spacing: 4px;
+            animation: pulse 2s infinite;
         }
 
-        .zone-title { font-size: 11px; font-weight: 700; color: #fff; border-bottom: 1px solid rgba(0,191,255,0.3); padding-bottom: 8px; margin-bottom: 15px; letter-spacing: 2px;}
+        /* Right Panel - Activity Log */
+        .right-panel {
+            grid-column: 3;
+            grid-row: 2;
+            border-left: 1px solid var(--dark-cyan);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        .activity-log {
+            flex-grow: 1;
+            overflow-y: auto;
+            border: 1px solid var(--dark-cyan);
+            background: rgba(0, 10, 15, 0.5);
+            padding: 10px;
+            font-size: 12px;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .log-entry.user { color: #fff; }
+        .log-entry.jarvis { color: var(--cyan); }
+        .log-entry.system { color: #888; }
         
-        .stat-label { font-size: 10px; color: rgba(255,255,255,0.6); margin-bottom: 5px; }
-        .stat-val { font-size: 24px; color: #fff; text-shadow: 0 0 8px #00BFFF; margin-bottom: 8px; }
-        .bar-bg { width: 100%; height: 3px; background: rgba(0,191,255,0.1); margin-bottom: 20px;}
-        .bar-fill { height: 100%; background: #00BFFF; width: 0%; box-shadow: 0 0 8px #00BFFF; transition: width 0.5s ease; }
-
-        .center-stage { grid-column: 2; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; background: transparent; border: none; backdrop-filter: none; box-shadow: none; }
+        /* Input & Controls */
+        .command-input {
+            width: 100%;
+            background: transparent;
+            border: 1px solid var(--dark-cyan);
+            color: var(--cyan);
+            padding: 10px;
+            font-family: 'Share Tech Mono', monospace;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        .command-input:focus { outline: none; border-color: var(--cyan); }
         
-        canvas { width: 300px; height: 100px; margin-bottom: 20px; filter: drop-shadow(0 0 10px #00BFFF); }
-        
-        #main-output { text-align: center; color: #fff; font-size: 14px; text-shadow: 0 0 8px #00BFFF; margin-bottom: 20px; background: rgba(0,0,0,0.4); padding: 10px 20px; border-radius: 4px; backdrop-filter: blur(5px);}
+        .mic-btn {
+            width: 100%;
+            background: rgba(0, 50, 50, 0.3);
+            border: 1px solid var(--cyan);
+            color: var(--cyan);
+            padding: 12px;
+            font-family: 'Share Tech Mono', monospace;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.2s;
+        }
+        .mic-btn.active {
+            background: var(--cyan);
+            color: #000;
+            box-shadow: 0 0 15px var(--cyan);
+        }
 
-        .bottom-strip { grid-column: 1 / -1; display: flex; gap: 15px; pointer-events: auto;}
-        .cli-box { width: 300px; background: rgba(0,20,40,0.8); border: 1px solid #00BFFF; display: flex; align-items: center; padding: 0 15px; font-size: 12px; }
-        .cli-prompt { color: #00BFFF; margin-right: 10px; font-weight: bold; }
-        .cli-cursor { width: 6px; height: 14px; background: #00BFFF; animation: blink 1s infinite; }
-        
-        .ticker { flex: 1; background: rgba(0,10,20,0.8); border: 1px solid rgba(0,191,255,0.3); display: flex; align-items: center; overflow: hidden; white-space: nowrap; font-size: 11px; padding: 0 15px; color: rgba(255,255,255,0.7); }
-        .ticker-content { display: inline-block; animation: scroll 20s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes spin-reverse { 100% { transform: rotate(-360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; text-shadow: 0 0 10px var(--cyan); } }
 
-        @keyframes spin { 100% { transform: translateZ(-50px) rotate(360deg); } }
-        @keyframes spin-reverse { 100% { transform: translateZ(0px) rotate(-360deg); } }
-        @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
-        @keyframes scroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-
-        .state-listening .core-orb { box-shadow: 0 0 80px rgba(0,191,255,0.5); }
-        .state-processing .core-orb { background: radial-gradient(circle, rgba(138,43,226,0.2) 0%, transparent 70%); box-shadow: 0 0 80px rgba(138,43,226,0.5); }
-        .state-processing .ring-3 { border-left-color: #8A2BE2; border-right-color: #8A2BE2; }
-
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--dark-cyan); }
     </style>
 </head>
 <body>
-    <div class="drag-region"></div>
-
-    <!-- LAYER 1: 3D Parallax Core -->
-    <div class="scene">
-        <div id="parallax-core">
-            <div class="ring ring-1"></div>
-            <div class="ring ring-2"></div>
-            <div class="ring ring-3"></div>
-            <div class="core-orb" id="orb"></div>
+    <div class="top-bar">
+        <h1>J.A.R.V.I.S — MARK XXXIX</h1>
+        <div>
+            <div class="clock" id="clock">00:00:00</div>
+            <div class="clock-date" id="date">JAN 01 2026</div>
         </div>
     </div>
 
-    <!-- LAYER 2: 2D tactical Screen -->
-    <div class="grid-container">
+    <div class="left-panel">
+        <div class="panel-header">SYS MONITOR</div>
         
-        <div class="tile">
-            <div class="zone-title">SYSTEM TELEMETRY</div>
-            <div>
-                <div class="stat-label">CPU ALLOCATION</div>
-                <div class="stat-val" id="cpu-val">0%</div>
-                <div class="bar-bg"><div class="bar-fill" id="cpu-bar"></div></div>
-            </div>
-            <div>
-                <div class="stat-label">MEMORY ALLOCATION</div>
-                <div class="stat-val" id="ram-val">0%</div>
-                <div class="bar-bg"><div class="bar-fill" id="ram-bar"></div></div>
-            </div>
+        <div class="stat-box">
+            <div class="stat-header"><span>CPU</span><span id="cpu-val">0%</span></div>
+            <div class="progress-bg"><div class="progress-fill" id="cpu-bar" style="width: 0%;"></div></div>
         </div>
-
-        <div class="tile center-stage" id="panel-center">
-            <canvas id="audioCanvas"></canvas>
-            <div id="main-output">AWAITING INPUT...</div>
+        
+        <div class="stat-box">
+            <div class="stat-header"><span>MEM</span><span id="ram-val">0%</span></div>
+            <div class="progress-bg"><div class="progress-fill" id="ram-bar" style="width: 0%;"></div></div>
         </div>
-
-        <div class="tile">
-            <div class="zone-title">TACTICAL DATALINK</div>
-            <div class="stat-label" style="margin-bottom:15px; color:#00ff00;">> LOCAL OLLAMA [ONLINE]</div>
-            <!-- Dynamic Gesture Tracking UI -->
-            <div class="stat-label" id="gesture-status" style="margin-bottom:15px; color:#00ff00;">> GESTURE CONTROL [OFFLINE]</div>
-            <div class="stat-label" style="margin-bottom:15px; color:#FFBF00;">> IOT HOME BRIDGE [WAIT]</div>
+        
+        <div style="margin-top: auto;">
+            <div class="panel-header">AI CORE</div>
+            <div style="color: var(--cyan); font-size: 14px; text-align: center; border: 1px solid var(--cyan); padding: 5px;">ACTIVE</div>
         </div>
+    </div>
 
-        <div class="bottom-strip">
-            <div class="cli-box">
-                <span class="cli-prompt">SYS_ROOT></span>
-                <span id="cli-text"></span><div class="cli-cursor"></div>
-            </div>
-            <div class="ticker">
-                <div class="ticker-content" id="ticker-text">[SYS_LOG] BACKGROUND PROCESSES OPTIMAL /// [SEC] FIREWALL ACTIVE /// [NET] TRAFFIC ROUTED</div>
-            </div>
+    <div class="center-panel">
+        <div class="radar-ring ring-3"></div>
+        <div class="radar-ring ring-2"></div>
+        <div class="radar-ring ring-1"></div>
+        
+        <div class="core-status" id="core-status">STANDBY</div>
+    </div>
+
+    <div class="right-panel">
+        <div class="panel-header">ACTIVITY LOG</div>
+        <div class="activity-log" id="log-container">
+            <div class="log-entry system">[SYSTEM] J.A.R.V.I.S. Core Initialized.</div>
         </div>
-
+        
+        <div class="panel-header">COMMAND INPUT</div>
+        <input type="text" class="command-input" placeholder="Type a command..." id="cmd-input" disabled>
+        <button class="mic-btn active" id="mic-btn">MICROPHONE ACTIVE</button>
     </div>
 
     <script>
-        let gestureActive = false;
+        // Clock Update
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('en-GB');
+            document.getElementById('date').innerText = now.toDateString().toUpperCase();
+        }, 1000);
 
-        // --- NORMAL MOUSE PARALLAX ---
-        document.addEventListener('mousemove', (e) => {
-            if (gestureActive) return; // Ignore mouse if hands are tracking
-            const xAxis = (window.innerWidth / 2 - e.pageX) / 25; 
-            const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
-            document.getElementById('parallax-core').style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
-        });
+        // API for Python Backend
+        function updateTelemetry(cpu, ram) {
+            document.getElementById('cpu-val').innerText = cpu + '%';
+            const cpuBar = document.getElementById('cpu-bar');
+            cpuBar.style.width = cpu + '%';
+            cpuBar.className = 'progress-fill ' + (cpu > 80 ? 'danger' : (cpu > 50 ? 'warn' : ''));
 
-        // --- BAREHANDS WEBCAM VISION PARALLAX ---
-        function updateParallaxFromVision(x, y) {
-            gestureActive = true;
-            document.getElementById('gesture-status').innerText = "> GESTURE CONTROL [ONLINE]";
-            document.getElementById('gesture-status').style.color = "#8A2BE2"; // Violet for active vision
-            
-            // x and y from MediaPipe are 0.0 to 1.0 floats.
-            const xAxis = (0.5 - x) * 40; 
-            const yAxis = (y - 0.5) * 40;
-            document.getElementById('parallax-core').style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
-        }
-        
-        function setGestureMode(isActive) {
-            gestureActive = isActive;
-            if(!isActive) {
-                document.getElementById('gesture-status').innerText = "> GESTURE CONTROL [OFFLINE]";
-                document.getElementById('gesture-status').style.color = "#00ff00";
-            }
-        }
-
-        // --- HTML5 CANVAS AUDIO VISUALIZER ---
-        const canvas = document.getElementById('audioCanvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 300; canvas.height = 100;
-        let isSpeaking = false;
-        
-        function drawVisualizer() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const bars = 30;
-            const barWidth = canvas.width / bars;
-            
-            for (let i = 0; i < bars; i++) {
-                const height = isSpeaking ? (Math.random() * 80 + 10) : (Math.random() * 5 + 2);
-                const x = i * barWidth;
-                const y = (canvas.height - height) / 2;
-                ctx.fillStyle = '#00BFFF';
-                ctx.fillRect(x, y, barWidth - 2, height);
-            }
-            requestAnimationFrame(drawVisualizer);
-        }
-        drawVisualizer(); 
-
-        // --- PYTHON BRIDGE ---
-        function updateState(state) {
-            const body = document.body;
-            body.className = ''; 
-            
-            if(state === 'LISTENING') body.classList.add('state-listening');
-            if(state === 'THINKING' || state === 'PROCESSING') body.classList.add('state-processing');
-            
-            if(state === 'SPEAKING') isSpeaking = true;
-            else isSpeaking = false;
-            
-            if(state === 'ONLINE') document.getElementById('main-output').innerText = "AWAITING INPUT...";
+            document.getElementById('ram-val').innerText = ram + '%';
+            const ramBar = document.getElementById('ram-bar');
+            ramBar.style.width = ram + '%';
+            ramBar.className = 'progress-fill ' + (ram > 80 ? 'danger' : (ram > 50 ? 'warn' : ''));
         }
 
         function addLog(speaker, text) {
-            if (speaker === 'USER') {
-                document.getElementById('cli-text').innerText = text;
-            } else if (speaker === 'JARVIS') {
-                document.getElementById('main-output').innerText = text;
-                document.getElementById('ticker-text').innerText = `[AI_RESPONSE] ${text.toUpperCase()} /// [SYS] STANDBY`;
+            const container = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + speaker.toLowerCase();
+            entry.innerText = `[${speaker}] ${text}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateState(state) {
+            document.getElementById('core-status').innerText = state;
+            const micBtn = document.getElementById('mic-btn');
+            
+            if(state === 'LISTENING') {
+                micBtn.innerText = 'MICROPHONE ACTIVE';
+                micBtn.classList.add('active');
+            } else {
+                micBtn.innerText = state;
+                micBtn.classList.remove('active');
             }
         }
-
-        function updateTelemetry(cpu, ram) {
-            document.getElementById('cpu-val').innerText = cpu + '%';
-            document.getElementById('cpu-bar').style.width = cpu + '%';
-            document.getElementById('ram-val').innerText = ram + '%';
-            document.getElementById('ram-bar').style.width = ram + '%';
-        }
-
-        window.updateState = updateState;
-        window.addLog = addLog;
-        window.updateTelemetry = updateTelemetry;
-        window.updateParallaxFromVision = updateParallaxFromVision;
-        window.setGestureMode = setGestureMode;
+        
+        // Disable parallax override for now in this clean UI
+        function updateParallaxFromVision(x, y) {}
+        function setGestureMode(mode) {}
     </script>
 </body>
 </html>
