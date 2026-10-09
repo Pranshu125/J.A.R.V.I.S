@@ -297,13 +297,14 @@ class Api:
 if __name__ == '__main__':
     html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hud.html')
     # Create window without API first to get the instance
-    window = webview.create_window('JARVIS Master', html_path, transparent=True, frameless=True, fullscreen=True, on_top=True)
+    window = webview.create_window('JARVIS Master', html_path, transparent=True, frameless=False, fullscreen=True, on_top=True)
     pipeline = JarvisPipeline(window)
     api = Api(pipeline)
     window.expose(api.send_command, api.minimize, api.toggle_fullscreen, api.destroy)
     
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
+
 
 
 
