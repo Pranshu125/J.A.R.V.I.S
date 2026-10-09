@@ -43,7 +43,7 @@ class MemoryModule:
                 f.write("# J.A.R.V.I.S. Memory Vault\n\n")
                 for role, msg in history[-15:]:
                     f.write(f"**{role}:** {msg}\n\n")
-        except: pass
+        except Exception as e: print("Audio/Piper Error: ", e)
 
 class ToolModule:
     """Deep OS Control (Ported from Mark-XXXIX-OR)"""
@@ -139,7 +139,7 @@ class IntelligenceModule:
             "options": {"temperature": 0.7, "num_predict": 150}
         }
         try:
-            response = requests.post(OLLAMA_URL, json=payload, timeout=45)
+            response = requests.post(OLLAMA_URL, json=payload, timeout=120)
             if response.status_code == 200:
                 return response.json().get("message", {})
             else:
@@ -158,20 +158,34 @@ class JarvisPipeline:
         self.gesture_mode = False 
         self.voice_mode = 'JARVIS'
         try:
-            self.window.evaluate_js("addLog('SYSTEM', 'Loading Offline STT Model...')")
             self.stt_model = WhisperModel('base.en', device='cpu', compute_type='int8')
-            self.window.evaluate_js("addLog('SYSTEM', 'Loading Offline TTS Models...')")
-            self.jarvis_voice = PiperVoice('models/en_GB-alan-medium.onnx')
-            self.friday_voice = PiperVoice('models/en_GB-jenny_dioco-medium.onnx')
         except Exception as e:
-            print(f"Model Load Error: {e}")
+            print(f"STT Model Load Error: {e}")
 
     def start_services(self):
         threading.Thread(target=self.stt_worker, daemon=True).start()
         threading.Thread(target=self.llm_worker, daemon=True).start()
         threading.Thread(target=self.tts_worker, daemon=True).start()
         threading.Thread(target=self.telemetry_worker, daemon=True).start()
-        # Vision offloaded to JS (barehands architecture)
+        
+        # Dynamic Boot Greeting
+        import time, random
+        hour = time.localtime().tm_hour
+        mode_name = getattr(self, "voice_mode", "JARVIS")
+        if hour < 12: g = ["Good morning, sir. All core systems are online.", f"A very good morning to you, sir. {mode_name} is at your service."]
+        elif hour < 18: g = ["Good afternoon, sir. How may I assist you today?", f"Systems initialized. Good afternoon, sir."]
+        else: g = [f"Good evening, sir. {mode_name} is online and ready.", "Evening, sir. Awaiting your command."]
+        self.response_queue.put(random.choice(g))
+        
+        self.is_sleeping = False
+        self.last_active = time.time()
+        threading.Thread(target=self.idle_worker, daemon=True).start()
+        
+        try:
+            import keyboard
+            keyboard.add_hotkey('alt+space', self.trigger_hotkey_wake)
+        except Exception as e:
+            print("Hotkey binding failed: ", e)
 
 
     def trigger_hotkey_wake(self):
@@ -287,7 +301,7 @@ class JarvisPipeline:
                             results = DDGS().text(text, max_results=1)
                             if results:
                                 context_injection = f"\n[LATEST INTERNET DATA: {results[0]['body']}]\n"
-                        except: pass
+                        except Exception as e: print("Audio/Piper Error: ", e)
 
                     messages = [{"role": "system", "content": f"You are JARVIS, a witty British AI. Keep answers short and avoid emojis. If you do not understand the user's request, politely ask them to repeat or clarify. {context_injection}"}]
                     for role, msg in self.history:
@@ -460,11 +474,11 @@ class JarvisPipeline:
                     pygame.mixer.music.play()
                     while pygame.mixer.music.get_busy():
                         pygame.time.Clock().tick(10)
-                except: pass
+                except Exception as e: print("Audio/Piper Error: ", e)
                 try:
                     pygame.mixer.music.unload()
                     os.remove(audio_file)
-                except: pass
+                except Exception as e: print("Audio/Piper Error: ", e)
 
                 self.window.evaluate_js("updateState('ONLINE')")
             except Exception as e:
@@ -516,6 +530,7 @@ if __name__ == '__main__':
     
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
+
 
 
 
