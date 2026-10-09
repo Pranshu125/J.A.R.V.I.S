@@ -174,6 +174,14 @@ class JarvisPipeline:
         # Vision offloaded to JS (barehands architecture)
 
 
+    def trigger_hotkey_wake(self):
+        if getattr(self, "is_sleeping", False):
+            self.is_sleeping = False
+            self.last_active = time.time()
+            self.window.evaluate_js("toggleMiniMode(false)")
+            self.window.toggle_fullscreen()
+            self.response_queue.put("Overlay activated, sir.")
+
     def idle_worker(self):
         while self.running:
             if not getattr(self, "is_sleeping", False) and time.time() - self.last_active > 45:
@@ -286,20 +294,37 @@ class JarvisPipeline:
                         messages.append({"role": "user" if role == "USER" else "assistant", "content": msg})
                     messages.append({"role": "user", "content": text})
 
-                    tools = [{
-                        "type": "function",
-                        "function": {
-                            "name": "open_website",
-                            "description": "Open a specific website, or search YouTube/Google.",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "url": {"type": "string", "description": "The exact URL to open (e.g. https://www.youtube.com/results?search_query=cats or https://google.com)"}
-                                },
-                                "required": ["url"]
+                    tools = [
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "open_website",
+                                "description": "Open a specific website, or search YouTube/Google.",
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {
+                                        "url": {"type": "string", "description": "The URL to open."}
+                                    },
+                                    "required": ["url"]
+                                }
+                            }
+                        },
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "system_control",
+                                "description": "Control laptop hardware like volume, or open native OS applications.",
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {
+                                        "action": {"type": "string", "enum": ["volume_up", "volume_down", "mute", "open_app"]},
+                                        "app_name": {"type": "string", "description": "Name of the app to open (e.g. notepad, calc). Leave blank for volume."}
+                                    },
+                                    "required": ["action"]
+                                }
                             }
                         }
-                    }]
+                    ]
                     
                     msg_obj = IntelligenceModule.chat(messages, tools, self.window)
                     
@@ -314,6 +339,27 @@ class JarvisPipeline:
                                 url = tool["function"]["arguments"].get("url")
                                 webbrowser.open(url)
                                 response = f"{ack} Accessing {url}."
+                                self.is_sleeping = True
+                                self.window.evaluate_js("toggleMiniMode(true)")
+                                self.window.resize(350, 350)
+                                break
+                            elif tool["function"]["name"] == "system_control":
+                                action = tool["function"]["arguments"].get("action")
+                                app = tool["function"]["arguments"].get("app_name", "")
+                                import keyboard
+                                if action == "volume_up":
+                                    for _ in range(5): keyboard.send("volume up")
+                                    response = f"{ack} Increasing system volume."
+                                elif action == "volume_down":
+                                    for _ in range(5): keyboard.send("volume down")
+                                    response = f"{ack} Decreasing system volume."
+                                elif action == "mute":
+                                    keyboard.send("volume mute")
+                                    response = f"{ack} Toggling system mute."
+                                elif action == "open_app":
+                                    import os
+                                    os.system(f"start {app}")
+                                    response = f"{ack} Launching {app}."
                                 self.is_sleeping = True
                                 self.window.evaluate_js("toggleMiniMode(true)")
                                 self.window.resize(350, 350)
