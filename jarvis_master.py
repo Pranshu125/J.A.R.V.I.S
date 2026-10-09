@@ -174,13 +174,36 @@ class JarvisPipeline:
 
 
     def telemetry_worker(self):
+        # Fetch initial weather & location
+        try:
+            loc = requests.get('https://ipapi.co/json/', timeout=3).json()
+            city = loc.get('city', 'Unknown')
+            lat, lon = loc.get('latitude'), loc.get('longitude')
+            if lat and lon:
+                w_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code"
+                w_data = requests.get(w_url, timeout=3).json()['current']
+                t, h, w = w_data['temperature_2m'], w_data['relative_humidity_2m'], w_data['wind_speed_10m']
+                desc = "Clear" if w_data['weather_code'] < 3 else "Cloudy" if w_data['weather_code'] < 50 else "Rain"
+                self.window.evaluate_js(f"updateWeather('{t}°C', '{city}', '{desc}', '{h}%', '{w} km/h')")
+        except Exception as e:
+            print(f"Weather error: {e}")
+
+        last_net = psutil.net_io_counters().bytes_recv + psutil.net_io_counters().bytes_sent
         while self.running:
             try:
                 cpu = int(psutil.cpu_percent(interval=1))
                 ram = int(psutil.virtual_memory().percent)
-                self.window.evaluate_js(f"updateTelemetry({cpu}, {ram})")
-            except: pass
-            time.sleep(1.5)
+                
+                # Calc Network Speed
+                curr_net = psutil.net_io_counters().bytes_recv + psutil.net_io_counters().bytes_sent
+                speed_mbps = (curr_net - last_net) / (1024 * 1024)
+                last_net = curr_net
+                
+                self.window.evaluate_js(f"updateSystemStats({cpu}, {ram})")
+                self.window.evaluate_js(f"updateNetwork('{speed_mbps:.2f} MB/s')")
+            except Exception as e:
+                pass
+            time.sleep(1)
 
     def stt_worker(self):
         recognizer = sr.Recognizer()
