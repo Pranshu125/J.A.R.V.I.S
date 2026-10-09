@@ -247,8 +247,7 @@ class JarvisPipeline:
                 self.window.evaluate_js("updateState('SPEAKING')")
                 safe_resp = json.dumps(response)
                 self.window.evaluate_js(f"addLog('JARVIS', {safe_resp})")
-                
-                                audio_file = f"temp_{int(time.time())}.wav"
+                audio_file = f"temp_{int(time.time())}.wav"
                 
                 # Use Piper CLI for bulletproof file generation
                 model_path = "models/en_GB-jenny_dioco-medium.onnx" if getattr(self, "voice_mode", "JARVIS") == "FRIDAY" else "models/en_GB-alan-medium.onnx"
