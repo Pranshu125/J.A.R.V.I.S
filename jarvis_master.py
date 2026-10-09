@@ -85,10 +85,18 @@ class ToolModule:
             return True, "Opening Calculator."
 
         # 4. Core System Hooks
-        elif "switch to friday" in cmd or "friday mode" in cmd:
+                elif "switch to friday" in cmd or "friday mode" in cmd:
             pipeline.voice_mode = 'FRIDAY'
             window.evaluate_js("switchMode('FRIDAY')")
             return True, "Switching to F.R.I.D.A.Y. mode, boss. All systems red."
+            
+        elif "minimize window" in cmd or "hide screen" in cmd:
+            pipeline.window.minimize()
+            return True, "Minimizing interface."
+            
+        elif "exit fullscreen" in cmd or "window mode" in cmd:
+            pipeline.window.toggle_fullscreen()
+            return True, "Toggling window mode."
             
         elif "switch to jarvis" in cmd or "jarvis mode" in cmd:
             pipeline.voice_mode = 'JARVIS'
@@ -307,6 +315,7 @@ if __name__ == '__main__':
     
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
+
 
 
 
