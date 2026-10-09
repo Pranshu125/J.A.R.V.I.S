@@ -313,12 +313,13 @@
             </div>
 
             <div class="widget">
-                <div class="widget-header"><span>Camera</span> ⏻</div>
-                <div style="height: 120px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted);">
+                <div class="widget-header"><span>Camera</span> <span style="cursor:pointer;" onclick="toggleCamera()">⏻</span></div>
+                <div id="cam-off" style="height: 120px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted);">
                     <span style="font-size:24px; margin-bottom:10px; color:var(--theme-color);">📷</span>
                     <span style="font-size:12px;">Camera Off</span>
                 </div>
-                <div style="font-size:10px; text-align:center; margin-top:10px; color:var(--text-muted);">Camera is inactive. Click the power button to start.</div>
+                <video id="cam-video" autoplay playsinline style="display:none; width:100%; height:120px; border-radius:8px; object-fit:cover;"></video>
+                <div style="font-size:10px; text-align:center; margin-top:10px; color:var(--text-muted);">Click the power icon to toggle live feed.</div>
             </div>
             
             <div class="widget">
@@ -356,11 +357,14 @@
                 <div class="dot"></div> <span id="state-text">Listening for wake word...</span>
             </div>
 
-            <button class="friday-btn" onclick="triggerFriday()">F.R.I.D.A.Y.</button>
+                        <div style="display:flex; gap:15px;">
+                <button class="friday-btn" style="background:#00334a; border-color:#00ffff; color:#00ffff; box-shadow:0 0 15px rgba(0,255,255,0.2);" onclick="triggerJarvis()">J.A.R.V.I.S.</button>
+                <button class="friday-btn" onclick="triggerFriday()">F.R.I.D.A.Y.</button>
+            </div>
 
             <div class="controls">
-                <button class="icon-btn">📷</button>
-                <button class="icon-btn">🎙️</button>
+                <button class="icon-btn" onclick="toggleCamera()" title="Toggle Camera">📷</button>
+                <button class="icon-btn" onclick="startMicVisualizer()" title="Connect Audio Visualizer">🎙️</button>
                 <button class="icon-btn">⌨️</button>
             </div>
         </div>
@@ -507,6 +511,75 @@
                 switchMode('FRIDAY'); // local test fallback
             }
         }
+            // --- NEW HARDWARE CONNECTIONS ---
+        
+        function triggerJarvis() {
+            if (typeof pywebview !== 'undefined') pywebview.api.send_command("switch to jarvis");
+            else switchMode('JARVIS');
+        }
+
+        // Live Camera Feed
+        let camStream = null;
+        async function toggleCamera() {
+            const vid = document.getElementById('cam-video');
+            const offBox = document.getElementById('cam-off');
+            if (camStream) {
+                camStream.getTracks().forEach(t => t.stop());
+                camStream = null;
+                vid.style.display = 'none';
+                offBox.style.display = 'flex';
+            } else {
+                try {
+                    camStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    vid.srcObject = camStream;
+                    vid.style.display = 'block';
+                    offBox.style.display = 'none';
+                } catch(e) { addLog('SYSTEM', 'Webcam access denied or unavailable.'); }
+            }
+        }
+
+        // Live Microphone Visualizer
+        async function startMicVisualizer() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioCtx.createMediaStreamSource(stream);
+                const analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 32;
+                source.connect(analyser);
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                const bars = document.querySelectorAll('.waveform .bar');
+                
+                function renderFrame() {
+                    requestAnimationFrame(renderFrame);
+                    if(document.getElementById('state-text').innerText === 'Transmitting audio...') return; // Let TTS override
+                    
+                    analyser.getByteFrequencyData(dataArray);
+                    for(let i=0; i<bars.length; i++) {
+                        let h = (dataArray[i] / 255) * 100;
+                        if(h < 10) h = 10;
+                        bars[i].style.height = h + '%';
+                    }
+                }
+                renderFrame();
+                document.querySelector('.icon-btn:nth-child(2)').style.background = 'var(--theme-color)';
+                document.querySelector('.icon-btn:nth-child(2)').style.color = '#000';
+            } catch(e) { console.log("Mic vis error:", e); }
+        }
+
+        // Network Speed & Weather (Called from Python)
+        function updateNetwork(speed) {
+            document.getElementById('net-speed').innerText = speed;
+        }
+        function updateWeather(temp, loc, desc, hum, wind) {
+            document.querySelector('.temp').innerText = temp;
+            document.querySelector('.weather-loc').innerText = loc;
+            document.querySelector('.weather-desc').innerText = desc;
+            document.querySelector('.stat-grid div:nth-child(1) strong').innerText = hum;
+            document.querySelector('.stat-grid div:nth-child(2) strong').innerText = wind;
+        }
     </script>
 </body>
 </html>
+
+
