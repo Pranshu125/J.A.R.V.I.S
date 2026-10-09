@@ -6,6 +6,7 @@ import json
 import os
 import requests
 import subprocess
+import os
 import webbrowser
 import speech_recognition as sr
 from faster_whisper import WhisperModel
@@ -24,7 +25,7 @@ import pyautogui
 # ==========================================
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "llama3" 
+OLLAMA_MODEL = "llama3.2" 
 VOICE_MODEL = "en-GB-RyanNeural"
 MEMORY_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jarvis_state.md")
 
@@ -247,12 +248,13 @@ class JarvisPipeline:
                 safe_resp = json.dumps(response)
                 self.window.evaluate_js(f"addLog('JARVIS', {safe_resp})")
                 
-                audio_file = f"temp_{int(time.time())}.wav"
-                with wave.open(audio_file, "w") as f:
-                    if getattr(self, "voice_mode", "JARVIS") == "FRIDAY":
-                        self.friday_voice.synthesize_wav(response, f)
-                    else:
-                        self.jarvis_voice.synthesize_wav(response, f)
+                                audio_file = f"temp_{int(time.time())}.wav"
+                
+                # Use Piper CLI for bulletproof file generation
+                model_path = "models/en_GB-jenny_dioco-medium.onnx" if getattr(self, "voice_mode", "JARVIS") == "FRIDAY" else "models/en_GB-alan-medium.onnx"
+                piper_exe = os.path.join("venv", "Scripts", "piper.exe")
+                
+                subprocess.run([piper_exe, "-m", model_path, "-f", audio_file], input=response.encode('utf-8'), creationflags=subprocess.CREATE_NO_WINDOW)
                 
                 try:
                     if not pygame.mixer.get_init(): pygame.mixer.init()
@@ -302,6 +304,7 @@ if __name__ == '__main__':
     
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
+
 
 
 
