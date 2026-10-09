@@ -24,7 +24,7 @@ import pyautogui
 # Merging Our Core with Mark-XXXIX OS Control & Barehands Spatial Tech
 # ==========================================
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
+OLLAMA_URL = "http://localhost:11434/api/chat"
 OLLAMA_MODEL = "llama3.2" 
 VOICE_MODEL = "en-GB-RyanNeural"
 MEMORY_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jarvis_state.md")
@@ -127,23 +127,24 @@ class ToolModule:
         return False, None
 
 class IntelligenceModule:
-    """Local LLM Engine"""
+    """Agentic LLM Engine with Tool Calling"""
     @staticmethod
-    def generate(prompt, window):
+    def chat(messages, tools, window):
         payload = {
             "model": OLLAMA_MODEL,
-            "prompt": prompt,
+            "messages": messages,
             "stream": False,
-            "options": {"temperature": 0.7, "num_predict": 100}
+            "tools": tools,
+            "options": {"temperature": 0.7, "num_predict": 150}
         }
         try:
             response = requests.post(OLLAMA_URL, json=payload, timeout=45)
             if response.status_code == 200:
-                return response.json().get('response', '').strip()
+                return response.json().get("message", {})
             else:
-                return f"LLM Error: {response.status_code}"
-        except:
-            return "Sir, my local cognitive engine is offline. Please ensure Ollama is running."
+                return {"role": "assistant", "content": f"LLM Error: {response.status_code}"}
+        except Exception as e:
+            return {"role": "assistant", "content": f"Sir, my local cognitive engine is offline. {e}"}
 
 class JarvisPipeline:
     def __init__(self, window):
