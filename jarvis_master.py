@@ -250,9 +250,9 @@ class JarvisPipeline:
                 audio_file = f"temp_{int(time.time())}.wav"
                 with wave.open(audio_file, "w") as f:
                     if getattr(self, "voice_mode", "JARVIS") == "FRIDAY":
-                        self.friday_voice.synthesize(response, f)
+                        self.friday_voice.synthesize_wav(response, f)
                     else:
-                        self.jarvis_voice.synthesize(response, f)
+                        self.jarvis_voice.synthesize_wav(response, f)
                 
                 try:
                     if not pygame.mixer.get_init(): pygame.mixer.init()
@@ -302,6 +302,7 @@ if __name__ == '__main__':
     
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
+
 
 
 
