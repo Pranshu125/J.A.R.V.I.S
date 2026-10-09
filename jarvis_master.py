@@ -12,8 +12,8 @@ import edge_tts
 import pygame
 import psutil
 import webview
-import cv2
-import mediapipe as mp
+
+
 import pyautogui
 
 # ==========================================
@@ -42,7 +42,7 @@ class MemoryModule:
         except: pass
 
 class ToolModule:
-    """Deep OS Control (Inspired by Mark-XXXIX-OR)"""
+    """Deep OS Control (Ported from Mark-XXXIX-OR)"""
     @staticmethod
     def execute(command, window, pipeline):
         cmd = command.lower()
@@ -51,7 +51,7 @@ class ToolModule:
         if "search for" in cmd or "google" in cmd:
             query = cmd.replace("search for", "").replace("google", "").strip()
             webbrowser.open(f"https://www.google.com/search?q={query}")
-            window.evaluate_js(f"addLog('SYSTEM', 'Tool: Web Search -> {query}')")
+            window.evaluate_js(f"addLog('SYSTEM', 'Web Search: {query}')")
             return True, f"I have pulled up the search results for {query}, sir."
             
         elif "play" in cmd and "on youtube" in cmd:
@@ -59,7 +59,7 @@ class ToolModule:
             webbrowser.open(f"https://www.youtube.com/results?search_query={query}")
             return True, f"Searching YouTube for {query}."
 
-        # 2. Keyboard & Screen Automation (PyAutoGUI)
+        # 2. Keyboard & Screen Automation
         elif "type this" in cmd or "dictate" in cmd:
             text = cmd.replace("type this", "").replace("dictate", "").strip()
             pyautogui.write(text, interval=0.03)
@@ -67,9 +67,17 @@ class ToolModule:
             
         elif "take a screenshot" in cmd or "capture screen" in cmd:
             pyautogui.screenshot(os.path.join(os.path.dirname(__file__), "capture.png"))
-            return True, "Screen captured and saved to the primary directory."
+            return True, "Screenshot saved."
+            
+        # 3. File & App Controller (Mark-XXXIX Port)
+        elif "open notepad" in cmd:
+            os.system("start notepad")
+            return True, "Opening Notepad."
+        elif "open calculator" in cmd:
+            os.system("start calc")
+            return True, "Opening Calculator."
 
-        # 3. Core System Hooks
+        # 4. Core System Hooks
         elif "lock system" in cmd:
             os.system("rundll32.exe user32.dll,LockWorkStation")
             return True, "Workstation locked."
@@ -81,16 +89,6 @@ class ToolModule:
             if pygame.mixer.get_init(): pygame.mixer.music.stop()
             return True, "Audio playback canceled."
         
-        # 4. Barehands Spatial Toggle
-        elif "enable gestures" in cmd or "turn on webcam" in cmd:
-            pipeline.gesture_mode = True
-            return True, "Barehands spatial tracking online."
-            
-        elif "disable gestures" in cmd or "turn off webcam" in cmd:
-            pipeline.gesture_mode = False
-            window.evaluate_js("setGestureMode(false)")
-            return True, "Spatial tracking deactivated."
-            
         return False, None
 
 class IntelligenceModule:
@@ -127,49 +125,8 @@ class JarvisPipeline:
         threading.Thread(target=self.llm_worker, daemon=True).start()
         threading.Thread(target=self.tts_worker, daemon=True).start()
         threading.Thread(target=self.telemetry_worker, daemon=True).start()
-        threading.Thread(target=self.vision_worker, daemon=True).start()
+        # Vision offloaded to JS (barehands architecture)
 
-    def vision_worker(self):
-        """Barehands MediaPipe Computer Vision Tracking"""
-        mp_hands = mp.solutions.hands
-        hands = mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.7)
-        cap = None
-        
-        while self.running:
-            if self.gesture_mode:
-                if cap is None:
-                    cap = cv2.VideoCapture(0)
-                    if not cap.isOpened():
-                        self.window.evaluate_js(f"addLog('SYSTEM', 'Webcam Error: Device in use.')")
-                        self.gesture_mode = False
-                        self.window.evaluate_js("setGestureMode(false)")
-                        continue
-                        
-                ret, frame = cap.read()
-                if ret:
-                    frame = cv2.flip(frame, 1) 
-                    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    results = hands.process(rgb_frame)
-                    
-                    if results.multi_hand_landmarks:
-                        for hand_landmarks in results.multi_hand_landmarks:
-                            # Index finger tracking
-                            x = hand_landmarks.landmark[8].x
-                            y = hand_landmarks.landmark[8].y
-                            self.window.evaluate_js(f"updateParallaxFromVision({x}, {y})")
-                            
-                            # Pinch Detection (Thumb tip 4 + Index tip 8)
-                            tx, ty = hand_landmarks.landmark[4].x, hand_landmarks.landmark[4].y
-                            distance = ((x - tx)**2 + (y - ty)**2)**0.5
-                            if distance < 0.05:
-                                # Trigger a UI interaction on pinch
-                                self.window.evaluate_js(f"addLog('SYSTEM', 'Gesture: Pinch Detected')")
-                                time.sleep(1) # Cooldown
-            else:
-                if cap is not None:
-                    cap.release()
-                    cap = None
-            time.sleep(0.03) 
 
     def telemetry_worker(self):
         while self.running:
