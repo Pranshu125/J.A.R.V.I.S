@@ -170,68 +170,80 @@ class JarvisPipeline:
                         # Removed strict wake-word so it responds instantly
                         cmd = text.replace("jarvis", "").replace("system", "").strip()
                         if cmd:
-                            self.window.evaluate_js(f"addLog('USER', `{cmd}`)")
+                            safe_cmd = json.dumps(cmd)
+                            self.window.evaluate_js(f"addLog('USER', {safe_cmd})")
                             self.text_queue.put(cmd)
-                except: pass
+                except Exception as e:
+                    pass
 
     def llm_worker(self):
         while self.running:
-            text = self.text_queue.get()
-            is_tool, tool_response = ToolModule.execute(text, self.window, self)
-            
-            if is_tool:
-                self.response_queue.put(tool_response)
-            else:
-                self.window.evaluate_js("updateState('THINKING')")
-                prompt = "You are JARVIS. Respond concisely and wittily in a British tone. Never use emojis.\n"
-                for role, msg in self.history:
-                    prompt += f"{role}: {msg}\n"
-                prompt += f"USER: {text}\nJARVIS:"
+            try:
+                text = self.text_queue.get()
+                is_tool, tool_response = ToolModule.execute(text, self.window, self)
                 
-                response = IntelligenceModule.generate(prompt, self.window)
+                if is_tool:
+                    self.response_queue.put(tool_response)
+                else:
+                    self.window.evaluate_js("updateState('THINKING')")
+                    prompt = "You are JARVIS. Respond concisely and wittily in a British tone. Never use emojis.\n"
+                    for role, msg in self.history:
+                        prompt += f"{role}: {msg}\n"
+                    prompt += f"USER: {text}\nJARVIS:"
+                    
+                    response = IntelligenceModule.generate(prompt, self.window)
+                    
+                    self.history.append(("USER", text))
+                    self.history.append(("JARVIS", response))
+                    MemoryModule.save(self.history)
+                    
+                    self.response_queue.put(response)
                 
-                self.history.append(("USER", text))
-                self.history.append(("JARVIS", response))
-                MemoryModule.save(self.history)
-                
-                self.response_queue.put(response)
-            
-            self.text_queue.task_done()
+                self.text_queue.task_done()
+            except Exception as e:
+                self.window.evaluate_js(f"addLog('SYSTEM', 'LLM Error: {e}')")
 
     def tts_worker(self):
         while self.running:
-            response = self.response_queue.get()
-            self.window.evaluate_js("updateState('SPEAKING')")
-            self.window.evaluate_js(f"addLog('JARVIS', `{response}`)")
-            
-            async def _speak():
-                communicate = edge_tts.Communicate(response, VOICE_MODEL)
-                audio_file = f"temp_{int(time.time())}.mp3"
-                await communicate.save(audio_file)
-                try:
-                    if not pygame.mixer.get_init(): pygame.mixer.init()
-                    pygame.mixer.music.load(audio_file)
-                    pygame.mixer.music.play()
-                    while pygame.mixer.music.get_busy():
-                        pygame.time.Clock().tick(10)
-                except: pass
-                try:
-                    pygame.mixer.music.unload()
-                    os.remove(audio_file)
-                except: pass
+            try:
+                response = self.response_queue.get()
+                self.window.evaluate_js("updateState('SPEAKING')")
+                safe_resp = json.dumps(response)
+                self.window.evaluate_js(f"addLog('JARVIS', {safe_resp})")
+                
+                async def _speak():
+                    communicate = edge_tts.Communicate(response, VOICE_MODEL)
+                    audio_file = f"temp_{int(time.time())}.mp3"
+                    await communicate.save(audio_file)
+                    try:
+                        if not pygame.mixer.get_init(): pygame.mixer.init()
+                        pygame.mixer.music.load(audio_file)
+                        pygame.mixer.music.play()
+                        while pygame.mixer.music.get_busy():
+                            pygame.time.Clock().tick(10)
+                    except: pass
+                    try:
+                        pygame.mixer.music.unload()
+                        os.remove(audio_file)
+                    except: pass
 
-            if os.name == 'nt':
-                asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-            asyncio.run(_speak())
-            self.window.evaluate_js("updateState('ONLINE')")
-            self.response_queue.task_done()
+                if os.name == 'nt':
+                    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+                asyncio.run(_speak())
+                self.window.evaluate_js("updateState('ONLINE')")
+            except Exception as e:
+                self.window.evaluate_js(f"addLog('SYSTEM', 'TTS Error: {e}')")
+            finally:
+                if hasattr(self, 'response_queue'):
+                    self.response_queue.task_done()
 
 class Api:
     def __init__(self, pipeline):
         self.pipeline = pipeline
     
     def send_command(self, text):
-        self.pipeline.window.evaluate_js(f"addLog('USER', `{text}`)")
+        safe_text = json.dumps(text)
+        self.pipeline.window.evaluate_js(f"addLog('USER', {safe_text})")
         self.pipeline.text_queue.put(text)
 
 if __name__ == '__main__':
