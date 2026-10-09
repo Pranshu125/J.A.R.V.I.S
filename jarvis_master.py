@@ -234,15 +234,41 @@ class JarvisPipeline:
                                 context_injection = f"\n[LATEST INTERNET DATA: {results[0]['body']}]\n"
                         except: pass
 
-                    prompt = "You are JARVIS. Respond concisely and wittily in a British tone. Never use emojis. Use the internet data provided to answer accurately if applicable.\n"
+                    messages = [{"role": "system", "content": f"You are JARVIS, a witty British AI. Keep answers short and avoid emojis. {context_injection}"}]
                     for role, msg in self.history:
-                        prompt += f"{role}: {msg}\n"
+                        messages.append({"role": "user" if role == "USER" else "assistant", "content": msg})
+                    messages.append({"role": "user", "content": text})
+
+                    tools = [{
+                        "type": "function",
+                        "function": {
+                            "name": "open_website",
+                            "description": "Open a specific website, or search YouTube/Google.",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "url": {"type": "string", "description": "The exact URL to open (e.g. https://www.youtube.com/results?search_query=cats or https://google.com)"}
+                                },
+                                "required": ["url"]
+                            }
+                        }
+                    }]
                     
-                    prompt += context_injection
-                    prompt += f"USER: {text}\nJARVIS:"
+                    msg_obj = IntelligenceModule.chat(messages, tools, self.window)
                     
-                    response = IntelligenceModule.generate(prompt, self.window)
+                    # Tool Routing
+                    response = ""
+                    if "tool_calls" in msg_obj and msg_obj["tool_calls"]:
+                        for tool in msg_obj["tool_calls"]:
+                            if tool["function"]["name"] == "open_website":
+                                url = tool["function"]["arguments"].get("url")
+                                webbrowser.open(url)
+                                response = f"Right away, sir. Accessing {url}."
+                                break
                     
+                    if not response:
+                        response = msg_obj.get("content", "").strip()
+                        
                     self.history.append(("USER", text))
                     self.history.append(("JARVIS", response))
                     MemoryModule.save(self.history)
