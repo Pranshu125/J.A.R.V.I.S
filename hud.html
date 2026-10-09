@@ -487,6 +487,36 @@
             if (e.key === 'Enter') sendCommand();
         }
 
+                // Floating Mini Mode (Picture-in-Picture)
+        function toggleMiniMode(on) {
+            const els = ['.top-bar', '.left-panel', '.right-panel', '.center-title', '.state-pill', '.friday-btn', '.controls'];
+            els.forEach(selector => {
+                const el = document.querySelector(selector);
+                if(el) el.style.display = on ? 'none' : (selector === '.controls' ? 'flex' : (selector === '.top-bar' ? 'flex' : 'block'));
+            });
+            
+            if (on) {
+                document.body.style.backgroundColor = 'transparent';
+                document.querySelector('.main-container').style.display = 'block';
+                document.querySelector('.arc-reactor').style.webkitAppRegion = 'drag';
+                document.querySelector('.arc-reactor').style.margin = '0 auto';
+                document.querySelector('.arc-reactor').style.transform = 'scale(0.8)';
+            } else {
+                document.body.style.backgroundColor = 'var(--bg-color)';
+                document.querySelector('.main-container').style.display = 'grid';
+                document.querySelector('.arc-reactor').style.webkitAppRegion = 'no-drag';
+                document.querySelector('.arc-reactor').style.margin = '0';
+                document.querySelector('.arc-reactor').style.transform = 'scale(1)';
+            }
+        }
+        
+        // Double click Arc Reactor to manually wake up
+        document.querySelector('.arc-reactor').addEventListener('dblclick', () => {
+            if (document.body.style.backgroundColor === 'transparent') {
+                if(typeof pywebview !== 'undefined') pywebview.api.exit_mini();
+            }
+        });
+
         // Mode Switching
         function switchMode(mode) {
             const titles = document.querySelectorAll('.title-text');
@@ -610,6 +640,7 @@
     </script>
 </body>
 </html>
+
 
 
 
