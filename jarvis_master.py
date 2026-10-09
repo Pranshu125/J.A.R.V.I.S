@@ -80,7 +80,7 @@ class ToolModule:
             return True, "Opening Calculator."
 
         # 4. Core System Hooks
-                elif "switch to friday" in cmd or "friday mode" in cmd:
+        elif "switch to friday" in cmd or "friday mode" in cmd:
             pipeline.voice_mode = 'FRIDAY'
             window.evaluate_js("switchMode('FRIDAY')")
             return True, "Switching to F.R.I.D.A.Y. mode, boss. All systems red."
@@ -297,10 +297,12 @@ if __name__ == '__main__':
     # Create window without API first to get the instance
     window = webview.create_window('JARVIS Master', html_path, transparent=True, frameless=True, fullscreen=True, on_top=True)
     pipeline = JarvisPipeline(window)
-    window.expose(Api(pipeline)) # expose whole API class
+    api = Api(pipeline)
+    window.expose(api.send_command, api.minimize, api.toggle_fullscreen, api.destroy)
     
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
+
 
 
 

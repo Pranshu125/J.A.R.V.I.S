@@ -7,3 +7,4 @@ start /B ollama serve >nul 2>&1
 call venv\Scripts\activate
 python jarvis_master.py
 exit
+
