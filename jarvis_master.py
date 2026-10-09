@@ -7,31 +7,38 @@ import json
 import os
 import requests
 import subprocess
-import os
 import webbrowser
 import speech_recognition as sr
 from faster_whisper import WhisperModel
-import wave
-from piper.voice import PiperVoice
 import pygame
 import psutil
 import webview
 
-
-import pyautogui
+# Import our battle-tested modules ported from Sagar's Friday & Mark-XXXIX-OR
+from modules.world_intel import (
+    get_world_news_sync,
+    get_finance_news_sync,
+    open_world_monitor,
+    open_finance_monitor
+)
+from modules.system_control import (
+    volume_control,
+    brightness_control,
+    window_action,
+    launch_application
+)
 
 # ==========================================
-# J.A.R.V.I.S. V2.0 THE ULTIMATE HYBRID
-# Merging Our Core with Mark-XXXIX OS Control & Barehands Spatial Tech
+# J.A.R.V.I.S. & F.R.I.D.A.Y. UNIFIED CORE
+# Combined with Fast World Intel & Deep OS Control
 # ==========================================
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
 OLLAMA_MODEL = "llama3.2" 
-VOICE_MODEL = "en-GB-RyanNeural"
 MEMORY_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jarvis_state.md")
 
 class MemoryModule:
-    """Handles Long-Term State (fullstack-agent Markdown Vault style)"""
+    """Handles Long-Term State in a Markdown Vault"""
     @staticmethod
     def load():
         return []
@@ -43,109 +50,48 @@ class MemoryModule:
                 f.write("# J.A.R.V.I.S. Memory Vault\n\n")
                 for role, msg in history[-15:]:
                     f.write(f"**{role}:** {msg}\n\n")
-        except Exception as e: print("Audio/Piper Error: ", e)
-
-class ToolModule:
-    """Deep OS Control (Ported from Mark-XXXIX-OR)"""
-    @staticmethod
-    def execute(command, window, pipeline):
-        cmd = command.lower()
-        
-        # 1. Advanced Web Automation
-        if "search for" in cmd or "google" in cmd:
-            query = cmd.replace("search for", "").replace("google", "").strip()
-            webbrowser.open(f"https://www.google.com/search?q={query}")
-            window.evaluate_js(f"addLog('SYSTEM', 'Web Search: {query}')")
-            return True, f"I have pulled up the search results for {query}, sir."
-            
-        elif "youtube" in cmd:
-            query = cmd.replace("play", "").replace("open", "").replace("on youtube", "").replace("youtube", "").strip()
-            if query:
-                webbrowser.open(f"https://www.youtube.com/results?search_query={query}")
-                return True, f"Searching YouTube for {query}."
-            else:
-                webbrowser.open("https://www.youtube.com")
-                return True, "Opening YouTube."
-
-        # 2. Keyboard & Screen Automation
-        elif "type this" in cmd or "dictate" in cmd:
-            text = cmd.replace("type this", "").replace("dictate", "").strip()
-            pyautogui.write(text, interval=0.03)
-            return True, "Dictation typed on screen."
-            
-        elif "take a screenshot" in cmd or "capture screen" in cmd:
-            pyautogui.screenshot(os.path.join(os.path.dirname(__file__), "capture.png"))
-            return True, "Screenshot saved."
-            
-        # 3. File & App Controller (Mark-XXXIX Port)
-        elif "open notepad" in cmd:
-            os.system("start notepad")
-            return True, "Opening Notepad."
-        elif "open calculator" in cmd:
-            os.system("start calc")
-            return True, "Opening Calculator."
-
-        # 4. Core System Hooks
-        elif "switch to friday" in cmd or "friday mode" in cmd:
-            pipeline.voice_mode = 'FRIDAY'
-            window.evaluate_js("switchMode('FRIDAY')")
-            return True, "Switching to F.R.I.D.A.Y. mode, boss. All systems red."
-            
-        elif "minimize window" in cmd or "hide screen" in cmd:
-            pipeline.window.minimize()
-            return True, "Minimizing interface."
-            
-        elif "exit fullscreen" in cmd or "window mode" in cmd:
-            pipeline.window.toggle_fullscreen()
-            return True, "Toggling window mode."
-            
-        elif "switch to jarvis" in cmd or "jarvis mode" in cmd:
-            pipeline.voice_mode = 'JARVIS'
-            window.evaluate_js("switchMode('JARVIS')")
-            return True, "Reverting to J.A.R.V.I.S. mode, sir. Back in blue."
-            
-        elif "morning brief" in cmd or "status report" in cmd:
-            sys_time = time.strftime('%I:%M %p')
-            cpu = psutil.cpu_percent()
-            ram = psutil.virtual_memory().percent
-            brief = (f"Good morning, sir. It is currently {sys_time}. "
-                     f"System telemetry indicates CPU is at {cpu} percent, and memory at {ram} percent. "
-                     "All core subsystems are online and your calendar is clear. What would you like to focus on today?")
-            window.evaluate_js(f"addLog('SYSTEM', 'Generated Morning Brief')")
-            return True, brief
-
-        elif "lock system" in cmd:
-            os.system("rundll32.exe user32.dll,LockWorkStation")
-            return True, "Workstation locked."
-            
-        elif "time" in cmd or "what time" in cmd:
-            return True, f"The current system time is {time.strftime('%I:%M %p')}."
-            
-        elif "stop" in cmd and ("talking" in cmd or "speaking" in cmd):
-            if pygame.mixer.get_init(): pygame.mixer.music.stop()
-            return True, "Audio playback canceled."
-        
-        return False, None
+        except Exception:
+            pass
 
 class IntelligenceModule:
-    """Agentic LLM Engine with Tool Calling"""
+    """Hybrid Cognitive Engine (Ollama Local with Cloud Fast Support)"""
     @staticmethod
     def chat(messages, tools, window):
+        # 1. Cloud Fast Mode if GEMINI_API_KEY is present
+        api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        if api_key:
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel('gemini-2.5-flash')
+                last_user_prompt = messages[-1]["content"] if messages else "Hello"
+                res = model.generate_content(last_user_prompt)
+                return {"role": "assistant", "content": res.text}
+            except Exception as e:
+                window.evaluate_js(f"addLog('SYSTEM', 'Gemini fallback to Ollama: {e}')")
+
+        # 2. Local Ollama Mode with low-latency configuration
         payload = {
             "model": OLLAMA_MODEL,
             "messages": messages,
             "stream": False,
             "tools": tools,
-            "options": {"temperature": 0.7, "num_predict": 150}
+            "options": {
+                "temperature": 0.5,
+                "num_ctx": 2048,
+                "num_predict": 120
+            }
         }
         try:
-            response = requests.post(OLLAMA_URL, json=payload, timeout=120)
+            response = requests.post(OLLAMA_URL, json=payload, timeout=90)
             if response.status_code == 200:
                 return response.json().get("message", {})
             else:
-                return {"role": "assistant", "content": f"LLM Error: {response.status_code}"}
+                return {"role": "assistant", "content": f"Neural core returned code {response.status_code}."}
+        except requests.exceptions.Timeout:
+            return {"role": "assistant", "content": "I am experiencing heavy computational load on the local CPU, sir. Let me catch my breath."}
         except Exception as e:
-            return {"role": "assistant", "content": f"Sir, my local cognitive engine is offline. {e}"}
+            return {"role": "assistant", "content": f"Sir, my cognitive engine is offline: {e}"}
 
 class JarvisPipeline:
     def __init__(self, window):
@@ -155,38 +101,40 @@ class JarvisPipeline:
         self.text_queue = queue.Queue()
         self.response_queue = queue.Queue()
         self.running = True
-        self.gesture_mode = False 
         self.voice_mode = 'JARVIS'
+        self.is_sleeping = False
+        self.last_active = time.time()
+        
         try:
             self.stt_model = WhisperModel('base.en', device='cpu', compute_type='int8')
         except Exception as e:
-            print(f"STT Model Load Error: {e}")
+            print(f"STT Model Load Warning: {e}")
 
     def start_services(self):
         threading.Thread(target=self.stt_worker, daemon=True).start()
         threading.Thread(target=self.llm_worker, daemon=True).start()
         threading.Thread(target=self.tts_worker, daemon=True).start()
         threading.Thread(target=self.telemetry_worker, daemon=True).start()
-        
-        # Dynamic Boot Greeting
-        import time, random
-        hour = time.localtime().tm_hour
-        mode_name = getattr(self, "voice_mode", "JARVIS")
-        if hour < 12: g = ["Good morning, sir. All core systems are online.", f"A very good morning to you, sir. {mode_name} is at your service."]
-        elif hour < 18: g = ["Good afternoon, sir. How may I assist you today?", f"Systems initialized. Good afternoon, sir."]
-        else: g = [f"Good evening, sir. {mode_name} is online and ready.", "Evening, sir. Awaiting your command."]
-        self.response_queue.put(random.choice(g))
-        
-        self.is_sleeping = False
-        self.last_active = time.time()
         threading.Thread(target=self.idle_worker, daemon=True).start()
         
+        # Dynamic Time-of-Day Boot Greeting
+        hour = time.localtime().tm_hour
+        mode_name = getattr(self, "voice_mode", "JARVIS")
+        if hour < 12:
+            g = ["Good morning, sir. Core systems are online.", f"Good morning, sir. {mode_name} is at your service."]
+        elif hour < 18:
+            g = ["Good afternoon, sir. How may I assist you today?", f"Systems operational. Good afternoon, sir."]
+        else:
+            g = [f"Good evening, sir. {mode_name} is online and ready.", "Evening, sir. Standing by for your instructions."]
+        
+        self.response_queue.put(random.choice(g))
+        
+        # Global Overlay Hotkey (Alt + Space)
         try:
             import keyboard
             keyboard.add_hotkey('alt+space', self.trigger_hotkey_wake)
         except Exception as e:
             print("Hotkey binding failed: ", e)
-
 
     def trigger_hotkey_wake(self):
         if getattr(self, "is_sleeping", False):
@@ -201,75 +149,71 @@ class JarvisPipeline:
             if not getattr(self, "is_sleeping", False) and time.time() - self.last_active > 45:
                 self.is_sleeping = True
                 self.window.evaluate_js("toggleMiniMode(true)")
-                self.window.resize(350, 350)
+                self.window.resize(400, 400)
             time.sleep(2)
             
     def fetch_weather(self):
         try:
-            loc = requests.get('http://ip-api.com/json/', timeout=3).json()
+            loc = requests.get('http://ip-api.com/json/', timeout=4).json()
             city = loc.get('city', 'Unknown')
             lat, lon = loc.get('lat'), loc.get('lon')
             if lat and lon:
                 w_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code"
-                w_data = requests.get(w_url, timeout=3).json()['current']
+                w_data = requests.get(w_url, timeout=4).json()['current']
                 t, h, w = w_data['temperature_2m'], w_data['relative_humidity_2m'], w_data['wind_speed_10m']
                 desc = "Clear" if w_data['weather_code'] < 3 else "Cloudy" if w_data['weather_code'] < 50 else "Rain"
                 self.window.evaluate_js(f"updateWeather('{t}°C', '{city}', '{desc}', '{h}%', '{w} km/h')")
-                self.window.evaluate_js(f"addLog('SYSTEM', 'Weather connected to satellite data.')")
+                self.window.evaluate_js(f"addLog('SYSTEM', 'Weather synchronized with satellite telemetry.')")
         except Exception as e:
-            self.window.evaluate_js(f"addLog('SYSTEM', 'Weather error: {e}')")
+            self.window.evaluate_js(f"addLog('SYSTEM', 'Weather telemetry error: {e}')")
 
     def telemetry_worker(self):
-        # Fetch initial weather & location
         self.fetch_weather()
-
         last_net = psutil.net_io_counters().bytes_recv + psutil.net_io_counters().bytes_sent
         while self.running:
             try:
                 cpu = int(psutil.cpu_percent(interval=1))
                 ram = int(psutil.virtual_memory().percent)
-                
-                # Calc Network Speed
                 curr_net = psutil.net_io_counters().bytes_recv + psutil.net_io_counters().bytes_sent
                 speed_mbps = (curr_net - last_net) / (1024 * 1024)
                 last_net = curr_net
                 
                 self.window.evaluate_js(f"updateSystemStats({cpu}, {ram})")
                 self.window.evaluate_js(f"updateNetwork('{speed_mbps:.2f} MB/s')")
-            except Exception as e:
+            except Exception:
                 pass
             time.sleep(1)
 
     def stt_worker(self):
         recognizer = sr.Recognizer()
-        pygame.mixer.init()
         
         with sr.Microphone() as source:
             recognizer.adjust_for_ambient_noise(source, duration=1.0)
             self.window.evaluate_js("updateState('ONLINE')")
             
             while self.running:
-                if pygame.mixer.get_init() and pygame.mixer.music.get_busy():
-                    time.sleep(0.5)
+                if pygame.mixer.get_init() and pygame.mixer.get_busy():
+                    time.sleep(0.3)
                     continue
 
                 self.window.evaluate_js("updateState('LISTENING')")
                 try:
-                    audio = recognizer.listen(source, timeout=3, phrase_time_limit=10)
+                    audio = recognizer.listen(source, timeout=3, phrase_time_limit=9)
                     self.window.evaluate_js("updateState('PROCESSING')")
                     text = recognizer.recognize_google(audio).lower()
                     
                     if text:
                         mode_name = getattr(self, "voice_mode", "JARVIS").lower()
                         
+                        # Strict Wake-Word filtering in Sleep Mode
                         if getattr(self, "is_sleeping", False):
-                            if mode_name in text or "wake" in text:
+                            if mode_name in text or "wake" in text or "jarvis" in text or "friday" in text:
                                 self.is_sleeping = False
                                 self.last_active = time.time()
                                 self.window.evaluate_js("toggleMiniMode(false)")
                                 self.window.toggle_fullscreen()
-                                self.response_queue.put(f"I am awake, sir. How can I help?")
-                            continue # Ignore all background noise while sleeping
+                                self.response_queue.put("I am awake, sir. Standing by.")
+                            continue
                             
                         self.last_active = time.time()
                         cmd = text.replace(mode_name, "").replace("system", "").strip()
@@ -277,212 +221,303 @@ class JarvisPipeline:
                             safe_cmd = json.dumps(cmd)
                             self.window.evaluate_js(f"addLog('USER', {safe_cmd})")
                             self.text_queue.put(cmd)
-                except Exception as e:
+                except Exception:
                     pass
 
     def llm_worker(self):
         while self.running:
             try:
                 text = self.text_queue.get()
-                is_tool, tool_response = ToolModule.execute(text, self.window, self)
+                self.window.evaluate_js("updateState('THINKING')")
                 
-                if is_tool:
-                    self.response_queue.put(tool_response)
-                else:
-                    self.window.evaluate_js("updateState('THINKING')")
-                    
-                    # INTELLIGENT WEB KNOWLEDGE ROUTING (Inspired by Sukeesh/Microsoft JARVIS)
-                    # If the user asks a factual question, scrape the web invisibly first!
-                    context_injection = ""
-                    if any(q in text.lower() for q in ["who is", "what is", "why did", "how to", "tell me about"]):
-                        try:
-                            from duckduckgo_search import DDGS
-                            self.window.evaluate_js(f"addLog('SYSTEM', 'Scanning internet databases...')")
-                            results = DDGS().text(text, max_results=1)
-                            if results:
-                                context_injection = f"\n[LATEST INTERNET DATA: {results[0]['body']}]\n"
-                        except Exception as e: print("Audio/Piper Error: ", e)
+                # Fast Keyword Short-circuits for Immediate Execution
+                cmd_lower = text.lower()
+                handled = False
+                
+                if "switch to friday" in cmd_lower or "friday mode" in cmd_lower:
+                    self.voice_mode = 'FRIDAY'
+                    self.window.evaluate_js("switchMode('FRIDAY')")
+                    self.response_queue.put("Switching to F.R.I.D.A.Y. mode, boss. All systems red.")
+                    handled = True
+                elif "switch to jarvis" in cmd_lower or "jarvis mode" in cmd_lower:
+                    self.voice_mode = 'JARVIS'
+                    self.window.evaluate_js("switchMode('JARVIS')")
+                    self.response_queue.put("Reverting to J.A.R.V.I.S. mode, sir. Back in blue.")
+                    handled = True
+                elif "stop talking" in cmd_lower or "mute audio" in cmd_lower:
+                    if pygame.mixer.get_init():
+                        pygame.mixer.stop()
+                    handled = True
 
-                    messages = [{"role": "system", "content": f"You are JARVIS, a witty British AI. Keep answers short and avoid emojis. If you do not understand the user's request, politely ask them to repeat or clarify. {context_injection}"}]
-                    for role, msg in self.history:
-                        messages.append({"role": "user" if role == "USER" else "assistant", "content": msg})
-                    messages.append({"role": "user", "content": text})
+                if handled:
+                    self.text_queue.task_done()
+                    continue
 
-                    tools = [
-                        {
-                            "type": "function",
-                            "function": {
-                                "name": "open_website",
-                                "description": "Open a specific website, or search YouTube/Google.",
-                                "parameters": {
-                                    "type": "object",
-                                    "properties": {
-                                        "url": {"type": "string", "description": "The URL to open."}
-                                    },
-                                    "required": ["url"]
-                                }
-                            }
-                        },
-                        {
-                            "type": "function",
-                            "function": {
-                                "name": "system_control",
-                                "description": "Control laptop hardware like volume, or open native OS applications.",
-                                "parameters": {
-                                    "type": "object",
-                                    "properties": {
-                                        "action": {"type": "string", "enum": ["volume_up", "volume_down", "mute", "open_app"]},
-                                        "app_name": {"type": "string", "description": "Name of the app to open (e.g. notepad, calc). Leave blank for volume."}
-                                    },
-                                    "required": ["action"]
-                                }
-                            }
-                        },
-                        {
-                            "type": "function",
-                            "function": {
-                                "name": "execute_terminal",
-                                "description": "Execute a shell/terminal command on the developer's machine (e.g. git status, dir, ping).",
-                                "parameters": {
-                                    "type": "object",
-                                    "properties": {
-                                        "command": {"type": "string", "description": "The exact powershell/cmd command to run."}
-                                    },
-                                    "required": ["command"]
-                                }
-                            }
-                        },
-                        {
-                            "type": "function",
-                            "function": {
-                                "name": "analyze_screen",
-                                "description": "Take a screenshot of the user's active screen and analyze it to see what they are looking at or reading.",
-                                "parameters": {
-                                    "type": "object",
-                                    "properties": {
-                                        "query": {"type": "string", "description": "What to look for on the screen."}
-                                    },
-                                    "required": ["query"]
-                                }
+                # Prepare LLM Agent Prompt (Ported rules from Sagar Tamang & Mark-XXXIX)
+                system_prompt = (
+                    "You are JARVIS / F.R.I.D.A.Y., Tony Stark's personal desktop assistant. "
+                    "Tone: sharp, calm, confident, dry wit. "
+                    "CRITICAL RULES: "
+                    "1. Keep spoken responses short (2 to 4 sentences maximum). "
+                    "2. Do NOT use bullet points, markdown syntax, or numbered lists. You are speaking, not writing. "
+                    "3. Call tools silently and immediately. NEVER utter tool names like get_world_news. "
+                    "4. Address the user naturally as 'sir' or 'boss'."
+                )
+
+                messages = [{"role": "system", "content": system_prompt}]
+                for role, msg in self.history[-6:]:
+                    messages.append({"role": "user" if role == "USER" else "assistant", "content": msg})
+                messages.append({"role": "user", "content": text})
+
+                tools = [
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "get_world_news",
+                            "description": "Fetch live breaking world news headlines from major international wire services.",
+                            "parameters": {"type": "object", "properties": {}}
+                        }
+                    },
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "get_finance_news",
+                            "description": "Fetch current market and financial news headlines from global market feeds.",
+                            "parameters": {"type": "object", "properties": {}}
+                        }
+                    },
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "open_world_monitor",
+                            "description": "Open the live visual satellite World Monitor dashboard on screen.",
+                            "parameters": {"type": "object", "properties": {}}
+                        }
+                    },
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "open_finance_monitor",
+                            "description": "Open the live visual financial markets dashboard on screen.",
+                            "parameters": {"type": "object", "properties": {}}
+                        }
+                    },
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "system_hardware_control",
+                            "description": "Control laptop audio volume, mute, brightness, or launch applications.",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "action": {"type": "string", "enum": ["volume_up", "volume_down", "mute", "brightness_up", "brightness_down", "launch_app"]},
+                                    "app_name": {"type": "string", "description": "Application name to open (e.g. chrome, vscode, notepad, spotify, steam, calc)."}
+                                },
+                                "required": ["action"]
                             }
                         }
-                    ]
-                    
-                    msg_obj = IntelligenceModule.chat(messages, tools, self.window)
-                    
-                    # Tool Routing & Dynamic Acknowledgments
-                    response = ""
-                    acks = ["Right away, sir.", "At your service, sir.", "Consider it done.", "Processing your request, sir.", "On it, sir."]
-                    ack = random.choice(acks)
-                    
-                    if "tool_calls" in msg_obj and msg_obj["tool_calls"]:
-                        for tool in msg_obj["tool_calls"]:
-                            if tool["function"]["name"] == "open_website":
-                                url = tool["function"]["arguments"].get("url")
-                                webbrowser.open(url)
-                                response = f"{ack} Accessing {url}."
+                    },
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "window_management",
+                            "description": "Manage desktop windows (minimize, maximize, snap left/right, show desktop, lock screen).",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "action": {"type": "string", "enum": ["minimize", "maximize", "snap_left", "snap_right", "show_desktop", "lock_screen", "screenshot", "task_manager"]}
+                                },
+                                "required": ["action"]
+                            }
+                        }
+                    },
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "open_website",
+                            "description": "Open any website or web search in the default browser.",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "url": {"type": "string", "description": "The exact URL to open."}
+                                },
+                                "required": ["url"]
+                            }
+                        }
+                    },
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "execute_terminal",
+                            "description": "Execute a shell or PowerShell command on the machine.",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "command": {"type": "string", "description": "Command line string to execute."}
+                                },
+                                "required": ["command"]
+                            }
+                        }
+                    },
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "analyze_screen",
+                            "description": "Take a silent screenshot and inspect what the user is reading or viewing on screen.",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "query": {"type": "string", "description": "Visual query description."}
+                                },
+                                "required": ["query"]
+                            }
+                        }
+                    }
+                ]
+
+                msg_obj = IntelligenceModule.chat(messages, tools, self.window)
+                response = ""
+                acks = ["Right away, sir.", "At your service, sir.", "Processing, sir.", "Checking the feeds now, sir."]
+                ack = random.choice(acks)
+
+                # Tool Routing
+                if "tool_calls" in msg_obj and msg_obj["tool_calls"]:
+                    for tool in msg_obj["tool_calls"]:
+                        t_name = tool["function"]["name"]
+                        t_args = tool["function"]["arguments"]
+
+                        if t_name == "get_world_news":
+                            self.window.evaluate_js("addLog('SYSTEM', 'Polling Global Feeds...')")
+                            news_data = get_world_news_sync()
+                            open_world_monitor()
+                            response = f"Here is the latest from the global news wire, sir: {news_data[:220]}. I have opened the World Monitor on your display."
+                            break
+
+                        elif t_name == "get_finance_news":
+                            self.window.evaluate_js("addLog('SYSTEM', 'Polling Financial Feeds...')")
+                            fin_data = get_finance_news_sync()
+                            open_finance_monitor()
+                            response = f"Here is the market briefing, sir: {fin_data[:220]}. Pulling up the finance monitor now."
+                            break
+
+                        elif t_name == "open_world_monitor":
+                            response = open_world_monitor()
+                            break
+
+                        elif t_name == "open_finance_monitor":
+                            response = open_finance_monitor()
+                            break
+
+                        elif t_name == "system_hardware_control":
+                            act = t_args.get("action", "")
+                            app = t_args.get("app_name", "")
+                            if act in ("volume_up", "volume_down", "mute"):
+                                response = f"{ack} " + volume_control(act)
+                            elif act in ("brightness_up", "brightness_down"):
+                                response = f"{ack} " + brightness_control(act)
+                            elif act == "launch_app":
+                                response = f"{ack} " + launch_application(app)
                                 self.is_sleeping = True
                                 self.window.evaluate_js("toggleMiniMode(true)")
-                                self.window.resize(350, 350)
-                                break
-                            elif tool["function"]["name"] == "system_control":
-                                action = tool["function"]["arguments"].get("action")
-                                app = tool["function"]["arguments"].get("app_name", "")
-                                import keyboard
-                                if action == "volume_up":
-                                    for _ in range(5): keyboard.send("volume up")
-                                    response = f"{ack} Increasing system volume."
-                                elif action == "volume_down":
-                                    for _ in range(5): keyboard.send("volume down")
-                                    response = f"{ack} Decreasing system volume."
-                                elif action == "mute":
-                                    keyboard.send("volume mute")
-                                    response = f"{ack} Toggling system mute."
-                                elif action == "open_app":
-                                    import os
-                                    os.system(f"start {app}")
-                                    response = f"{ack} Launching {app}."
-                                self.is_sleeping = True
-                                self.window.evaluate_js("toggleMiniMode(true)")
-                                self.window.resize(350, 350)
-                                break
-                            elif tool["function"]["name"] == "execute_terminal":
-                                cmd_str = tool["function"]["arguments"].get("command")
-                                try:
-                                    import subprocess
-                                    out = subprocess.check_output(cmd_str, shell=True, text=True, stderr=subprocess.STDOUT, timeout=10)
-                                    clean_out = out.replace('\n', ' ')[:200]
-                                    response = f"{ack} Terminal command executed. Result: {clean_out}"
-                                except Exception as e:
-                                    response = f"Terminal command failed, sir. Error: {e}"
-                                break
-                            elif tool["function"]["name"] == "analyze_screen":
-                                query = tool["function"]["arguments"].get("query", "Describe this screen.")
-                                try:
-                                    import pyautogui, base64, requests
-                                    pyautogui.screenshot("vision_cache.png")
-                                    with open("vision_cache.png", "rb") as img:
-                                        b64 = base64.b64encode(img.read()).decode('utf-8')
-                                    
-                                    payload = {
-                                        "model": "moondream",
-                                        "prompt": query,
-                                        "images": [b64],
-                                        "stream": False
-                                    }
-                                    res = requests.post("http://localhost:11434/api/generate", json=payload).json()
-                                    vis_text = res.get('response', '')
-                                    response = f"I am looking at your screen, sir. {vis_text}"
-                                except Exception as e:
-                                    response = "Vision module offline. Please ensure moondream is installed and pyautogui is available."
-                                break
-                    
-                    if not response:
-                        response = msg_obj.get("content", "").strip()
-                        
+                                self.window.resize(400, 400)
+                            break
+
+                        elif t_name == "window_management":
+                            act = t_args.get("action", "")
+                            response = f"{ack} " + window_action(act)
+                            break
+
+                        elif t_name == "open_website":
+                            url = t_args.get("url")
+                            webbrowser.open(url)
+                            response = f"{ack} Opening {url}."
+                            self.is_sleeping = True
+                            self.window.evaluate_js("toggleMiniMode(true)")
+                            self.window.resize(400, 400)
+                            break
+
+                        elif t_name == "execute_terminal":
+                            cmd_str = t_args.get("command")
+                            try:
+                                out = subprocess.check_output(cmd_str, shell=True, text=True, stderr=subprocess.STDOUT, timeout=8)
+                                clean = out.replace('\n', ' ')[:180]
+                                response = f"Execution completed, sir. Output: {clean}"
+                            except Exception as e:
+                                response = f"Terminal execution failed: {e}"
+                            break
+
+                        elif t_name == "analyze_screen":
+                            q = t_args.get("query", "Describe this display.")
+                            try:
+                                import pyautogui, base64
+                                pyautogui.screenshot("vision_cache.png")
+                                with open("vision_cache.png", "rb") as img:
+                                    b64 = base64.b64encode(img.read()).decode('utf-8')
+                                payload = {
+                                    "model": "moondream",
+                                    "prompt": q,
+                                    "images": [b64],
+                                    "stream": False
+                                }
+                                res = requests.post("http://localhost:11434/api/generate", json=payload, timeout=30).json()
+                                vis_text = res.get('response', '')
+                                response = f"Looking at your display now, sir. {vis_text}"
+                            except Exception:
+                                response = "Vision sensors are processing slowly. Please verify moondream is ready."
+                            break
+
+                if not response:
+                    response = msg_obj.get("content", "").strip()
+
+                if response:
                     self.history.append(("USER", text))
                     self.history.append(("JARVIS", response))
                     MemoryModule.save(self.history)
-                    
-                    # CRITICAL: Send to TTS Engine
                     self.response_queue.put(response)
-                    
-                    self.response_queue.put(response)
-                
+
                 self.text_queue.task_done()
             except Exception as e:
-                self.window.evaluate_js(f"addLog('SYSTEM', 'LLM Error: {e}')")
+                self.window.evaluate_js(f"addLog('SYSTEM', 'Cognitive processing warning: {e}')")
 
     def tts_worker(self):
+        """Zero-Lock In-Memory Audio Playback Engine"""
         while self.running:
             try:
                 response = self.response_queue.get()
                 self.window.evaluate_js("updateState('SPEAKING')")
                 safe_resp = json.dumps(response)
                 self.window.evaluate_js(f"addLog('JARVIS', {safe_resp})")
-                audio_file = f"temp_{int(time.time())}.wav"
                 
-                # Use Piper CLI for bulletproof file generation
+                audio_file = f"temp_{int(time.time()*1000)}.wav"
                 model_path = "models/en_GB-jenny_dioco-medium.onnx" if getattr(self, "voice_mode", "JARVIS") == "FRIDAY" else "models/en_GB-alan-medium.onnx"
                 piper_exe = os.path.join("venv", "Scripts", "piper.exe")
                 
-                subprocess.run([piper_exe, "-m", model_path, "-f", audio_file], input=response.encode('utf-8'), creationflags=subprocess.CREATE_NO_WINDOW)
+                # Generate audio wave via Piper CLI
+                subprocess.run(
+                    [piper_exe, "-m", model_path, "-f", audio_file],
+                    input=response.encode('utf-8'),
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                )
                 
+                # Load sound entirely into RAM and delete temporary file immediately
                 try:
-                    if not pygame.mixer.get_init(): pygame.mixer.init()
-                    pygame.mixer.music.load(audio_file)
-                    pygame.mixer.music.play()
-                    while pygame.mixer.music.get_busy():
-                        pygame.time.Clock().tick(10)
-                except Exception as e: print("Audio/Piper Error: ", e)
-                try:
-                    pygame.mixer.music.unload()
-                    os.remove(audio_file)
-                except Exception as e: print("Audio/Piper Error: ", e)
+                    if not pygame.mixer.get_init():
+                        pygame.mixer.init()
+                    if os.path.exists(audio_file):
+                        sound = pygame.mixer.Sound(audio_file)
+                        os.remove(audio_file) # ZERO file locking, deleted instantly!
+                        sound.play()
+                        while pygame.mixer.get_busy():
+                            pygame.time.Clock().tick(15)
+                except Exception as e:
+                    print(f"Audio playback issue: {e}")
+                    if os.path.exists(audio_file):
+                        try: os.remove(audio_file)
+                        except Exception: pass
 
                 self.window.evaluate_js("updateState('ONLINE')")
             except Exception as e:
-                self.window.evaluate_js(f"addLog('SYSTEM', 'TTS Error: {e}')")
+                self.window.evaluate_js(f"addLog('SYSTEM', 'Voice Engine Warning: {e}')")
             finally:
                 if hasattr(self, 'response_queue'):
                     self.response_queue.task_done()
@@ -506,7 +541,6 @@ class Api:
         self.pipeline.window.destroy()
         
     def force_weather_update(self):
-        import threading
         threading.Thread(target=self.pipeline.fetch_weather, daemon=True).start()
 
     def enter_mini(self):
@@ -518,26 +552,28 @@ class Api:
         self.pipeline.is_sleeping = False
         self.pipeline.last_active = time.time()
         self.pipeline.window.evaluate_js("toggleMiniMode(false)")
-        os._exit(0)
 
 if __name__ == '__main__':
     html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hud.html')
-    # Create window without API first to get the instance
-    window = webview.create_window('JARVIS Master', html_path, transparent=True, frameless=False, fullscreen=True, on_top=True)
+    window = webview.create_window(
+        'JARVIS Master',
+        html_path,
+        transparent=True,
+        frameless=False,
+        fullscreen=True,
+        on_top=True
+    )
     pipeline = JarvisPipeline(window)
     api = Api(pipeline)
-    window.expose(api.send_command, api.minimize, api.toggle_fullscreen, api.destroy, api.force_weather_update, api.enter_mini, api.exit_mini)
+    window.expose(
+        api.send_command,
+        api.minimize,
+        api.toggle_fullscreen,
+        api.destroy,
+        api.force_weather_update,
+        api.enter_mini,
+        api.exit_mini
+    )
     
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
-
-
-
-
-
-
-
-
-
-
-
