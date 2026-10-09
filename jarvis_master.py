@@ -2,6 +2,7 @@ import threading
 import asyncio
 import queue
 import time
+import random
 import json
 import os
 import requests
@@ -261,7 +262,7 @@ class JarvisPipeline:
                                 context_injection = f"\n[LATEST INTERNET DATA: {results[0]['body']}]\n"
                         except: pass
 
-                    messages = [{"role": "system", "content": f"You are JARVIS, a witty British AI. Keep answers short and avoid emojis. {context_injection}"}]
+                    messages = [{"role": "system", "content": f"You are JARVIS, a witty British AI. Keep answers short and avoid emojis. If you do not understand the user's request, politely ask them to repeat or clarify. {context_injection}"}]
                     for role, msg in self.history:
                         messages.append({"role": "user" if role == "USER" else "assistant", "content": msg})
                     messages.append({"role": "user", "content": text})
@@ -283,14 +284,17 @@ class JarvisPipeline:
                     
                     msg_obj = IntelligenceModule.chat(messages, tools, self.window)
                     
-                    # Tool Routing
+                    # Tool Routing & Dynamic Acknowledgments
                     response = ""
+                    acks = ["Right away, sir.", "At your service, sir.", "Consider it done.", "Processing your request, sir.", "On it, sir."]
+                    ack = random.choice(acks)
+                    
                     if "tool_calls" in msg_obj and msg_obj["tool_calls"]:
                         for tool in msg_obj["tool_calls"]:
                             if tool["function"]["name"] == "open_website":
                                 url = tool["function"]["arguments"].get("url")
                                 webbrowser.open(url)
-                                response = f"Right away, sir. Accessing {url}."
+                                response = f"{ack} Accessing {url}."
                                 break
                     
                     if not response:
@@ -299,6 +303,9 @@ class JarvisPipeline:
                     self.history.append(("USER", text))
                     self.history.append(("JARVIS", response))
                     MemoryModule.save(self.history)
+                    
+                    # CRITICAL: Send to TTS Engine
+                    self.response_queue.put(response)
                     
                     self.response_queue.put(response)
                 
