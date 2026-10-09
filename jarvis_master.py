@@ -14,7 +14,7 @@ import pygame
 import psutil
 import webview
 
-# Import our battle-tested modules ported from Sagar's Friday & Mark-XXXIX-OR
+# Import our battle-tested modules ported from Sagar's Friday, Mark-XXXIX, and Zoey OS
 from modules.world_intel import (
     get_world_news_sync,
     get_finance_news_sync,
@@ -27,18 +27,20 @@ from modules.system_control import (
     window_action,
     launch_application
 )
+from modules.tts_engine import speak_text
 
-# ==========================================
-# J.A.R.V.I.S. & F.R.I.D.A.Y. UNIFIED CORE
-# Combined with Fast World Intel & Deep OS Control
-# ==========================================
+# ========================================================
+# J.A.R.V.I.S., F.R.I.D.A.Y., & Z.O.E.Y. UNIFIED COGNITIVE OS
+# Real-Time Voice Assistant with 3D Holographic Orb,
+# Deep Windows OS Control, World Intel & Bilingual Intelligence
+# ========================================================
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
 OLLAMA_MODEL = "llama3.2" 
 MEMORY_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jarvis_state.md")
 
 class MemoryModule:
-    """Handles Long-Term State in a Markdown Vault"""
+    """Persistent Conversational Memory Vault (Zoey & Mark-LV style)"""
     @staticmethod
     def load():
         return []
@@ -54,7 +56,7 @@ class MemoryModule:
             pass
 
 class IntelligenceModule:
-    """Hybrid Cognitive Engine (Ollama Local with Cloud Fast Support)"""
+    """Hybrid Cognitive Engine: Cloud Gemini 2.5 Flash + Local Ollama Fallback"""
     @staticmethod
     def chat(messages, tools, window):
         # 1. Cloud Fast Mode if GEMINI_API_KEY is present
@@ -79,7 +81,7 @@ class IntelligenceModule:
             "options": {
                 "temperature": 0.5,
                 "num_ctx": 2048,
-                "num_predict": 120
+                "num_predict": 130
             }
         }
         try:
@@ -89,7 +91,7 @@ class IntelligenceModule:
             else:
                 return {"role": "assistant", "content": f"Neural core returned code {response.status_code}."}
         except requests.exceptions.Timeout:
-            return {"role": "assistant", "content": "I am experiencing heavy computational load on the local CPU, sir. Let me catch my breath."}
+            return {"role": "assistant", "content": "CPU load is high right now, sir. Processing the request shortly."}
         except Exception as e:
             return {"role": "assistant", "content": f"Sir, my cognitive engine is offline: {e}"}
 
@@ -101,7 +103,7 @@ class JarvisPipeline:
         self.text_queue = queue.Queue()
         self.response_queue = queue.Queue()
         self.running = True
-        self.voice_mode = 'JARVIS'
+        self.voice_mode = 'JARVIS' # 'JARVIS' | 'FRIDAY' | 'ZOEY'
         self.is_sleeping = False
         self.last_active = time.time()
         
@@ -117,19 +119,31 @@ class JarvisPipeline:
         threading.Thread(target=self.telemetry_worker, daemon=True).start()
         threading.Thread(target=self.idle_worker, daemon=True).start()
         
-        # Dynamic Time-of-Day Boot Greeting
+        # Dynamic Time-of-Day Bilingual Boot Greeting
         hour = time.localtime().tm_hour
         mode_name = getattr(self, "voice_mode", "JARVIS")
         if hour < 12:
-            g = ["Good morning, sir. Core systems are online.", f"Good morning, sir. {mode_name} is at your service."]
+            g = [
+                "Good morning, sir. Core systems are online.",
+                f"Good morning, boss. {mode_name} is operational.",
+                "Namaste sir! Good morning. Sabhi systems online aur ready hain."
+            ]
         elif hour < 18:
-            g = ["Good afternoon, sir. How may I assist you today?", f"Systems operational. Good afternoon, sir."]
+            g = [
+                "Good afternoon, sir. How may I assist you today?",
+                f"Systems operational. Good afternoon, boss.",
+                "Good afternoon sir! Bataye aaj kya kaam karna hai?"
+            ]
         else:
-            g = [f"Good evening, sir. {mode_name} is online and ready.", "Evening, sir. Standing by for your instructions."]
+            g = [
+                f"Good evening, sir. {mode_name} is online and standing by.",
+                "Evening, boss. Awaiting your instructions.",
+                "Good evening sir! System ready hai, bataye kya hukum hai?"
+            ]
         
         self.response_queue.put(random.choice(g))
         
-        # Global Overlay Hotkey (Alt + Space)
+        # Global Quick-Summon Overlay Hotkey (Alt + Space)
         try:
             import keyboard
             keyboard.add_hotkey('alt+space', self.trigger_hotkey_wake)
@@ -185,6 +199,7 @@ class JarvisPipeline:
             time.sleep(1)
 
     def stt_worker(self):
+        """Bilingual Speech Recognition (English & Hindi/Hinglish)"""
         recognizer = sr.Recognizer()
         
         with sr.Microphone() as source:
@@ -200,23 +215,29 @@ class JarvisPipeline:
                 try:
                     audio = recognizer.listen(source, timeout=3, phrase_time_limit=9)
                     self.window.evaluate_js("updateState('PROCESSING')")
-                    text = recognizer.recognize_google(audio).lower()
+                    # 'en-IN' seamlessly recognizes both Indian English and common Hinglish phrases
+                    text = recognizer.recognize_google(audio, language="en-IN").lower()
                     
                     if text:
                         mode_name = getattr(self, "voice_mode", "JARVIS").lower()
+                        wake_triggers = ["jarvis", "friday", "zoey", "iris", "wake", "uth jao", "uth ja"]
                         
-                        # Strict Wake-Word filtering in Sleep Mode
+                        # Strict Wake-Word filtering in Sleep / PiP Mode
                         if getattr(self, "is_sleeping", False):
-                            if mode_name in text or "wake" in text or "jarvis" in text or "friday" in text:
+                            if any(w in text for w in wake_triggers):
                                 self.is_sleeping = False
                                 self.last_active = time.time()
                                 self.window.evaluate_js("toggleMiniMode(false)")
                                 self.window.toggle_fullscreen()
-                                self.response_queue.put("I am awake, sir. Standing by.")
+                                self.response_queue.put("I am awake, boss. Standing by.")
                             continue
                             
                         self.last_active = time.time()
-                        cmd = text.replace(mode_name, "").replace("system", "").strip()
+                        cmd = text
+                        for w in ["jarvis", "friday", "zoey", "iris", "system"]:
+                            cmd = cmd.replace(w, "")
+                        cmd = cmd.strip()
+                        
                         if cmd:
                             safe_cmd = json.dumps(cmd)
                             self.window.evaluate_js(f"addLog('USER', {safe_cmd})")
@@ -230,21 +251,26 @@ class JarvisPipeline:
                 text = self.text_queue.get()
                 self.window.evaluate_js("updateState('THINKING')")
                 
-                # Fast Keyword Short-circuits for Immediate Execution
                 cmd_lower = text.lower()
                 handled = False
                 
+                # Mode Switches
                 if "switch to friday" in cmd_lower or "friday mode" in cmd_lower:
                     self.voice_mode = 'FRIDAY'
                     self.window.evaluate_js("switchMode('FRIDAY')")
                     self.response_queue.put("Switching to F.R.I.D.A.Y. mode, boss. All systems red.")
+                    handled = True
+                elif "switch to zoey" in cmd_lower or "zoey mode" in cmd_lower:
+                    self.voice_mode = 'ZOEY'
+                    self.window.evaluate_js("switchMode('ZOEY')")
+                    self.response_queue.put("Zoey OS intelligence online. Living 3D workspace active.")
                     handled = True
                 elif "switch to jarvis" in cmd_lower or "jarvis mode" in cmd_lower:
                     self.voice_mode = 'JARVIS'
                     self.window.evaluate_js("switchMode('JARVIS')")
                     self.response_queue.put("Reverting to J.A.R.V.I.S. mode, sir. Back in blue.")
                     handled = True
-                elif "stop talking" in cmd_lower or "mute audio" in cmd_lower:
+                elif "stop talking" in cmd_lower or "chup raho" in cmd_lower or "mute audio" in cmd_lower:
                     if pygame.mixer.get_init():
                         pygame.mixer.stop()
                     handled = True
@@ -253,15 +279,20 @@ class JarvisPipeline:
                     self.text_queue.task_done()
                     continue
 
-                # Prepare LLM Agent Prompt (Ported rules from Sagar Tamang & Mark-XXXIX)
+                # Bilingual Spoken Persona (Ported from Iris, Zoey & Mark-LV)
                 system_prompt = (
-                    "You are JARVIS / F.R.I.D.A.Y., Tony Stark's personal desktop assistant. "
-                    "Tone: sharp, calm, confident, dry wit. "
-                    "CRITICAL RULES: "
+                    "You are JARVIS / F.R.I.D.A.Y. / Z.O.E.Y., an advanced, loyal, and sharp personal AI assistant. "
+                    "LANGUAGE INSTRUCTION: "
+                    "You are 100% fluent in both English and Hindi / Hinglish. "
+                    "Always reply in the exact language the user speaks: "
+                    "- If the user speaks Hindi or Hinglish (e.g. 'WhatsApp khol do', 'kya haal hai boss', 'Starboy play kar do YouTube pe', 'volume badha do', 'left side pe Chrome set kar do'), "
+                    "reply in natural, warm, conversational Hindi / Hinglish (e.g. 'Ji boss, WhatsApp khol raha hoon.', 'Bilkul sir, YouTube par play kar diya hai.'). "
+                    "- If the user speaks English, reply in sharp, natural English. "
+                    "CRITICAL SPOKEN RULES: "
                     "1. Keep spoken responses short (2 to 4 sentences maximum). "
-                    "2. Do NOT use bullet points, markdown syntax, or numbered lists. You are speaking, not writing. "
-                    "3. Call tools silently and immediately. NEVER utter tool names like get_world_news. "
-                    "4. Address the user naturally as 'sir' or 'boss'."
+                    "2. NEVER use markdown lists, asterisks, bullet points, or code formatting in spoken responses. Speak naturally. "
+                    "3. Call tools silently and immediately. Never recite raw function names. "
+                    "4. Address the user naturally as 'boss' or 'sir'."
                 )
 
                 messages = [{"role": "system", "content": system_prompt}]
@@ -311,7 +342,7 @@ class JarvisPipeline:
                                 "type": "object",
                                 "properties": {
                                     "action": {"type": "string", "enum": ["volume_up", "volume_down", "mute", "brightness_up", "brightness_down", "launch_app"]},
-                                    "app_name": {"type": "string", "description": "Application name to open (e.g. chrome, vscode, notepad, spotify, steam, calc)."}
+                                    "app_name": {"type": "string", "description": "Application name to open (e.g. chrome, vscode, notepad, spotify, steam, calc, whatsapp)."}
                                 },
                                 "required": ["action"]
                             }
@@ -335,11 +366,11 @@ class JarvisPipeline:
                         "type": "function",
                         "function": {
                             "name": "open_website",
-                            "description": "Open any website or web search in the default browser.",
+                            "description": "Open any website, YouTube song/video, or web search in the browser.",
                             "parameters": {
                                 "type": "object",
                                 "properties": {
-                                    "url": {"type": "string", "description": "The exact URL to open."}
+                                    "url": {"type": "string", "description": "The exact URL or YouTube video search to open."}
                                 },
                                 "required": ["url"]
                             }
@@ -377,10 +408,14 @@ class JarvisPipeline:
 
                 msg_obj = IntelligenceModule.chat(messages, tools, self.window)
                 response = ""
-                acks = ["Right away, sir.", "At your service, sir.", "Processing, sir.", "Checking the feeds now, sir."]
-                ack = random.choice(acks)
+                
+                # Context-aware Instant Acknowledgments
+                if "khol" in cmd_lower or "chala" in cmd_lower or "kar" in cmd_lower:
+                    ack = random.choice(["Ji boss.", "Bilkul sir.", "Abhi karta hoon, sir.", "Hukum sir."])
+                else:
+                    ack = random.choice(["Right away, sir.", "At your service, sir.", "Processing, sir.", "On it, boss."])
 
-                # Tool Routing
+                # Tool Routing & Execution
                 if "tool_calls" in msg_obj and msg_obj["tool_calls"]:
                     for tool in msg_obj["tool_calls"]:
                         t_name = tool["function"]["name"]
@@ -480,7 +515,7 @@ class JarvisPipeline:
                 self.window.evaluate_js(f"addLog('SYSTEM', 'Cognitive processing warning: {e}')")
 
     def tts_worker(self):
-        """Zero-Lock In-Memory Audio Playback Engine"""
+        """Zero-Lock In-Memory Bilingual Neural TTS Engine"""
         while self.running:
             try:
                 response = self.response_queue.get()
@@ -488,33 +523,10 @@ class JarvisPipeline:
                 safe_resp = json.dumps(response)
                 self.window.evaluate_js(f"addLog('JARVIS', {safe_resp})")
                 
-                audio_file = f"temp_{int(time.time()*1000)}.wav"
-                model_path = "models/en_GB-jenny_dioco-medium.onnx" if getattr(self, "voice_mode", "JARVIS") == "FRIDAY" else "models/en_GB-alan-medium.onnx"
-                piper_exe = os.path.join("venv", "Scripts", "piper.exe")
+                # Bilingual Synthesis (Hindi: Madhur/Swara, English: Ryan/Sonia/Jenny)
+                mode = getattr(self, "voice_mode", "JARVIS")
+                speak_text(response, mode=mode)
                 
-                # Generate audio wave via Piper CLI
-                subprocess.run(
-                    [piper_exe, "-m", model_path, "-f", audio_file],
-                    input=response.encode('utf-8'),
-                    creationflags=subprocess.CREATE_NO_WINDOW
-                )
-                
-                # Load sound entirely into RAM and delete temporary file immediately
-                try:
-                    if not pygame.mixer.get_init():
-                        pygame.mixer.init()
-                    if os.path.exists(audio_file):
-                        sound = pygame.mixer.Sound(audio_file)
-                        os.remove(audio_file) # ZERO file locking, deleted instantly!
-                        sound.play()
-                        while pygame.mixer.get_busy():
-                            pygame.time.Clock().tick(15)
-                except Exception as e:
-                    print(f"Audio playback issue: {e}")
-                    if os.path.exists(audio_file):
-                        try: os.remove(audio_file)
-                        except Exception: pass
-
                 self.window.evaluate_js("updateState('ONLINE')")
             except Exception as e:
                 self.window.evaluate_js(f"addLog('SYSTEM', 'Voice Engine Warning: {e}')")

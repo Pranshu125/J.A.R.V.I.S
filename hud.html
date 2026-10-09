@@ -150,11 +150,27 @@
 
         .arc-reactor {
             position: relative;
-            width: 300px;
-            height: 300px;
+            width: 320px;
+            height: 320px;
             display: flex;
             align-items: center;
             justify-content: center;
+            cursor: grab;
+        }
+        .arc-reactor:active { cursor: grabbing; }
+        #orb-canvas {
+            width: 320px;
+            height: 320px;
+            border-radius: 50%;
+            display: block;
+        }
+        .radar-ring {
+            position: absolute;
+            inset: -10px;
+            border-radius: 50%;
+            border: 1px dashed var(--panel-border);
+            pointer-events: none;
+            animation: spin 35s linear infinite;
         }
 
         .ring {
@@ -242,6 +258,7 @@
         .send-btn:hover { box-shadow: 0 0 15px var(--theme-color); transform: scale(1.05); }
 
     </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
@@ -340,16 +357,9 @@
 
         <!-- CENTER PANEL -->
         <div class="center-panel">
-            <div class="arc-reactor">
-                <div class="ring ring-1"></div>
-                <div class="ring ring-2"></div>
-                <div class="ring ring-3"></div>
-                <div class="core">
-                    <div class="waveform" id="waveform">
-                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                    </div>
-                </div>
+            <div class="arc-reactor" id="orb-mount">
+                <canvas id="orb-canvas" width="320" height="320"></canvas>
+                <div class="radar-ring"></div>
             </div>
 
             <div class="center-title title-text">J.A.R.V.I.S</div>
@@ -358,9 +368,10 @@
                 <div class="dot"></div> <span id="state-text">Listening for wake word...</span>
             </div>
 
-                        <div style="display:flex; gap:15px;">
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
                 <button class="friday-btn" style="background:#00334a; border-color:#00ffff; color:#00ffff; box-shadow:0 0 15px rgba(0,255,255,0.2);" onclick="triggerJarvis()">J.A.R.V.I.S.</button>
                 <button class="friday-btn" onclick="triggerFriday()">F.R.I.D.A.Y.</button>
+                <button class="friday-btn" style="background:#4a2c00; border-color:#ff7700; color:#ff7700; box-shadow:0 0 15px rgba(255,119,0,0.2);" onclick="triggerZoey()">Z.O.E.Y.</button>
             </div>
 
             <div class="controls">
@@ -421,6 +432,8 @@
             const bars = document.querySelectorAll('.bar');
             const dot = pill.querySelector('.dot');
             
+            orbSpeed = (state === 'THINKING') ? 0.025 : (state === 'SPEAKING') ? 0.015 : 0.008;
+            orbPulse = (state === 'SPEAKING') ? 2.5 : (state === 'THINKING') ? 1.8 : 1.0;
             if (state === 'LISTENING') {
                 text.innerText = 'Listening for wake word...';
                 dot.style.background = 'var(--theme-color)';
@@ -518,6 +531,141 @@
         });
 
         // Mode Switching
+        
+        // --- 3D HOLOGRAPHIC PARTICLE ORB (ZOEY & IRIS STYLE) ---
+        let orbScene, orbCamera, orbRenderer, particleMesh, orbMaterial;
+        let basePositions = [];
+        let orbSpeed = 0.008;
+        let orbPulse = 1.0;
+        let orbColor = 0x00ffff;
+        let isDragging = false;
+        let prevMousePos = { x: 0, y: 0 };
+
+        function initThreeOrb() {
+            const canvas = document.getElementById('orb-canvas');
+            if (!canvas || typeof THREE === 'undefined') return;
+
+            orbScene = new THREE.Scene();
+            orbCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+            orbCamera.position.z = 180;
+
+            orbRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            orbRenderer.setSize(320, 320);
+            orbRenderer.setPixelRatio(window.devicePixelRatio || 1);
+
+            // Create 1,200 particle nodes distributed uniformly on a sphere
+            const particleCount = 1200;
+            const radius = 62;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            basePositions = [];
+
+            for (let i = 0; i < particleCount; i++) {
+                // Fibonacci sphere distribution for uniform organic spacing
+                const phi = Math.acos(-1 + (2 * i) / particleCount);
+                const theta = Math.sqrt(particleCount * Math.PI) * phi;
+
+                const x = radius * Math.cos(theta) * Math.sin(phi);
+                const y = radius * Math.sin(theta) * Math.sin(phi);
+                const z = radius * Math.cos(phi);
+
+                positions[i * 3] = x;
+                positions[i * 3 + 1] = y;
+                positions[i * 3 + 2] = z;
+
+                basePositions.push({ x, y, z, phi, theta });
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            // Custom glowing particle canvas texture
+            const pCanvas = document.createElement('canvas');
+            pCanvas.width = 16;
+            pCanvas.height = 16;
+            const pCtx = pCanvas.getContext('2d');
+            const gradient = pCtx.createRadialGradient(8, 8, 0, 8, 8, 8);
+            gradient.addColorStop(0, 'rgba(255,255,255,1)');
+            gradient.addColorStop(0.3, 'rgba(255,255,255,0.8)');
+            gradient.addColorStop(0.8, 'rgba(0,255,255,0.2)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0)');
+            pCtx.fillStyle = gradient;
+            pCtx.fillRect(0, 0, 16, 16);
+
+            const pTexture = new THREE.CanvasTexture(pCanvas);
+
+            orbMaterial = new THREE.PointsMaterial({
+                color: orbColor,
+                size: 3.2,
+                map: pTexture,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            particleMesh = new THREE.Points(geometry, orbMaterial);
+            orbScene.add(particleMesh);
+
+            // Interactive 3D mouse drag rotation
+            canvas.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                prevMousePos = { x: e.clientX, y: e.clientY };
+            });
+            window.addEventListener('mouseup', () => { isDragging = false; });
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging || !particleMesh) return;
+                const dx = e.clientX - prevMousePos.x;
+                const dy = e.clientY - prevMousePos.y;
+                particleMesh.rotation.y += dx * 0.01;
+                particleMesh.rotation.x += dy * 0.01;
+                prevMousePos = { x: e.clientX, y: e.clientY };
+            });
+
+            // Animation Loop
+            let clock = new THREE.Clock();
+            function animateOrb() {
+                requestAnimationFrame(animateOrb);
+                const time = clock.getElapsedTime();
+
+                if (particleMesh) {
+                    if (!isDragging) {
+                        particleMesh.rotation.y += orbSpeed;
+                        particleMesh.rotation.x += orbSpeed * 0.5;
+                    }
+
+                    // Audio & state ripple deformation
+                    const posAttr = particleMesh.geometry.attributes.position;
+                    const posArray = posAttr.array;
+
+                    for (let i = 0; i < basePositions.length; i++) {
+                        const bp = basePositions[i];
+                        // Harmonic surface undulation
+                        const wave = Math.sin(bp.phi * 4 + time * 3) * Math.cos(bp.theta * 3 + time * 2) * (3.5 * orbPulse);
+                        const rScale = 1 + wave / 62;
+
+                        posArray[i * 3] = bp.x * rScale;
+                        posArray[i * 3 + 1] = bp.y * rScale;
+                        posArray[i * 3 + 2] = bp.z * rScale;
+                    }
+                    posAttr.needsUpdate = true;
+                }
+
+                orbRenderer.render(orbScene, orbCamera);
+            }
+            animateOrb();
+        }
+
+        window.addEventListener('DOMContentLoaded', initThreeOrb);
+
+        function setOrbColor(hex) {
+            orbColor = hex;
+            if (orbMaterial) orbMaterial.color.setHex(hex);
+        }
+
+        function triggerZoey() {
+            if (typeof pywebview !== 'undefined') pywebview.api.send_command("switch to zoey");
+            else switchMode('ZOEY');
+        }
+
         function switchMode(mode) {
             const titles = document.querySelectorAll('.title-text');
             const root = document.documentElement;
@@ -526,12 +674,17 @@
                 root.style.setProperty('--theme-color', '#ff0033');
                 root.style.setProperty('--panel-border', 'rgba(255, 0, 51, 0.2)');
                 titles.forEach(t => t.innerText = 'F.R.I.D.A.Y');
-                document.querySelector('.core').style.background = 'radial-gradient(circle, rgba(255,0,51,0.2) 0%, rgba(0,0,0,0.8) 100%)';
+                setOrbColor(0xff0033);
+            } else if (mode === 'ZOEY') {
+                root.style.setProperty('--theme-color', '#ff7700');
+                root.style.setProperty('--panel-border', 'rgba(255, 119, 0, 0.2)');
+                titles.forEach(t => t.innerText = 'Z.O.E.Y');
+                setOrbColor(0xff7700);
             } else {
                 root.style.setProperty('--theme-color', '#00ffff');
                 root.style.setProperty('--panel-border', 'rgba(0, 255, 255, 0.15)');
                 titles.forEach(t => t.innerText = 'J.A.R.V.I.S');
-                document.querySelector('.core').style.background = 'radial-gradient(circle, rgba(0,255,255,0.2) 0%, rgba(0,0,0,0.8) 100%)';
+                setOrbColor(0x00ffff);
             }
         }
         
