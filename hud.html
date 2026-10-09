@@ -2,314 +2,511 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>J.A.R.V.I.S - MARK XXXIX CLONE</title>
+    <title>J.A.R.V.I.S - MARK XL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --theme-color: #0ff;
+            --theme-color: #00ffff; /* Cyan for JARVIS */
+            --bg-color: #05080c;
+            --panel-bg: #0c1219;
+            --panel-border: rgba(0, 255, 255, 0.15);
+            --text-main: #e0e0e0;
+            --text-muted: #7a8b99;
         }
-        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Rajdhani', sans-serif; }
         
-        :root {
-            --cyan: #00ffff;
-            --dark-cyan: #003333;
-            --bg: #010a0f;
-            --red: #ff3333;
-            --orange: #ff9900;
-        }
-
-        body, html {
-            margin: 0; padding: 0; width: 100vw; height: 100vh;
-            background-color: var(--bg);
-            color: var(--cyan);
-            font-family: 'Share Tech Mono', monospace;
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
             overflow: hidden;
-            display: grid;
-            grid-template-columns: 280px 1fr 320px;
-            grid-template-rows: 50px 1fr;
+            display: flex;
+            flex-direction: column;
+            user-select: none;
         }
 
-        /* Top Bar */
+        /* Top Navigation Bar */
         .top-bar {
-            grid-column: 1 / 4;
-            grid-row: 1;
+            height: 60px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 0 20px;
-            border-bottom: 1px solid var(--dark-cyan);
-            background: linear-gradient(90deg, rgba(0,255,255,0.05) 0%, transparent 100%);
+            border-bottom: 1px solid var(--panel-border);
+            background: var(--panel-bg);
+            -webkit-app-region: drag; /* Allows window dragging */
         }
-        .top-bar h1 { font-size: 18px; letter-spacing: 2px; margin: 0; }
-        .clock { font-size: 20px; text-align: right; }
-        .clock-date { font-size: 10px; color: #888; }
 
-        /* Left Panel - Sys Monitor */
-        .left-panel {
-            grid-column: 1;
-            grid-row: 2;
-            border-right: 1px solid var(--dark-cyan);
-            padding: 15px;
+        .top-left, .top-center, .top-right {
             display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        .panel-header {
-            font-size: 12px;
-            letter-spacing: 2px;
-            border-bottom: 1px solid var(--cyan);
-            padding-bottom: 5px;
-            margin-bottom: 10px;
-        }
-        .stat-box { font-size: 12px; }
-        .stat-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
-        .progress-bg { width: 100%; height: 4px; background: #111; border: 1px solid var(--dark-cyan); }
-        .progress-fill { height: 100%; background: var(--cyan); transition: width 0.3s; }
-        .progress-fill.danger { background: var(--red); }
-        .progress-fill.warn { background: var(--orange); }
-
-        /* Center - Radar HUD */
-        .center-panel {
-            grid-column: 2;
-            grid-row: 2;
-            position: relative;
-            display: flex;
-            justify-content: center;
             align-items: center;
-            background: radial-gradient(circle at center, rgba(0,50,50,0.1) 0%, transparent 70%);
-        }
-        .radar-ring {
-            position: absolute;
-            border: 1px solid rgba(0, 255, 255, 0.15);
-            border-radius: 50%;
-        }
-        .ring-1 { width: 300px; height: 300px; border-top: 2px solid var(--cyan); animation: spin 4s linear infinite; }
-        .ring-2 { width: 450px; height: 450px; border-right: 2px solid var(--cyan); border-left: 2px solid var(--cyan); animation: spin-reverse 8s linear infinite; }
-        .ring-3 { width: 600px; height: 600px; border: 1px dashed rgba(0, 255, 255, 0.3); }
-        
-        .core-status {
-            position: absolute;
-            bottom: 30px;
-            text-align: center;
-            width: 100%;
-            font-size: 14px;
-            letter-spacing: 4px;
-            animation: pulse 2s infinite;
+            gap: 15px;
         }
 
-        /* Right Panel - Activity Log */
-        .right-panel {
-            grid-column: 3;
-            grid-row: 2;
-            border-left: 1px solid var(--dark-cyan);
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
+        .sys-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--theme-color);
+            letter-spacing: 2px;
         }
-        .activity-log {
-            flex-grow: 1;
-            overflow-y: auto;
-            border: 1px solid var(--dark-cyan);
-            background: rgba(0, 10, 15, 0.5);
-            padding: 10px;
+
+        .status-badge {
+            background: rgba(0, 255, 0, 0.1);
+            color: #00ff00;
+            padding: 4px 12px;
+            border-radius: 20px;
             font-size: 12px;
-            line-height: 1.5;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid rgba(0,255,0,0.3);
+        }
+        .status-badge .dot { width: 6px; height: 6px; background: #00ff00; border-radius: 50%; box-shadow: 0 0 5px #00ff00;}
+
+        .top-center-box {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 6px 15px;
+            font-size: 14px;
+            color: var(--text-muted);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .top-center-box span { color: var(--text-main); font-weight: 600;}
+
+        .window-controls button {
+            background: transparent; border: none; color: var(--theme-color);
+            font-size: 18px; cursor: pointer; font-weight: bold; width: 30px; height: 30px;
+            border-radius: 5px; transition: 0.2s; -webkit-app-region: no-drag;
+        }
+        .window-controls button:hover { background: rgba(0,255,255,0.1); }
+
+        /* Main Grid Layout */
+        .main-container {
+            display: grid;
+            grid-template-columns: 320px 1fr 380px;
+            gap: 20px;
+            padding: 20px;
+            flex-grow: 1;
+            height: calc(100vh - 60px);
+        }
+
+        /* Generic Widget Panel */
+        .widget {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 15px;
             margin-bottom: 15px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
-        .log-entry.user { color: #fff; }
-        .log-entry.jarvis { color: var(--cyan); }
-        .log-entry.system { color: #888; }
-        
-        /* Input & Controls */
-        .command-input {
-            width: 100%;
-            background: transparent;
-            border: 1px solid var(--dark-cyan);
-            color: var(--cyan);
-            padding: 10px;
-            font-family: 'Share Tech Mono', monospace;
-            box-sizing: border-box;
-            margin-bottom: 10px;
-        }
-        .command-input:focus { outline: none; border-color: var(--cyan); }
-        
-        .mic-btn {
-            width: 100%;
-            background: rgba(0, 50, 50, 0.3);
-            border: 1px solid var(--cyan);
-            color: var(--cyan);
-            padding: 12px;
-            font-family: 'Share Tech Mono', monospace;
-            cursor: pointer;
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--theme-color);
+            margin-bottom: 15px;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            transition: all 0.2s;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 8px;
         }
-        .mic-btn.active {
-            background: var(--cyan);
-            color: #000;
-            box-shadow: 0 0 15px var(--cyan);
+
+        /* Left Panel - System Stats */
+        .left-panel { overflow-y: auto; }
+        .left-panel::-webkit-scrollbar { display: none; }
+
+        .stat-row { margin-bottom: 12px; }
+        .stat-labels { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: var(--text-muted); }
+        .stat-bar-bg { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+        .stat-bar-fill { height: 100%; background: var(--theme-color); width: 0%; transition: width 0.5s ease; box-shadow: 0 0 10px var(--theme-color); }
+        
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; text-align: center; }
+        .stat-grid div { background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; }
+        .stat-grid span { display: block; font-size: 11px; color: var(--text-muted); }
+        .stat-grid strong { font-size: 14px; color: var(--theme-color); }
+
+        /* Weather Widget */
+        .weather-main { display: flex; justify-content: space-between; align-items: center; }
+        .temp { font-size: 36px; font-weight: 700; color: var(--text-main); }
+        .weather-loc { font-size: 12px; color: var(--text-muted); }
+        .weather-desc { font-size: 11px; color: var(--theme-color); }
+        
+        /* Center Panel - Arc Reactor */
+        .center-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
         }
+
+        .arc-reactor {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top-color: var(--theme-color);
+            border-bottom-color: var(--theme-color);
+            box-shadow: 0 0 15px rgba(0,255,255,0.1), inset 0 0 15px rgba(0,255,255,0.1);
+            animation: spin linear infinite;
+        }
+        .ring-1 { width: 100%; height: 100%; animation-duration: 10s; }
+        .ring-2 { width: 80%; height: 80%; animation-duration: 7s; animation-direction: reverse; border-width: 4px; opacity: 0.5; }
+        .ring-3 { width: 60%; height: 60%; animation-duration: 4s; border-left-color: var(--theme-color); border-right-color: var(--theme-color); }
+        .core {
+            width: 45%; height: 45%;
+            background: radial-gradient(circle, rgba(0,255,255,0.2) 0%, rgba(0,0,0,0.8) 100%);
+            border-radius: 50%;
+            border: 2px solid var(--theme-color);
+            box-shadow: 0 0 30px var(--theme-color);
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .waveform { display: flex; gap: 4px; height: 30px; align-items: center; }
+        .bar { width: 4px; background: var(--theme-color); border-radius: 2px; height: 10%; transition: height 0.1s ease; }
 
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        @keyframes spin-reverse { 100% { transform: rotate(-360deg); } }
-        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; text-shadow: 0 0 10px var(--cyan); } }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--dark-cyan); }
-            .window-controls {
-            position: absolute;
-            top: 0;
-            right: 0;
+        .center-title { font-size: 28px; font-weight: 700; color: var(--text-main); margin-top: 40px; letter-spacing: 4px; text-shadow: 0 0 10px rgba(255,255,255,0.3);}
+        
+        .state-pill {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--panel-border);
+            padding: 8px 20px;
+            border-radius: 20px;
+            margin-top: 15px;
+            font-size: 13px;
             display: flex;
-            gap: 10px;
-            padding: 10px 20px;
-            z-index: 9999;
-            -webkit-app-region: no-drag;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
         }
-        .window-controls button {
-            background: transparent;
-            border: none;
-            color: var(--theme-color);
-            font-size: 18px;
+        .state-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--theme-color); box-shadow: 0 0 8px var(--theme-color); }
+
+        .friday-btn {
+            margin-top: 30px;
+            background: #4a0000;
+            border: 1px solid #ff0033;
+            color: #ff0033;
+            padding: 8px 30px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
             cursor: pointer;
-            outline: none;
-            font-family: monospace;
-            opacity: 0.7;
+            letter-spacing: 2px;
+            transition: 0.3s;
+            box-shadow: 0 0 15px rgba(255,0,51,0.2);
         }
-        .window-controls button:hover {
-            opacity: 1;
-            text-shadow: 0 0 8px var(--theme-color);
-        }</style>
+        .friday-btn:hover { background: #ff0033; color: white; box-shadow: 0 0 25px #ff0033; }
+        
+        .controls { margin-top: 20px; display: flex; gap: 15px; }
+        .icon-btn { width: 45px; height: 45px; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--theme-color); font-size: 18px; transition: 0.2s;}
+        .icon-btn:hover { background: var(--theme-color); color: #000; box-shadow: 0 0 15px var(--theme-color); }
+
+        /* Right Panel - Conversation */
+        .right-panel { display: flex; flex-direction: column; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 12px; overflow: hidden; }
+        .chat-header { padding: 15px; border-bottom: 1px solid var(--panel-border); display: flex; justify-content: space-between; align-items: center; font-weight: 600; color: var(--text-main); }
+        .chat-actions button { background: rgba(0,255,255,0.1); border: 1px solid var(--theme-color); color: var(--theme-color); padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+        
+        .chat-box { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .chat-box::-webkit-scrollbar { width: 6px; }
+        .chat-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+        .msg { max-width: 85%; padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.4; position: relative;}
+        .msg.jarvis { align-self: flex-start; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-top-left-radius: 2px; color: var(--text-main); }
+        .msg.user { align-self: flex-end; background: rgba(0,255,255,0.05); border: 1px solid var(--theme-color); border-top-right-radius: 2px; color: var(--theme-color); box-shadow: 0 4px 15px rgba(0,255,255,0.05);}
+        .msg.system { align-self: center; background: transparent; color: var(--text-muted); font-size: 12px; font-style: italic; border: none; text-align: center; width: 100%;}
+        
+        .time-stamp { display: block; font-size: 10px; opacity: 0.5; margin-top: 6px; text-align: right; }
+
+        .chat-input { padding: 15px; border-top: 1px solid var(--panel-border); display: flex; gap: 10px; background: rgba(0,0,0,0.2); }
+        .chat-input input { flex-grow: 1; background: transparent; border: 1px solid var(--panel-border); padding: 10px 15px; border-radius: 8px; color: white; outline: none; font-size: 14px; }
+        .chat-input input:focus { border-color: var(--theme-color); box-shadow: 0 0 10px rgba(0,255,255,0.1); }
+        .send-btn { background: var(--theme-color); color: #000; border: none; padding: 0 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .send-btn:hover { box-shadow: 0 0 15px var(--theme-color); transform: scale(1.05); }
+
+    </style>
 </head>
 <body>
-    <div class="top-bar" style="display:flex; justify-content:space-between; align-items:center;">
-        <h1 class="title">J.A.R.V.I.S - MARK XXXIX</h1>
-        <div style="display:flex; align-items:center;">            <div class="clock" id="clock">00:00:00</div>
-                        <div class="clock-date" id="date">JAN 01 2026</div>
-            <button onclick="pywebview.api.toggle_fullscreen()" style="background:transparent; border:none; color:var(--theme-color); font-size:22px; cursor:pointer; font-weight:bold; margin-left:15px;" title="Toggle Fullscreen">☐</button>
+
+    <!-- TOP BAR -->
+    <div class="top-bar">
+        <div class="top-left">
+            <div class="sys-title title-text">J.A.R.V.I.S</div>
+            <div class="status-badge"><div class="dot"></div> Online</div>
+        </div>
+        <div class="top-center">
+            <div class="top-center-box">
+                <span id="net-speed">0.00 MB/s</span> | 📶 🔊
+            </div>
+            <div class="top-center-box">
+                <div class="clock" id="clock">00:00:00</div> | <div id="date">JAN 01 2026</div>
+            </div>
+        </div>
+        <div class="top-right">
+            <div class="top-center-box" style="gap:5px;">
+                <span>25.2°C</span> <span style="font-size:11px; color:var(--text-muted)">Quezon City</span>
+            </div>
+            <div class="window-controls" style="-webkit-app-region: no-drag;">
+                <button onclick="pywebview.api.minimize()" title="Minimize">—</button>
+                <button onclick="pywebview.api.toggle_fullscreen()" title="Toggle Fullscreen">☐</button>
+                <button onclick="pywebview.api.destroy()" title="Close">X</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="main-container">
+        
+        <!-- LEFT PANEL -->
+        <div class="left-panel">
+            <div class="widget">
+                <div class="widget-header"><span>System Stats</span> ⟳</div>
+                
+                <div class="stat-row">
+                    <div class="stat-labels"><span>CPU Usage</span><span id="cpu-val">0%</span></div>
+                    <div class="stat-bar-bg"><div class="stat-bar-fill" id="cpu-bar"></div></div>
+                </div>
+                <div class="stat-row">
+                    <div class="stat-labels"><span>RAM Usage</span><span id="ram-val">0 GB</span></div>
+                    <div class="stat-bar-bg"><div class="stat-bar-fill" id="ram-bar"></div></div>
+                </div>
+
+                <div class="stat-grid">
+                    <div><span>CPU</span><strong id="cpu-sm">8%</strong></div>
+                    <div><span>Memory</span><strong id="ram-sm">44%</strong></div>
+                    <div><span>Disk</span><strong>439/475 GB</strong></div>
+                </div>
+            </div>
+
+            <div class="widget">
+                <div class="widget-header"><span>Weather</span> ⟳</div>
+                <div class="weather-main">
+                    <div>
+                        <div class="temp">25.2°C</div>
+                        <div class="weather-loc">Quezon City, PH</div>
+                        <div class="weather-desc">overcast clouds</div>
                     </div>
-    </div>
-    <div class="left-panel">
-        <div class="panel-header">SYS MONITOR</div>
-        
-        <div class="stat-box">
-            <div class="stat-header"><span>CPU</span><span id="cpu-val">0%</span></div>
-            <div class="progress-bg"><div class="progress-fill" id="cpu-bar" style="width: 0%;"></div></div>
-        </div>
-        
-        <div class="stat-box">
-            <div class="stat-header"><span>MEM</span><span id="ram-val">0%</span></div>
-            <div class="progress-bg"><div class="progress-fill" id="ram-bar" style="width: 0%;"></div></div>
-        </div>
-        
-        <div style="margin-top: auto;">
-            <div class="panel-header">AI CORE</div>
-            <div style="color: var(--cyan); font-size: 14px; text-align: center; border: 1px solid var(--cyan); padding: 5px;">ACTIVE</div>
-        </div>
-    </div>
+                    <div style="font-size:40px;">☁️</div>
+                </div>
+                <div class="stat-grid" style="margin-top:15px; border-top:1px solid var(--panel-border); padding-top:10px;">
+                    <div><span>Humidity</span><strong>94%</strong></div>
+                    <div><span>Wind</span><strong>5.8 m/s</strong></div>
+                    <div><span>Feels Like</span><strong>26.3°C</strong></div>
+                </div>
+            </div>
 
-    <div class="center-panel">
-        <div class="radar-ring ring-3"></div>
-        <div class="radar-ring ring-2"></div>
-        <div class="radar-ring ring-1"></div>
-        
-        <div class="core-status" id="core-status">STANDBY</div>
-    </div>
-
-    <div class="right-panel">
-        <div class="panel-header">ACTIVITY LOG</div>
-        <div class="activity-log" id="log-container">
-            <div class="log-entry system">[SYSTEM] J.A.R.V.I.S. Core Initialized.</div>
+            <div class="widget">
+                <div class="widget-header"><span>Camera</span> ⏻</div>
+                <div style="height: 120px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted);">
+                    <span style="font-size:24px; margin-bottom:10px; color:var(--theme-color);">📷</span>
+                    <span style="font-size:12px;">Camera Off</span>
+                </div>
+                <div style="font-size:10px; text-align:center; margin-top:10px; color:var(--text-muted);">Camera is inactive. Click the power button to start.</div>
+            </div>
+            
+            <div class="widget">
+                <div class="widget-header"><span>System Uptime</span> <span>00:07:19</span></div>
+                <div class="stat-labels" style="margin-bottom:15px;"><span>System Running For:</span><span style="color:var(--text-main); font-weight:bold;">00:07:19</span></div>
+                <div class="stat-grid" style="margin-top:0; margin-bottom:15px;">
+                    <div><span>Session</span><strong>1</strong></div>
+                    <div><span>Commands</span><strong>0</strong></div>
+                </div>
+                <div class="stat-row" style="margin-bottom:0;">
+                    <div class="stat-labels"><span>System Load</span></div>
+                    <div class="stat-bar-bg"><div class="stat-bar-fill" style="width:26%; background:orange; box-shadow:none;"></div></div>
+                    <div class="stat-labels" style="margin-top:4px;"><span style="color:orange;">Moderate</span><span>26%</span></div>
+                </div>
+            </div>
         </div>
-        
-        <div class="panel-header">COMMAND INPUT</div>
-        <input type="text" class="command-input" placeholder="Type a command..." id="cmd-input">
-        <button class="mic-btn active" id="mic-btn">MICROPHONE ACTIVE</button>
+
+        <!-- CENTER PANEL -->
+        <div class="center-panel">
+            <div class="arc-reactor">
+                <div class="ring ring-1"></div>
+                <div class="ring ring-2"></div>
+                <div class="ring ring-3"></div>
+                <div class="core">
+                    <div class="waveform" id="waveform">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="center-title title-text">J.A.R.V.I.S</div>
+            
+            <div class="state-pill" id="state-pill">
+                <div class="dot"></div> <span id="state-text">Listening for wake word...</span>
+            </div>
+
+            <button class="friday-btn" onclick="triggerFriday()">F.R.I.D.A.Y.</button>
+
+            <div class="controls">
+                <button class="icon-btn">📷</button>
+                <button class="icon-btn">🎙️</button>
+                <button class="icon-btn">⌨️</button>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div class="right-panel">
+            <div class="chat-header">
+                Conversation
+                <div class="chat-actions">
+                    <button onclick="document.getElementById('chat-box').innerHTML=''">🗑️ Clear</button>
+                    <button>⬇️ Extract</button>
+                </div>
+            </div>
+            
+            <div class="chat-box" id="chat-box">
+                <div class="msg jarvis">
+                    Hello, I am JARVIS. Core systems initialized and online. How can I assist you today, sir?
+                    <span class="time-stamp">Now</span>
+                </div>
+            </div>
+
+            <div class="chat-input">
+                <input type="text" id="cmd-input" placeholder="Type a message..." onkeypress="handleEnter(event)">
+                <button class="send-btn" onclick="sendCommand()">➤</button>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // Command Input Wiring
-        const cmdInput = document.getElementById('cmd-input');
-        cmdInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && this.value.trim() !== '') {
-                pywebview.api.send_command(this.value.trim());
-                this.value = '';
-            }
-        });
-
-                // Window controls & modes
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'F11') {
-                pywebview.api.toggle_fullscreen();
-                e.preventDefault();
-            }
-        });
-        function switchMode(mode) {
-            if (mode === 'FRIDAY') {
-                document.documentElement.style.setProperty('--theme-color', '#ff0033');
-                document.querySelector('.title').textContent = 'F.R.I.D.A.Y - MARK I';
-            } else {
-                document.documentElement.style.setProperty('--theme-color', '#0ff');
-                document.querySelector('.title').textContent = 'J.A.R.V.I.S - MARK XXXIX';
-            }
-        }
-        // Clock Update
+        // Real-time Clock
         setInterval(() => {
             const now = new Date();
-            document.getElementById('clock').innerText = now.toLocaleTimeString('en-GB');
-            document.getElementById('date').innerText = now.toDateString().toUpperCase();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', {hour12: true});
+            document.getElementById('date').innerText = now.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}).toUpperCase();
         }, 1000);
 
-        // API for Python Backend
-        function updateTelemetry(cpu, ram) {
+        // System Stats Updates from Python
+        function updateSystemStats(cpu, ram) {
+            document.getElementById('cpu-bar').style.width = cpu + '%';
             document.getElementById('cpu-val').innerText = cpu + '%';
-            const cpuBar = document.getElementById('cpu-bar');
-            cpuBar.style.width = cpu + '%';
-            cpuBar.className = 'progress-fill ' + (cpu > 80 ? 'danger' : (cpu > 50 ? 'warn' : ''));
-
-            document.getElementById('ram-val').innerText = ram + '%';
-            const ramBar = document.getElementById('ram-bar');
-            ramBar.style.width = ram + '%';
-            ramBar.className = 'progress-fill ' + (ram > 80 ? 'danger' : (ram > 50 ? 'warn' : ''));
-        }
-
-        function addLog(speaker, text) {
-            const container = document.getElementById('log-container');
-            const entry = document.createElement('div');
-            entry.className = 'log-entry ' + speaker.toLowerCase();
-            entry.innerText = `[${speaker}] ${text}`;
-            container.appendChild(entry);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function updateState(state) {
-            document.getElementById('core-status').innerText = state;
-            const micBtn = document.getElementById('mic-btn');
+            document.getElementById('cpu-sm').innerText = cpu + '%';
             
-            if(state === 'LISTENING') {
-                micBtn.innerText = 'MICROPHONE ACTIVE';
-                micBtn.classList.add('active');
+            document.getElementById('ram-bar').style.width = ram + '%';
+            document.getElementById('ram-val').innerText = ram + '%';
+            document.getElementById('ram-sm').innerText = ram + '%';
+        }
+
+        // State Manager
+        function updateState(state) {
+            const pill = document.getElementById('state-pill');
+            const text = document.getElementById('state-text');
+            const bars = document.querySelectorAll('.bar');
+            const dot = pill.querySelector('.dot');
+            
+            if (state === 'LISTENING') {
+                text.innerText = 'Listening for wake word...';
+                dot.style.background = 'var(--theme-color)';
+                dot.style.boxShadow = '0 0 8px var(--theme-color)';
+                bars.forEach(b => b.style.height = '10%');
+            } else if (state === 'THINKING') {
+                text.innerText = 'Processing command...';
+                dot.style.background = '#f39c12';
+                dot.style.boxShadow = '0 0 8px #f39c12';
+                bars.forEach(b => b.style.height = '30%');
+            } else if (state === 'SPEAKING') {
+                text.innerText = 'Transmitting audio...';
+                dot.style.background = '#00ff00';
+                dot.style.boxShadow = '0 0 8px #00ff00';
+                // Animate bars randomly for speaking effect
+                bars.forEach(b => b.style.height = Math.floor(Math.random() * 80 + 20) + '%');
             } else {
-                micBtn.innerText = state;
-                micBtn.classList.remove('active');
+                text.innerText = 'System Online.';
+                dot.style.background = 'var(--theme-color)';
+                dot.style.boxShadow = '0 0 8px var(--theme-color)';
+                bars.forEach(b => b.style.height = '10%');
+            }
+        }
+
+        setInterval(() => {
+            if (document.getElementById('state-text').innerText === 'Transmitting audio...') {
+                updateState('SPEAKING'); // re-trigger animation
+            }
+        }, 150);
+
+        // Chat Interface
+        function addLog(sender, message) {
+            const box = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+            if (sender === 'USER') {
+                div.className = 'msg user';
+                div.innerHTML = `${message} <span class="time-stamp">${time}</span>`;
+            } else if (sender === 'SYSTEM') {
+                div.className = 'msg system';
+                div.innerText = `— ${message} —`;
+            } else {
+                div.className = 'msg jarvis';
+                div.innerHTML = `${message} <span class="time-stamp">${time}</span>`;
+            }
+            
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        // Send Command to Python
+        function sendCommand() {
+            const input = document.getElementById('cmd-input');
+            const val = input.value.trim();
+            if (val && typeof pywebview !== 'undefined') {
+                pywebview.api.send_command(val);
+                input.value = '';
+            }
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') sendCommand();
+        }
+
+        // Mode Switching
+        function switchMode(mode) {
+            const titles = document.querySelectorAll('.title-text');
+            const root = document.documentElement;
+            
+            if (mode === 'FRIDAY') {
+                root.style.setProperty('--theme-color', '#ff0033');
+                root.style.setProperty('--panel-border', 'rgba(255, 0, 51, 0.2)');
+                titles.forEach(t => t.innerText = 'F.R.I.D.A.Y');
+                document.querySelector('.core').style.background = 'radial-gradient(circle, rgba(255,0,51,0.2) 0%, rgba(0,0,0,0.8) 100%)';
+            } else {
+                root.style.setProperty('--theme-color', '#00ffff');
+                root.style.setProperty('--panel-border', 'rgba(0, 255, 255, 0.15)');
+                titles.forEach(t => t.innerText = 'J.A.R.V.I.S');
+                document.querySelector('.core').style.background = 'radial-gradient(circle, rgba(0,255,255,0.2) 0%, rgba(0,0,0,0.8) 100%)';
             }
         }
         
-        // Disable parallax override for now in this clean UI
-        function updateParallaxFromVision(x, y) {}
-        function setGestureMode(mode) {}
+        function triggerFriday() {
+            if (typeof pywebview !== 'undefined') {
+                pywebview.api.send_command("switch to friday");
+            } else {
+                switchMode('FRIDAY'); // local test fallback
+            }
+        }
     </script>
 </body>
 </html>
-
-
-
-
-
-
