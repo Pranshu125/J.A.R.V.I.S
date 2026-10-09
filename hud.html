@@ -296,7 +296,7 @@
             </div>
 
             <div class="widget">
-                <div class="widget-header"><span>Weather</span> ⟳</div>
+                <div class="widget-header"><span>Weather</span> <span style="cursor:pointer;" onclick="pywebview.api.force_weather_update()">⟳</span></div>
                 <div class="weather-main">
                     <div>
                         <div class="temp">25.2°C</div>
@@ -314,6 +314,7 @@
 
             <div class="widget">
                 <div class="widget-header"><span>Camera</span> <span style="cursor:pointer;" onclick="toggleCamera()">⏻</span></div>
+                <select id="camera-select" style="background:rgba(0,0,0,0.5); color:var(--theme-color); border:1px solid var(--theme-color); border-radius:4px; margin-bottom:10px; display:none; width:100%; font-size:12px; padding:2px;" onchange="switchCamera()"></select>
                 <div id="cam-off" style="height: 120px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted);">
                     <span style="font-size:24px; margin-bottom:10px; color:var(--theme-color);">📷</span>
                     <span style="font-size:12px;">Camera Off</span>
@@ -523,19 +524,47 @@
         async function toggleCamera() {
             const vid = document.getElementById('cam-video');
             const offBox = document.getElementById('cam-off');
+            const select = document.getElementById('camera-select');
+            
             if (camStream) {
                 camStream.getTracks().forEach(t => t.stop());
                 camStream = null;
                 vid.style.display = 'none';
                 offBox.style.display = 'flex';
+                select.style.display = 'none';
             } else {
                 try {
+                    // Ask for initial permission
                     camStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    
+                    // Populate select box
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                    select.innerHTML = '';
+                    videoDevices.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.deviceId;
+                        opt.text = d.label || 'Camera ' + (select.length + 1);
+                        select.appendChild(opt);
+                    });
+                    
+                    if (videoDevices.length > 1) select.style.display = 'block';
+                    
                     vid.srcObject = camStream;
                     vid.style.display = 'block';
                     offBox.style.display = 'none';
-                } catch(e) { addLog('SYSTEM', 'Webcam access denied or unavailable.'); }
+                } catch(e) { addLog('SYSTEM', 'Webcam access denied. Check Windows Privacy Settings.'); }
             }
+        }
+
+        async function switchCamera() {
+            if (camStream) camStream.getTracks().forEach(t => t.stop());
+            const select = document.getElementById('camera-select');
+            const deviceId = select.value;
+            try {
+                camStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } } });
+                document.getElementById('cam-video').srcObject = camStream;
+            } catch(e) { addLog('SYSTEM', 'Failed to switch camera.'); }
         }
 
         // Live Microphone Visualizer
@@ -581,5 +610,6 @@
     </script>
 </body>
 </html>
+
 
 

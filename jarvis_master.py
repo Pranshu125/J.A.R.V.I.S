@@ -173,20 +173,24 @@ class JarvisPipeline:
         # Vision offloaded to JS (barehands architecture)
 
 
-    def telemetry_worker(self):
-        # Fetch initial weather & location
+    def fetch_weather(self):
         try:
-            loc = requests.get('https://ipapi.co/json/', timeout=3).json()
+            loc = requests.get('http://ip-api.com/json/', timeout=3).json()
             city = loc.get('city', 'Unknown')
-            lat, lon = loc.get('latitude'), loc.get('longitude')
+            lat, lon = loc.get('lat'), loc.get('lon')
             if lat and lon:
                 w_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code"
                 w_data = requests.get(w_url, timeout=3).json()['current']
                 t, h, w = w_data['temperature_2m'], w_data['relative_humidity_2m'], w_data['wind_speed_10m']
                 desc = "Clear" if w_data['weather_code'] < 3 else "Cloudy" if w_data['weather_code'] < 50 else "Rain"
                 self.window.evaluate_js(f"updateWeather('{t}°C', '{city}', '{desc}', '{h}%', '{w} km/h')")
+                self.window.evaluate_js(f"addLog('SYSTEM', 'Weather connected to satellite data.')")
         except Exception as e:
-            print(f"Weather error: {e}")
+            self.window.evaluate_js(f"addLog('SYSTEM', 'Weather error: {e}')")
+
+    def telemetry_worker(self):
+        # Fetch initial weather & location
+        self.fetch_weather()
 
         last_net = psutil.net_io_counters().bytes_recv + psutil.net_io_counters().bytes_sent
         while self.running:
@@ -353,6 +357,10 @@ class Api:
         
     def destroy(self):
         self.pipeline.window.destroy()
+        
+    def force_weather_update(self):
+        import threading
+        threading.Thread(target=self.pipeline.fetch_weather, daemon=True).start()
         os._exit(0)
 
 if __name__ == '__main__':
@@ -361,7 +369,7 @@ if __name__ == '__main__':
     window = webview.create_window('JARVIS Master', html_path, transparent=True, frameless=False, fullscreen=True, on_top=True)
     pipeline = JarvisPipeline(window)
     api = Api(pipeline)
-    window.expose(api.send_command, api.minimize, api.toggle_fullscreen, api.destroy)
+    window.expose(api.send_command, api.minimize, api.toggle_fullscreen, api.destroy, api.force_weather_update)
     
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
