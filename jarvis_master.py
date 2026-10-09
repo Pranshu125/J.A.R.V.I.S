@@ -57,7 +57,7 @@ class ToolModule:
             window.evaluate_js(f"addLog('SYSTEM', 'Web Search: {query}')")
             return True, f"I have pulled up the search results for {query}, sir."
             
-                elif "youtube" in cmd:
+        elif "youtube" in cmd:
             query = cmd.replace("play", "").replace("open", "").replace("on youtube", "").replace("youtube", "").strip()
             if query:
                 webbrowser.open(f"https://www.youtube.com/results?search_query={query}")
@@ -85,7 +85,7 @@ class ToolModule:
             return True, "Opening Calculator."
 
         # 4. Core System Hooks
-                elif "switch to friday" in cmd or "friday mode" in cmd:
+        elif "switch to friday" in cmd or "friday mode" in cmd:
             pipeline.voice_mode = 'FRIDAY'
             window.evaluate_js("switchMode('FRIDAY')")
             return True, "Switching to F.R.I.D.A.Y. mode, boss. All systems red."
@@ -342,6 +342,7 @@ if __name__ == '__main__':
     
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
+
 
 
 
