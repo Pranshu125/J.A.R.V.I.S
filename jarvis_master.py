@@ -186,9 +186,24 @@ class JarvisPipeline:
                     self.response_queue.put(tool_response)
                 else:
                     self.window.evaluate_js("updateState('THINKING')")
-                    prompt = "You are JARVIS. Respond concisely and wittily in a British tone. Never use emojis.\n"
+                    
+                    # INTELLIGENT WEB KNOWLEDGE ROUTING (Inspired by Sukeesh/Microsoft JARVIS)
+                    # If the user asks a factual question, scrape the web invisibly first!
+                    context_injection = ""
+                    if any(q in text.lower() for q in ["who is", "what is", "why did", "how to", "tell me about"]):
+                        try:
+                            from duckduckgo_search import DDGS
+                            self.window.evaluate_js(f"addLog('SYSTEM', 'Scanning internet databases...')")
+                            results = DDGS().text(text, max_results=1)
+                            if results:
+                                context_injection = f"\n[LATEST INTERNET DATA: {results[0]['body']}]\n"
+                        except: pass
+
+                    prompt = "You are JARVIS. Respond concisely and wittily in a British tone. Never use emojis. Use the internet data provided to answer accurately if applicable.\n"
                     for role, msg in self.history:
                         prompt += f"{role}: {msg}\n"
+                    
+                    prompt += context_injection
                     prompt += f"USER: {text}\nJARVIS:"
                     
                     response = IntelligenceModule.generate(prompt, self.window)
