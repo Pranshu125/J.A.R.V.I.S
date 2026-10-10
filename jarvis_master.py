@@ -52,7 +52,7 @@ from modules.system_control import (
     launch_application,
     split_workspace
 )
-from modules.tts_engine import speak_text, get_instant_ack
+from modules.tts_engine import speak_text, get_instant_ack, stop_speaking, TTS_ABORT_EVENT
 from modules.mark_lv_bridge import (
     UnifiedToolSuite,
     get_active_gemini_ladder,
@@ -100,7 +100,9 @@ class MemoryModule:
 class IntelligenceModule:
     """Hybrid Cognitive Engine: Cloud Gemini 3.8 Flash (29+ Native Tools) + Local Ollama Fallback"""
     @staticmethod
-    def chat(messages, tools, window):
+    def chat(messages, tools, window, abort_check=None):
+        if abort_check and abort_check():
+            return {"role": "assistant", "content": ""}
         api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         if api_key:
             try:
@@ -290,9 +292,13 @@ class IntelligenceModule:
                 user_prompt = messages[-1]["content"] if messages else "Hello"
 
                 for m_name in get_active_gemini_ladder():
+                    if abort_check and abort_check():
+                        return {"role": "assistant", "content": ""}
                     try:
                         model = genai.GenerativeModel(m_name, tools=gemini_tools, system_instruction=sys_inst)
                         res = model.generate_content(user_prompt)
+                        if abort_check and abort_check():
+                            return {"role": "assistant", "content": ""}
                         if res.candidates and res.candidates[0].content.parts:
                             parts = res.candidates[0].content.parts
                             tool_calls = []
@@ -324,6 +330,9 @@ class IntelligenceModule:
                 except Exception:
                     pass
 
+        if abort_check and abort_check():
+            return {"role": "assistant", "content": ""}
+
         # 2. Local Ollama Mode with low-latency configuration
         payload = {
             "model": OLLAMA_MODEL,
@@ -338,6 +347,8 @@ class IntelligenceModule:
         }
         try:
             response = requests.post(OLLAMA_URL, json=payload, timeout=90)
+            if abort_check and abort_check():
+                return {"role": "assistant", "content": ""}
             if response.status_code == 200:
                 return response.json().get("message", {})
             else:
@@ -360,6 +371,9 @@ class JarvisPipeline:
         self.is_fullscreen = True
         self.is_orb_only = False
         self.screen_vision_mode = False
+        self.abort_event = threading.Event()
+        self.active_cmd_id = 0
+        self.active_subprocess = None
         self.last_active = time.time()
         self.session_start = time.time()
         self.command_count = 0
@@ -370,6 +384,116 @@ class JarvisPipeline:
             self.stt_model = WhisperModel('base.en', device='cpu', compute_type='int8')
         except Exception as e:
             print(f"STT Model Load Warning: {e}")
+
+    @staticmethod
+    def is_kill_command(text: str, strict_barge_in: bool = False) -> bool:
+        """Return True if the user spoken/typed input is a kill, stop, abort, or cancel command."""
+        if not text:
+            return False
+        import re
+        raw_low = text.lower().strip()
+        # Strip punctuation and filler/wake words to inspect the core command
+        cleaned = re.sub(r"[^a-z0-9\s\u0900-\u097F]", " ", raw_low)
+        tokens = [
+            t for t in cleaned.split()
+            if t not in ("jarvis", "friday", "system", "please", "now", "sir", "boss", "ji", "yaar", "hey", "ok", "okay", "abhi", "jaldi")
+        ]
+        core = " ".join(tokens).strip()
+        if not core:
+            return False
+
+        exact_kill_words = {
+            "stop", "kill", "abort", "cancel", "halt", "terminate",
+            "silence", "quiet", "shut up", "enough", "wait",
+            "chup", "ruko", "ruk", "bas", "band", "roko",
+            "nevermind", "never mind", "forget it", "leave it",
+            "रुको", "बस", "चुप", "बंद", "बंद करो", "रुक जाओ"
+        }
+        if core in exact_kill_words:
+            return True
+
+        kill_phrases = (
+            "stop command", "kill command", "abort command", "cancel command",
+            "stop task", "kill task", "abort task", "cancel task",
+            "stop process", "kill process", "abort process", "terminate process",
+            "stop working", "stop talking", "stop speaking", "stop everything", "kill everything",
+            "stop it", "kill it", "abort it", "cancel it", "stop that", "kill that", "cancel that",
+            "abort mission", "emergency stop", "force stop", "force kill",
+            "ruk jao", "ruk ja", "band karo", "band kar do", "bas karo", "bas kar",
+            "chup raho", "chup ho jao", "kaam roko", "roko isko", "mat karo",
+            "cancel kar do", "rehne do", "chhod do", "stop kar do", "kill kar do"
+        )
+        if any(p in core or p in raw_low for p in kill_phrases):
+            return True
+
+        if not strict_barge_in and len(tokens) <= 3 and tokens[0] in ("stop", "kill", "abort", "cancel", "terminate", "ruko", "chup"):
+            return True
+
+        return False
+
+    def abort_current_command(self, spoken_text: str = ""):
+        """Pre-emptively kill any running command, tool execution, subprocess, and active TTS speech."""
+        self.active_cmd_id += 1
+        self.abort_event.set()
+        stop_speaking()
+
+        # Drain queued commands and queued TTS responses immediately
+        while not self.text_queue.empty():
+            try:
+                self.text_queue.get_nowait()
+                self.text_queue.task_done()
+            except Exception:
+                break
+        while not self.response_queue.empty():
+            try:
+                self.response_queue.get_nowait()
+                self.response_queue.task_done()
+            except Exception:
+                break
+
+        # Kill any active shell/PowerShell subprocess
+        proc = getattr(self, "active_subprocess", None)
+        if proc is not None:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+            self.active_subprocess = None
+
+        # Cancel Mark-XXXIX AgentExecutor if running
+        try:
+            if hasattr(self, "tool_suite") and getattr(self.tool_suite, "agent_executor", None):
+                ae = self.tool_suite.agent_executor
+                if hasattr(ae, "cancel"):
+                    ae.cancel()
+                elif hasattr(ae, "running"):
+                    ae.running = False
+        except Exception:
+            pass
+
+        try:
+            self.window.evaluate_js("updateState('ONLINE')")
+            self.window.evaluate_js("addLog('SYSTEM', '[ABORT ⊘] Active command & processes terminated.')")
+        except Exception:
+            pass
+
+        low = (spoken_text or "").lower()
+        silent_words = ("chup", "silence", "quiet", "shut up", "mute")
+        if not any(sw in low for sw in silent_words):
+            is_hi = any(hw in low for hw in ("ruk", "band", "bas", "roko", "mat", "rehne", "chhod"))
+            confirm_msg = "Ruk gaya, sir." if is_hi else "Stopped, sir."
+            mode = getattr(self, "voice_mode", "JARVIS")
+            def _speak_abort():
+                try:
+                    safe_c = json.dumps(confirm_msg)
+                    self.window.evaluate_js(f"addLog('JARVIS', {safe_c})")
+                    speak_text(confirm_msg, mode=mode, cache_clip=True, ignore_abort=True)
+                    self.window.evaluate_js("updateState('ONLINE')")
+                except Exception:
+                    pass
+            threading.Thread(target=_speak_abort, daemon=True).start()
+        else:
+            TTS_ABORT_EVENT.clear()
 
     def _init_session_counter(self) -> int:
         mem_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jarvis_memory.json")
@@ -469,10 +593,11 @@ class JarvisPipeline:
         
         self.response_queue.put(random.choice(g))
         
-        # Global Quick-Summon Overlay Hotkey (Alt + Space)
+        # Global Quick-Summon Overlay Hotkey (Alt + Space) & Emergency Kill Hotkey (Alt + X)
         try:
             import keyboard
             keyboard.add_hotkey('alt+space', self.trigger_hotkey_wake)
+            keyboard.add_hotkey('alt+x', lambda: self.abort_current_command("kill"))
         except Exception as e:
             print("Hotkey binding failed: ", e)
 
@@ -643,7 +768,7 @@ class JarvisPipeline:
             time.sleep(1)
 
     def stt_worker(self):
-        """Bilingual Speech Recognition (English & Hindi/Hinglish)"""
+        """Bilingual Speech Recognition (English & Hindi/Hinglish) with Voice Barge-In Kill Support"""
         recognizer = sr.Recognizer()
         
         with sr.Microphone() as source:
@@ -651,18 +776,35 @@ class JarvisPipeline:
             self.window.evaluate_js("updateState('ONLINE')")
             
             while self.running:
-                if pygame.mixer.get_init() and pygame.mixer.get_busy():
-                    time.sleep(0.3)
-                    continue
-
-                self.window.evaluate_js("updateState('LISTENING')")
+                was_speaking = bool(pygame.mixer.get_init() and pygame.mixer.get_busy())
+                if not was_speaking:
+                    self.window.evaluate_js("updateState('LISTENING')")
                 try:
-                    audio = recognizer.listen(source, timeout=3, phrase_time_limit=9)
-                    self.window.evaluate_js("updateState('PROCESSING')")
+                    p_limit = 3 if was_speaking else 9
+                    audio = recognizer.listen(source, timeout=2 if was_speaking else 3, phrase_time_limit=p_limit)
+                    if not was_speaking:
+                        self.window.evaluate_js("updateState('PROCESSING')")
                     # 'en-IN' seamlessly recognizes both Indian English and common Hinglish phrases
                     text = recognizer.recognize_google(audio, language="en-IN").lower()
                     
                     if text:
+                        cmd = text
+                        for w in ["jarvis", "friday", "system"]:
+                            cmd = cmd.replace(w, "")
+                        cmd = cmd.strip()
+
+                        # Instant Pre-emptive Kill / Stop Check (works even during active speech or slow tool runs)
+                        if self.is_kill_command(cmd, strict_barge_in=was_speaking) or self.is_kill_command(text, strict_barge_in=was_speaking):
+                            self.last_active = time.time()
+                            safe_cmd = json.dumps(cmd or text)
+                            self.window.evaluate_js(f"addLog('USER', {safe_cmd})")
+                            self.abort_current_command(spoken_text=cmd or text)
+                            continue
+
+                        # Ignore speaker bleed when TTS is actively playing unless it was a kill command above
+                        if was_speaking or (pygame.mixer.get_init() and pygame.mixer.get_busy()):
+                            continue
+
                         wake_triggers = ["jarvis", "friday", "wake", "uth jao", "uth ja"]
                         
                         # Strict Wake-Word filtering in Sleep Mode
@@ -673,11 +815,6 @@ class JarvisPipeline:
                             continue
                             
                         self.last_active = time.time()
-                        cmd = text
-                        for w in ["jarvis", "friday", "system"]:
-                            cmd = cmd.replace(w, "")
-                        cmd = cmd.strip()
-                        
                         if cmd:
                             safe_cmd = json.dumps(cmd)
                             self.window.evaluate_js(f"addLog('USER', {safe_cmd})")
@@ -690,6 +827,18 @@ class JarvisPipeline:
             try:
                 text = self.text_queue.get()
                 self.last_active = time.time()
+
+                # Pre-emptive Kill / Stop check
+                if self.is_kill_command(text):
+                    self.abort_current_command(spoken_text=text)
+                    self.text_queue.task_done()
+                    continue
+
+                self.abort_event.clear()
+                TTS_ABORT_EVENT.clear()
+                self.active_cmd_id += 1
+                my_cmd_id = self.active_cmd_id
+
                 self.increment_command_count()
                 self.window.evaluate_js("updateState('THINKING')")
                 
@@ -715,198 +864,17 @@ class JarvisPipeline:
                     self.enter_orb_only_mode(sleep_mode=False)
                     self.response_queue.put("Switching to transparent Orb mode, sir.")
                     handled = True
-                elif "stop talking" in cmd_lower or "chup raho" in cmd_lower or "mute audio" in cmd_lower:
-                    if pygame.mixer.get_init():
-                        pygame.mixer.stop()
-                    handled = True
 
                 if handled:
                     self.text_queue.task_done()
                     continue
 
-                # Instant Pre-Processing Voice Acknowledgment (spoken immediately in parallel before LLM/Vision execution)
-                ack_phrase = get_instant_ack(text, getattr(self, "voice_mode", "JARVIS"))
-                self.response_queue.put(("ACK", ack_phrase))
-
-                # Single-Pass Direct Vision Fast-Path (Mark-LV / Mark-XXXIX-OR Architecture: 1 API call instead of 2)
-                is_cam_query = any(k in cmd_lower for k in (
-                    "camera", "webcam", "look at me", "who am i", "mera chehra",
-                    "holding", "in my hand", "haath mein", "show you"
-                ))
-                is_screen_query = any(k in cmd_lower for k in (
-                    "screen", "looking at", "what do you see", "read this", "analyze this",
-                    "this error", "this code", "on my display", "screen par", "kya dikh raha"
-                ))
-                is_action_cmd = any(k in cmd_lower for k in (
-                    "open ", "khol", "launch ", "start ", "play ", "volume", "brightness",
-                    "mute", "weather", "news", "remind", "search "
-                ))
-                if is_cam_query or is_screen_query or (getattr(self, "screen_vision_mode", False) and not is_action_cmd):
-                    angle = "camera" if is_cam_query else "screen"
-                    was_fullscreen = getattr(self, "is_fullscreen", False)
-                    if angle == "screen":
-                        self.enter_orb_only_mode(sleep_mode=False, vision_mode=True)
-                        if was_fullscreen:
-                            time.sleep(0.22)
-                    vision_ans = run_screen_or_camera_vision(angle=angle, text=text, window=self.window)
-                    self.history.append(("USER", text))
-                    self.history.append(("JARVIS", vision_ans))
-                    MemoryModule.save(self.history)
-                    self.response_queue.put(vision_ans)
-                    self.text_queue.task_done()
-                    continue
-
-                # Pre-emptively enter Orb-Only Transparent Mode if command asks to open something
-                if any(k in cmd_lower for k in ("open ", "khol", "launch ", "start ", "play ", "world news", "finance news", "financial market")):
-                    self.enter_orb_only_mode(sleep_mode=False)
-
-                # Bilingual Spoken Persona + Long-Term Memory Injection (Mark-LV + Iris)
-                lt_mem = MemoryModule.get_long_term_prompt()
-                attached_file = self.tool_suite.ui.current_file
-                file_ctx = f"\n[ATTACHED FILE READY FOR file_processor: {attached_file}]\n" if attached_file else ""
-
-                system_prompt = (
-                    f"You are {self.voice_mode}, an advanced, loyal, and sharp personal AI assistant. "
-                    "LANGUAGE INSTRUCTION: "
-                    "You are 100% fluent in both English and Hindi / Hinglish. "
-                    "Always reply in the exact language the user speaks: "
-                    "- If the user speaks Hindi or Hinglish (e.g. 'WhatsApp khol do', 'kya haal hai boss', 'Starboy play kar do YouTube pe', 'volume badha do', 'left side pe Chrome set kar do', 'asman mein kitne planes hain'), "
-                    "reply in natural, warm, conversational Hindi / Hinglish (e.g. 'Ji boss, WhatsApp khol diya hai.', 'Bilkul sir, YouTube par play kar diya hai.'). "
-                    "- If the user speaks English, reply in sharp, natural English. "
-                    "CRITICAL SPOKEN RULES: "
-                    "1. Keep spoken responses short (2 to 4 sentences maximum). "
-                    "2. NEVER use markdown lists, asterisks, bullet points, or code formatting in spoken responses. Speak naturally. "
-                    "3. Call tools silently and immediately. Never recite raw function names. "
-                    "4. Address the user naturally as 'boss' or 'sir'. "
-                    "5. For playing YouTube videos or songs (even if Brave or Chrome is mentioned), ALWAYS call youtube_video(action='play', query='...') or open_website(url='...'). Never use execute_terminal to launch browsers or URLs.\n"
-                    f"{lt_mem}{file_ctx}"
-                )
-
-                messages = [{"role": "system", "content": system_prompt}]
-                for role, msg in self.history[-6:]:
-                    messages.append({"role": "user" if role == "USER" else "assistant", "content": msg})
-                messages.append({"role": "user", "content": text})
-
-                tools = self.tool_suite.get_ollama_tools()
-
-                msg_obj = IntelligenceModule.chat(messages, tools, self.window)
-                response = ""
-
-                # Tool Routing & Execution across all 35+ tools
-                if "tool_calls" in msg_obj and msg_obj["tool_calls"]:
-                    for tool in msg_obj["tool_calls"]:
-                        t_name = tool["function"]["name"]
-                        t_args = tool["function"]["arguments"] or {}
-
-                        if t_name == "get_world_news":
-                            self.window.evaluate_js("addLog('SYSTEM', 'Polling Global Feeds...')")
-                            self.enter_orb_only_mode(sleep_mode=False)
-                            news_data = get_world_news_sync()
-                            open_world_monitor()
-                            response = f"Here is the latest from the global news wire, sir: {news_data[:220]}. I have opened the World Monitor on your display."
-                            break
-
-                        elif t_name == "get_finance_news":
-                            self.window.evaluate_js("addLog('SYSTEM', 'Polling Financial Feeds...')")
-                            self.enter_orb_only_mode(sleep_mode=False)
-                            fin_data = get_finance_news_sync()
-                            open_finance_monitor()
-                            response = f"Here is the market briefing, sir: {fin_data[:220]}. Pulling up the finance monitor now."
-                            break
-
-                        elif t_name == "open_world_monitor":
-                            self.enter_orb_only_mode(sleep_mode=False)
-                            response = open_world_monitor()
-                            break
-
-                        elif t_name == "open_finance_monitor":
-                            self.enter_orb_only_mode(sleep_mode=False)
-                            response = open_finance_monitor()
-                            break
-
-                        elif t_name == "system_hardware_control":
-                            act = t_args.get("action", "")
-                            app = t_args.get("app_name", "")
-                            if act in ("volume_up", "volume_down", "mute"):
-                                response = volume_control(act)
-                            elif act in ("brightness_up", "brightness_down"):
-                                response = brightness_control(act)
-                            elif act == "launch_app":
-                                self.enter_orb_only_mode(sleep_mode=False)
-                                response = launch_application(app)
-                            break
-
-                        elif t_name == "launch_application":
-                            app = t_args.get("app_name", "")
-                            self.enter_orb_only_mode(sleep_mode=False)
-                            response = launch_application(app)
-                            break
-
-                        elif t_name == "volume_control":
-                            act = t_args.get("action", "")
-                            response = volume_control(act)
-                            break
-
-                        elif t_name == "window_management":
-                            act = t_args.get("action", "")
-                            response = window_action(act)
-                            break
-
-                        elif t_name == "split_workspace":
-                            l_app = t_args.get("left_app", "")
-                            r_app = t_args.get("right_app", "")
-                            self.enter_orb_only_mode(sleep_mode=False)
-                            response = split_workspace(l_app, r_app)
-                            break
-
-                        elif t_name == "open_website":
-                            url = t_args.get("url", "")
-                            self.enter_orb_only_mode(sleep_mode=False)
-                            webbrowser.open(url)
-                            response = f"Opened {url} on your display, sir."
-                            break
-
-                        elif t_name == "execute_terminal":
-                            cmd_str = t_args.get("command", "")
-                            try:
-                                import re
-                                url_match = re.search(r"https?://[^\s\"']+", cmd_str)
-                                if url_match:
-                                    target_url = url_match.group(0)
-                                    self.enter_orb_only_mode(sleep_mode=False)
-                                    if "youtube.com/results?search_query=" in target_url:
-                                        q = target_url.split("search_query=", 1)[1].replace("+", " ")
-                                        tool_res = self.tool_suite.execute("youtube_video", {"action": "play", "query": q})
-                                        response = str(tool_res)[:350] if tool_res else f"Playing {q} on YouTube, sir."
-                                    else:
-                                        webbrowser.open(target_url)
-                                        response = f"Opened {target_url} in your browser, sir."
-                                else:
-                                    if any(ps_kw in cmd_str for ps_kw in ("Start-Process", "Get-", "Set-", "Invoke-", "$")):
-                                        out = subprocess.check_output(["powershell", "-NoProfile", "-Command", cmd_str], text=True, stderr=subprocess.STDOUT, timeout=10)
-                                    else:
-                                        out = subprocess.check_output(cmd_str, shell=True, text=True, stderr=subprocess.STDOUT, timeout=10)
-                                    clean = out.replace('\n', ' ').strip()[:220]
-                                    response = f"Execution completed, sir. {('Output: ' + clean) if clean else ''}".strip()
-                            except Exception as e:
-                                response = f"Terminal execution failed: {e}"
-                            break
-
-                        else:
-                            # Dispatch to UnifiedToolSuite (17 Mark-LV actions + Mark-XXXIX Agent + OpenSky Radar + Vision + Memory + Undo)
-                            tool_res = self.tool_suite.execute(t_name, t_args)
-                            response = str(tool_res)[:350] if tool_res else f"Completed {t_name}, sir."
-                            break
-
-                if not response:
-                    response = msg_obj.get("content", "").strip()
-
-                if response:
-                    self.history.append(("USER", text))
-                    self.history.append(("JARVIS", response))
-                    MemoryModule.save(self.history)
-                    self.response_queue.put(response)
-
+                # Run command execution in a non-blocking worker thread so kill/stop commands can pre-empt at any millisecond
+                threading.Thread(
+                    target=self._execute_command_pipeline,
+                    args=(text, my_cmd_id),
+                    daemon=True
+                ).start()
                 self.text_queue.task_done()
             except Exception as e:
                 safe_err = json.dumps(f"Cognitive processing warning: {str(e).splitlines()[0][:120]}")
@@ -915,11 +883,251 @@ class JarvisPipeline:
                 except Exception:
                     pass
 
+    def _execute_command_pipeline(self, text: str, my_cmd_id: int):
+        """Execute a single command with continuous abort/kill checkpoints."""
+        def is_aborted() -> bool:
+            return self.abort_event.is_set() or (my_cmd_id != self.active_cmd_id)
+
+        try:
+            if is_aborted():
+                return
+
+            cmd_lower = text.lower()
+
+            # Instant Pre-Processing Voice Acknowledgment (spoken immediately in parallel before LLM/Vision execution)
+            ack_phrase = get_instant_ack(text, getattr(self, "voice_mode", "JARVIS"))
+            self.response_queue.put(("ACK", ack_phrase))
+
+            # Single-Pass Direct Vision Fast-Path (Mark-LV / Mark-XXXIX-OR Architecture: 1 API call instead of 2)
+            is_cam_query = any(k in cmd_lower for k in (
+                "camera", "webcam", "look at me", "who am i", "mera chehra",
+                "holding", "in my hand", "haath mein", "show you"
+            ))
+            is_screen_query = any(k in cmd_lower for k in (
+                "screen", "looking at", "what do you see", "read this", "analyze this",
+                "this error", "this code", "on my display", "screen par", "kya dikh raha"
+            ))
+            is_action_cmd = any(k in cmd_lower for k in (
+                "open ", "khol", "launch ", "start ", "play ", "volume", "brightness",
+                "mute", "weather", "news", "remind", "search "
+            ))
+            if is_cam_query or is_screen_query or (getattr(self, "screen_vision_mode", False) and not is_action_cmd):
+                angle = "camera" if is_cam_query else "screen"
+                was_fullscreen = getattr(self, "is_fullscreen", False)
+                if angle == "screen":
+                    self.enter_orb_only_mode(sleep_mode=False, vision_mode=True)
+                    if was_fullscreen:
+                        time.sleep(0.22)
+                if is_aborted():
+                    return
+                vision_ans = run_screen_or_camera_vision(angle=angle, text=text, window=self.window)
+                if is_aborted():
+                    return
+                self.history.append(("USER", text))
+                self.history.append(("JARVIS", vision_ans))
+                MemoryModule.save(self.history)
+                self.response_queue.put(vision_ans)
+                return
+
+            # Pre-emptively enter Orb-Only Transparent Mode if command asks to open something
+            if any(k in cmd_lower for k in ("open ", "khol", "launch ", "start ", "play ", "world news", "finance news", "financial market")):
+                self.enter_orb_only_mode(sleep_mode=False)
+
+            # Bilingual Spoken Persona + Long-Term Memory Injection (Mark-LV + Iris)
+            lt_mem = MemoryModule.get_long_term_prompt()
+            attached_file = self.tool_suite.ui.current_file
+            file_ctx = f"\n[ATTACHED FILE READY FOR file_processor: {attached_file}]\n" if attached_file else ""
+
+            system_prompt = (
+                f"You are {self.voice_mode}, an advanced, loyal, and sharp personal AI assistant. "
+                "LANGUAGE INSTRUCTION: "
+                "You are 100% fluent in both English and Hindi / Hinglish. "
+                "Always reply in the exact language the user speaks: "
+                "- If the user speaks Hindi or Hinglish (e.g. 'WhatsApp khol do', 'kya haal hai boss', 'Starboy play kar do YouTube pe', 'volume badha do', 'left side pe Chrome set kar do', 'asman mein kitne planes hain'), "
+                "reply in natural, warm, conversational Hindi / Hinglish (e.g. 'Ji boss, WhatsApp khol diya hai.', 'Bilkul sir, YouTube par play kar diya hai.'). "
+                "- If the user speaks English, reply in sharp, natural English. "
+                "CRITICAL SPOKEN RULES: "
+                "1. Keep spoken responses short (2 to 4 sentences maximum). "
+                "2. NEVER use markdown lists, asterisks, bullet points, or code formatting in spoken responses. Speak naturally. "
+                "3. Call tools silently and immediately. Never recite raw function names. "
+                "4. Address the user naturally as 'boss' or 'sir'. "
+                "5. For playing YouTube videos or songs (even if Brave or Chrome is mentioned), ALWAYS call youtube_video(action='play', query='...') or open_website(url='...'). Never use execute_terminal to launch browsers or URLs.\n"
+                f"{lt_mem}{file_ctx}"
+            )
+
+            messages = [{"role": "system", "content": system_prompt}]
+            for role, msg in self.history[-6:]:
+                messages.append({"role": "user" if role == "USER" else "assistant", "content": msg})
+            messages.append({"role": "user", "content": text})
+
+            tools = self.tool_suite.get_ollama_tools()
+
+            msg_obj = IntelligenceModule.chat(messages, tools, self.window, abort_check=is_aborted)
+            if is_aborted():
+                return
+
+            response = ""
+
+            # Tool Routing & Execution across all 35+ tools
+            if "tool_calls" in msg_obj and msg_obj["tool_calls"]:
+                for tool in msg_obj["tool_calls"]:
+                    if is_aborted():
+                        return
+                    t_name = tool["function"]["name"]
+                    t_args = tool["function"]["arguments"] or {}
+
+                    if t_name == "get_world_news":
+                        self.window.evaluate_js("addLog('SYSTEM', 'Polling Global Feeds...')")
+                        self.enter_orb_only_mode(sleep_mode=False)
+                        news_data = get_world_news_sync()
+                        if is_aborted():
+                            return
+                        open_world_monitor()
+                        response = f"Here is the latest from the global news wire, sir: {news_data[:220]}. I have opened the World Monitor on your display."
+                        break
+
+                    elif t_name == "get_finance_news":
+                        self.window.evaluate_js("addLog('SYSTEM', 'Polling Financial Feeds...')")
+                        self.enter_orb_only_mode(sleep_mode=False)
+                        fin_data = get_finance_news_sync()
+                        if is_aborted():
+                            return
+                        open_finance_monitor()
+                        response = f"Here is the market briefing, sir: {fin_data[:220]}. Pulling up the finance monitor now."
+                        break
+
+                    elif t_name == "open_world_monitor":
+                        self.enter_orb_only_mode(sleep_mode=False)
+                        response = open_world_monitor()
+                        break
+
+                    elif t_name == "open_finance_monitor":
+                        self.enter_orb_only_mode(sleep_mode=False)
+                        response = open_finance_monitor()
+                        break
+
+                    elif t_name == "system_hardware_control":
+                        act = t_args.get("action", "")
+                        app = t_args.get("app_name", "")
+                        if act in ("volume_up", "volume_down", "mute"):
+                            response = volume_control(act)
+                        elif act in ("brightness_up", "brightness_down"):
+                            response = brightness_control(act)
+                        elif act == "launch_app":
+                            self.enter_orb_only_mode(sleep_mode=False)
+                            response = launch_application(app)
+                        break
+
+                    elif t_name == "launch_application":
+                        app = t_args.get("app_name", "")
+                        self.enter_orb_only_mode(sleep_mode=False)
+                        response = launch_application(app)
+                        break
+
+                    elif t_name == "volume_control":
+                        act = t_args.get("action", "")
+                        response = volume_control(act)
+                        break
+
+                    elif t_name == "window_management":
+                        act = t_args.get("action", "")
+                        response = window_action(act)
+                        break
+
+                    elif t_name == "split_workspace":
+                        l_app = t_args.get("left_app", "")
+                        r_app = t_args.get("right_app", "")
+                        self.enter_orb_only_mode(sleep_mode=False)
+                        response = split_workspace(l_app, r_app)
+                        break
+
+                    elif t_name == "open_website":
+                        url = t_args.get("url", "")
+                        self.enter_orb_only_mode(sleep_mode=False)
+                        webbrowser.open(url)
+                        response = f"Opened {url} on your display, sir."
+                        break
+
+                    elif t_name == "execute_terminal":
+                        cmd_str = t_args.get("command", "")
+                        try:
+                            import re
+                            url_match = re.search(r"https?://[^\s\"']+", cmd_str)
+                            if url_match:
+                                target_url = url_match.group(0)
+                                self.enter_orb_only_mode(sleep_mode=False)
+                                if "youtube.com/results?search_query=" in target_url:
+                                    q = target_url.split("search_query=", 1)[1].replace("+", " ")
+                                    tool_res = self.tool_suite.execute("youtube_video", {"action": "play", "query": q})
+                                    response = str(tool_res)[:350] if tool_res else f"Playing {q} on YouTube, sir."
+                                else:
+                                    webbrowser.open(target_url)
+                                    response = f"Opened {target_url} in your browser, sir."
+                            else:
+                                if any(ps_kw in cmd_str for ps_kw in ("Start-Process", "Get-", "Set-", "Invoke-", "$")):
+                                    proc = subprocess.Popen(
+                                        ["powershell", "-NoProfile", "-Command", cmd_str],
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
+                                        text=True
+                                    )
+                                else:
+                                    proc = subprocess.Popen(
+                                        cmd_str,
+                                        shell=True,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
+                                        text=True
+                                    )
+                                self.active_subprocess = proc
+                                out, _ = proc.communicate(timeout=10)
+                                self.active_subprocess = None
+                                if is_aborted():
+                                    return
+                                clean = (out or "").replace('\n', ' ').strip()[:220]
+                                response = f"Execution completed, sir. {('Output: ' + clean) if clean else ''}".strip()
+                        except Exception as e:
+                            self.active_subprocess = None
+                            if is_aborted():
+                                return
+                            response = f"Terminal execution failed: {e}"
+                        break
+
+                    else:
+                        # Dispatch to UnifiedToolSuite (17 Mark-LV actions + Mark-XXXIX Agent + OpenSky Radar + Vision + Memory + Undo)
+                        tool_res = self.tool_suite.execute(t_name, t_args)
+                        if is_aborted():
+                            return
+                        response = str(tool_res)[:350] if tool_res else f"Completed {t_name}, sir."
+                        break
+
+            if is_aborted():
+                return
+
+            if not response:
+                response = msg_obj.get("content", "").strip()
+
+            if response and not is_aborted():
+                self.history.append(("USER", text))
+                self.history.append(("JARVIS", response))
+                MemoryModule.save(self.history)
+                self.response_queue.put(response)
+        except Exception as e:
+            if not is_aborted():
+                safe_err = json.dumps(f"Cognitive processing warning: {str(e).splitlines()[0][:120]}")
+                try:
+                    self.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
+                except Exception:
+                    pass
+
     def tts_worker(self):
-        """Zero-Lock In-Memory Bilingual Neural TTS Engine with Instant Pre-Processing Ack Support"""
+        """Zero-Lock In-Memory Bilingual Neural TTS Engine with Instant Pre-Processing Ack & Abort Support"""
         while self.running:
             try:
                 item = self.response_queue.get()
+                if self.abort_event.is_set():
+                    continue
+
                 is_ack = False
                 if isinstance(item, tuple) and len(item) == 2 and item[0] == "ACK":
                     is_ack = True
@@ -935,7 +1143,9 @@ class JarvisPipeline:
                 mode = getattr(self, "voice_mode", "JARVIS")
                 speak_text(response, mode=mode, cache_clip=is_ack)
                 
-                if is_ack and self.response_queue.empty():
+                if self.abort_event.is_set():
+                    self.window.evaluate_js("updateState('ONLINE')")
+                elif is_ack and self.response_queue.empty():
                     self.window.evaluate_js("updateState('THINKING')")
                 else:
                     self.window.evaluate_js("updateState('ONLINE')")
@@ -957,7 +1167,15 @@ class Api:
         self.pipeline.last_active = time.time()
         safe_text = json.dumps(text)
         self.pipeline.window.evaluate_js(f"addLog('USER', {safe_text})")
+        if self.pipeline.is_kill_command(text):
+            self.pipeline.abort_current_command(spoken_text=text)
+            return
         self.pipeline.text_queue.put(text)
+
+    def kill_command(self):
+        """Emergency Stop / Kill button in HUD or Escape key handler."""
+        self.pipeline.last_active = time.time()
+        self.pipeline.abort_current_command(spoken_text="stop")
         
     def minimize(self):
         self.pipeline.window.minimize()
@@ -1007,20 +1225,30 @@ class Api:
 
     def scan_airspace(self):
         """Run immediate 200km OpenSky aircraft radar scan."""
+        self.pipeline.abort_event.clear()
+        TTS_ABORT_EVENT.clear()
+        self.pipeline.active_cmd_id += 1
+        my_id = self.pipeline.active_cmd_id
         self.pipeline.increment_command_count()
         self.pipeline.response_queue.put(("ACK", "On it, sir. Scanning 200 kilometer airspace radar."))
         def _run():
             res = self.pipeline.tool_suite.execute("aircraft_report", {"action": "report", "radius_km": 200})
-            self.pipeline.response_queue.put(res)
+            if not self.pipeline.abort_event.is_set() and my_id == self.pipeline.active_cmd_id:
+                self.pipeline.response_queue.put(res)
         threading.Thread(target=_run, daemon=True).start()
 
     def undo_last_action(self):
         """Revert the most recent file, desktop, or setting change."""
+        self.pipeline.abort_event.clear()
+        TTS_ABORT_EVENT.clear()
+        self.pipeline.active_cmd_id += 1
+        my_id = self.pipeline.active_cmd_id
         self.pipeline.increment_command_count()
         self.pipeline.response_queue.put(("ACK", "Working on it, sir. Reverting last action."))
         def _run():
             res = self.pipeline.tool_suite.execute("undo", {"action": "undo"})
-            self.pipeline.response_queue.put(res)
+            if not self.pipeline.abort_event.is_set() and my_id == self.pipeline.active_cmd_id:
+                self.pipeline.response_queue.put(res)
         threading.Thread(target=_run, daemon=True).start()
 
     def show_memory_vault(self):
@@ -1042,13 +1270,21 @@ class Api:
     def trigger_screen_vision(self):
         """Instant 1-pass Screen Vision Mode: collapses HUD to corner Orb, captures screen in 15ms, and analyzes directly."""
         self.pipeline.last_active = time.time()
+        self.pipeline.abort_event.clear()
+        TTS_ABORT_EVENT.clear()
+        self.pipeline.active_cmd_id += 1
+        my_id = self.pipeline.active_cmd_id
         self.pipeline.increment_command_count()
         self.pipeline.response_queue.put(("ACK", "On it, sir. Scanning your display."))
         self.pipeline.enter_orb_only_mode(sleep_mode=False, vision_mode=True)
         def _run():
             time.sleep(0.22)
+            if self.pipeline.abort_event.is_set() or my_id != self.pipeline.active_cmd_id:
+                return
             self.pipeline.window.evaluate_js("updateState('THINKING')")
             res = run_screen_or_camera_vision("screen", "Analyze my screen and tell me what I am looking at.", window=self.pipeline.window)
+            if self.pipeline.abort_event.is_set() or my_id != self.pipeline.active_cmd_id:
+                return
             self.pipeline.history.append(("USER", "[Screen Vision]"))
             self.pipeline.history.append(("JARVIS", res))
             MemoryModule.save(self.pipeline.history)
@@ -1058,11 +1294,17 @@ class Api:
     def analyze_camera_frame(self, data_url: str, prompt: str = "Analyze what I am holding or showing to the camera and describe what you see."):
         """Instant 1-pass Camera Vision using the live WebView2 webcam frame (zero OpenCV camera lock conflict)."""
         self.pipeline.last_active = time.time()
+        self.pipeline.abort_event.clear()
+        TTS_ABORT_EVENT.clear()
+        self.pipeline.active_cmd_id += 1
+        my_id = self.pipeline.active_cmd_id
         self.pipeline.increment_command_count()
         self.pipeline.response_queue.put(("ACK", "Working on it, sir. Analyzing camera feed."))
         def _run():
             try:
                 import base64
+                if self.pipeline.abort_event.is_set() or my_id != self.pipeline.active_cmd_id:
+                    return
                 self.pipeline.window.evaluate_js("updateState('THINKING')")
                 self.pipeline.window.evaluate_js("addLog('SYSTEM', '[VISION] Running 1-Pass AI Camera Vision on live webcam frame...')")
                 raw_bytes = None
@@ -1074,6 +1316,8 @@ class Api:
                     raw_image_bytes=raw_bytes,
                     window=self.pipeline.window,
                 )
+                if self.pipeline.abort_event.is_set() or my_id != self.pipeline.active_cmd_id:
+                    return
                 self.pipeline.history.append(("USER", f"[Camera Vision] {prompt}"))
                 self.pipeline.history.append(("JARVIS", res))
                 MemoryModule.save(self.pipeline.history)
@@ -1152,6 +1396,7 @@ if __name__ == '__main__':
     api = Api(pipeline)
     window.expose(
         api.send_command,
+        api.kill_command,
         api.minimize,
         api.toggle_fullscreen,
         api.destroy,
@@ -1173,3 +1418,4 @@ if __name__ == '__main__':
     
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
+

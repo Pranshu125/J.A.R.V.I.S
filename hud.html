@@ -509,6 +509,9 @@
                 <button class="icon-btn" onclick="focusInput()" title="Focus Command Input">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
                 </button>
+                <button class="icon-btn" id="kill-btn" onclick="triggerKillCommand()" style="border-color:rgba(255,0,51,0.55); color:#ff3355;" title="Emergency Stop / Kill Active Command & Speech (Esc / Alt+X)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6" fill="currentColor"/></svg>
+                </button>
             </div>
         </div>
 
@@ -536,7 +539,8 @@
 
             <div class="chat-input">
                 <button class="icon-btn" style="width:40px; height:40px; font-size:18px; font-weight:700; flex-shrink:0;" onclick="triggerFilePicker()" title="Attach File (PDF, Image, DOCX, CSV, Code, Audio/Video) for File Processor">⊕</button>
-                <input type="text" id="cmd-input" placeholder="Type a command or question (English / Hindi)..." onkeypress="handleEnter(event)">
+                <input type="text" id="cmd-input" placeholder="Type a command or 'stop' / 'kill' (English / Hindi)..." onkeypress="handleEnter(event)">
+                <button class="icon-btn" style="width:40px; height:40px; font-size:16px; font-weight:700; flex-shrink:0; border-color:rgba(255,0,51,0.55); color:#ff3355;" onclick="triggerKillCommand()" title="Stop / Kill Active Command & Speech (Esc)">⊘</button>
                 <button class="send-btn" onclick="sendCommand()">➤</button>
             </div>
         </div>
@@ -747,6 +751,21 @@
         function handleEnter(e) {
             if (e.key === 'Enter') sendCommand();
         }
+
+        function triggerKillCommand() {
+            if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.kill_command) {
+                pywebview.api.kill_command();
+            } else {
+                addLog('SYSTEM', '[ABORT ⊘] Active command & speech terminated.');
+                updateState('ONLINE');
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                triggerKillCommand();
+            }
+        });
 
         // Orb-Only Transparent Mode (App Open / Screen Vision / PiP)
         function toggleMiniMode(on) {

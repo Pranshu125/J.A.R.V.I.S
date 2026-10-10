@@ -346,10 +346,29 @@ def get_instant_ack(user_text: str, mode: str = "JARVIS") -> str:
             "One moment, sir.",
         ])
 
+import threading
 
-def speak_text(text: str, mode: str = "JARVIS", cache_clip: bool = False):
+TTS_ABORT_EVENT = threading.Event()
+
+
+def stop_speaking():
+    """Immediately halt any active TTS synthesis and audio playback."""
+    TTS_ABORT_EVENT.set()
+    try:
+        if pygame.mixer.get_init():
+            pygame.mixer.stop()
+    except Exception:
+        pass
+
+
+def speak_text(text: str, mode: str = "JARVIS", cache_clip: bool = False, ignore_abort: bool = False):
     """Synthesize and play speech in-memory without Windows file locking (with instant disk cache for acknowledgments)."""
     if not text or not text.strip():
+        return
+
+    if ignore_abort:
+        TTS_ABORT_EVENT.clear()
+    elif TTS_ABORT_EVENT.is_set():
         return
 
     mode = mode.upper()
@@ -377,11 +396,16 @@ def speak_text(text: str, mode: str = "JARVIS", cache_clip: bool = False):
         cache_path = os.path.join(cache_dir, f"ack_{digest}.mp3")
         if os.path.exists(cache_path) and os.path.getsize(cache_path) > 256:
             try:
+                if not ignore_abort and TTS_ABORT_EVENT.is_set():
+                    return
                 if not pygame.mixer.get_init():
                     pygame.mixer.init()
                 sound = pygame.mixer.Sound(cache_path)
                 sound.play()
                 while pygame.mixer.get_busy():
+                    if not ignore_abort and TTS_ABORT_EVENT.is_set():
+                        pygame.mixer.stop()
+                        return
                     pygame.time.Clock().tick(20)
                 return
             except Exception:
@@ -396,6 +420,14 @@ def speak_text(text: str, mode: str = "JARVIS", cache_clip: bool = False):
         communicate = edge_tts.Communicate(synth_text, edge_voice, rate=rate)
         asyncio.run(communicate.save(temp_wav))
 
+        if not ignore_abort and TTS_ABORT_EVENT.is_set():
+            if not cache_clip and os.path.exists(temp_wav):
+                try:
+                    os.remove(temp_wav)
+                except Exception:
+                    pass
+            return
+
         if os.path.exists(temp_wav):
             if not pygame.mixer.get_init():
                 pygame.mixer.init()
@@ -404,6 +436,9 @@ def speak_text(text: str, mode: str = "JARVIS", cache_clip: bool = False):
                 os.remove(temp_wav)  # Immediate deletion from disk — NO file locking!
             sound.play()
             while pygame.mixer.get_busy():
+                if not ignore_abort and TTS_ABORT_EVENT.is_set():
+                    pygame.mixer.stop()
+                    break
                 pygame.time.Clock().tick(15)
             played = True
     except Exception:
@@ -413,7 +448,7 @@ def speak_text(text: str, mode: str = "JARVIS", cache_clip: bool = False):
             except Exception:
                 pass
         # Secondary Indian English Neural fallback if primary voice had a transient error
-        if hindi_detected:
+        if hindi_detected and (ignore_abort or not TTS_ABORT_EVENT.is_set()):
             try:
                 import edge_tts
                 alt_voice = VOICE_MAP[mode]["en_in"]
@@ -426,6 +461,9 @@ def speak_text(text: str, mode: str = "JARVIS", cache_clip: bool = False):
                     os.remove(temp_wav)
                     sound.play()
                     while pygame.mixer.get_busy():
+                        if not ignore_abort and TTS_ABORT_EVENT.is_set():
+                            pygame.mixer.stop()
+                            break
                         pygame.time.Clock().tick(15)
                     played = True
             except Exception:
@@ -436,7 +474,7 @@ def speak_text(text: str, mode: str = "JARVIS", cache_clip: bool = False):
                         pass
 
     # 2. Offline Fallback to Piper TTS
-    if not played:
+    if not played and (ignore_abort or not TTS_ABORT_EVENT.is_set()):
         piper_model = VOICE_MAP[mode]["piper"]
         piper_exe = os.path.join("venv", "Scripts", "piper.exe")
         fallback_wav = f"temp_piper_{int(time.time() * 1000)}.wav"
@@ -453,6 +491,9 @@ def speak_text(text: str, mode: str = "JARVIS", cache_clip: bool = False):
                 os.remove(fallback_wav)
                 sound.play()
                 while pygame.mixer.get_busy():
+                    if not ignore_abort and TTS_ABORT_EVENT.is_set():
+                        pygame.mixer.stop()
+                        break
                     pygame.time.Clock().tick(15)
         except Exception as e:
             print(f"Fallback TTS Error: {e}")
