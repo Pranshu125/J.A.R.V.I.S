@@ -52,7 +52,7 @@ from modules.system_control import (
     launch_application,
     split_workspace
 )
-from modules.tts_engine import speak_text
+from modules.tts_engine import speak_text, get_instant_ack
 from modules.mark_lv_bridge import (
     UnifiedToolSuite,
     get_active_gemini_ladder,
@@ -724,6 +724,10 @@ class JarvisPipeline:
                     self.text_queue.task_done()
                     continue
 
+                # Instant Pre-Processing Voice Acknowledgment (spoken immediately in parallel before LLM/Vision execution)
+                ack_phrase = get_instant_ack(text, getattr(self, "voice_mode", "JARVIS"))
+                self.response_queue.put(("ACK", ack_phrase))
+
                 # Single-Pass Direct Vision Fast-Path (Mark-LV / Mark-XXXIX-OR Architecture: 1 API call instead of 2)
                 is_cam_query = any(k in cmd_lower for k in (
                     "camera", "webcam", "look at me", "who am i", "mera chehra",
@@ -767,7 +771,7 @@ class JarvisPipeline:
                     "You are 100% fluent in both English and Hindi / Hinglish. "
                     "Always reply in the exact language the user speaks: "
                     "- If the user speaks Hindi or Hinglish (e.g. 'WhatsApp khol do', 'kya haal hai boss', 'Starboy play kar do YouTube pe', 'volume badha do', 'left side pe Chrome set kar do', 'asman mein kitne planes hain'), "
-                    "reply in natural, warm, conversational Hindi / Hinglish (e.g. 'Ji boss, WhatsApp khol raha hoon.', 'Bilkul sir, YouTube par play kar diya hai.'). "
+                    "reply in natural, warm, conversational Hindi / Hinglish (e.g. 'Ji boss, WhatsApp khol diya hai.', 'Bilkul sir, YouTube par play kar diya hai.'). "
                     "- If the user speaks English, reply in sharp, natural English. "
                     "CRITICAL SPOKEN RULES: "
                     "1. Keep spoken responses short (2 to 4 sentences maximum). "
@@ -787,12 +791,6 @@ class JarvisPipeline:
 
                 msg_obj = IntelligenceModule.chat(messages, tools, self.window)
                 response = ""
-                
-                # Context-aware Instant Acknowledgments
-                if "khol" in cmd_lower or "chala" in cmd_lower or "kar" in cmd_lower:
-                    ack = random.choice(["Ji boss.", "Bilkul sir.", "Abhi karta hoon, sir.", "Hukum sir."])
-                else:
-                    ack = random.choice(["Right away, sir.", "At your service, sir.", "Processing, sir.", "On it, boss."])
 
                 # Tool Routing & Execution across all 35+ tools
                 if "tool_calls" in msg_obj and msg_obj["tool_calls"]:
@@ -830,42 +828,42 @@ class JarvisPipeline:
                             act = t_args.get("action", "")
                             app = t_args.get("app_name", "")
                             if act in ("volume_up", "volume_down", "mute"):
-                                response = f"{ack} " + volume_control(act)
+                                response = volume_control(act)
                             elif act in ("brightness_up", "brightness_down"):
-                                response = f"{ack} " + brightness_control(act)
+                                response = brightness_control(act)
                             elif act == "launch_app":
                                 self.enter_orb_only_mode(sleep_mode=False)
-                                response = f"{ack} " + launch_application(app)
+                                response = launch_application(app)
                             break
 
                         elif t_name == "launch_application":
                             app = t_args.get("app_name", "")
                             self.enter_orb_only_mode(sleep_mode=False)
-                            response = f"{ack} " + launch_application(app)
+                            response = launch_application(app)
                             break
 
                         elif t_name == "volume_control":
                             act = t_args.get("action", "")
-                            response = f"{ack} " + volume_control(act)
+                            response = volume_control(act)
                             break
 
                         elif t_name == "window_management":
                             act = t_args.get("action", "")
-                            response = f"{ack} " + window_action(act)
+                            response = window_action(act)
                             break
 
                         elif t_name == "split_workspace":
                             l_app = t_args.get("left_app", "")
                             r_app = t_args.get("right_app", "")
                             self.enter_orb_only_mode(sleep_mode=False)
-                            response = f"{ack} " + split_workspace(l_app, r_app)
+                            response = split_workspace(l_app, r_app)
                             break
 
                         elif t_name == "open_website":
                             url = t_args.get("url", "")
                             self.enter_orb_only_mode(sleep_mode=False)
                             webbrowser.open(url)
-                            response = f"{ack} Opening {url}."
+                            response = f"Opened {url} on your display, sir."
                             break
 
                         elif t_name == "execute_terminal":
@@ -879,10 +877,10 @@ class JarvisPipeline:
                                     if "youtube.com/results?search_query=" in target_url:
                                         q = target_url.split("search_query=", 1)[1].replace("+", " ")
                                         tool_res = self.tool_suite.execute("youtube_video", {"action": "play", "query": q})
-                                        response = str(tool_res)[:350] if tool_res else f"{ack} Playing {q} on YouTube."
+                                        response = str(tool_res)[:350] if tool_res else f"Playing {q} on YouTube, sir."
                                     else:
                                         webbrowser.open(target_url)
-                                        response = f"{ack} Opened {target_url} in your browser."
+                                        response = f"Opened {target_url} in your browser, sir."
                                 else:
                                     if any(ps_kw in cmd_str for ps_kw in ("Start-Process", "Get-", "Set-", "Invoke-", "$")):
                                         out = subprocess.check_output(["powershell", "-NoProfile", "-Command", cmd_str], text=True, stderr=subprocess.STDOUT, timeout=10)
@@ -897,7 +895,7 @@ class JarvisPipeline:
                         else:
                             # Dispatch to UnifiedToolSuite (17 Mark-LV actions + Mark-XXXIX Agent + OpenSky Radar + Vision + Memory + Undo)
                             tool_res = self.tool_suite.execute(t_name, t_args)
-                            response = str(tool_res)[:350] if tool_res else f"{ack} Completed {t_name}."
+                            response = str(tool_res)[:350] if tool_res else f"Completed {t_name}, sir."
                             break
 
                 if not response:
@@ -918,19 +916,29 @@ class JarvisPipeline:
                     pass
 
     def tts_worker(self):
-        """Zero-Lock In-Memory Bilingual Neural TTS Engine"""
+        """Zero-Lock In-Memory Bilingual Neural TTS Engine with Instant Pre-Processing Ack Support"""
         while self.running:
             try:
-                response = self.response_queue.get()
+                item = self.response_queue.get()
+                is_ack = False
+                if isinstance(item, tuple) and len(item) == 2 and item[0] == "ACK":
+                    is_ack = True
+                    response = item[1]
+                else:
+                    response = str(item)
+
                 self.window.evaluate_js("updateState('SPEAKING')")
                 safe_resp = json.dumps(response)
                 self.window.evaluate_js(f"addLog('JARVIS', {safe_resp})")
                 
-                # Bilingual Synthesis (Hindi: Madhur/Swara, English: Ryan/Sonia/Jenny)
+                # Bilingual Synthesis (Hindi/Hinglish: Indian Neural Madhur/Swara, English: Ryan/Sonia)
                 mode = getattr(self, "voice_mode", "JARVIS")
-                speak_text(response, mode=mode)
+                speak_text(response, mode=mode, cache_clip=is_ack)
                 
-                self.window.evaluate_js("updateState('ONLINE')")
+                if is_ack and self.response_queue.empty():
+                    self.window.evaluate_js("updateState('THINKING')")
+                else:
+                    self.window.evaluate_js("updateState('ONLINE')")
             except Exception as e:
                 safe_err = json.dumps(f"Voice Engine Warning: {str(e).splitlines()[0][:100]}")
                 try:
@@ -1000,6 +1008,7 @@ class Api:
     def scan_airspace(self):
         """Run immediate 200km OpenSky aircraft radar scan."""
         self.pipeline.increment_command_count()
+        self.pipeline.response_queue.put(("ACK", "On it, sir. Scanning 200 kilometer airspace radar."))
         def _run():
             res = self.pipeline.tool_suite.execute("aircraft_report", {"action": "report", "radius_km": 200})
             self.pipeline.response_queue.put(res)
@@ -1008,6 +1017,7 @@ class Api:
     def undo_last_action(self):
         """Revert the most recent file, desktop, or setting change."""
         self.pipeline.increment_command_count()
+        self.pipeline.response_queue.put(("ACK", "Working on it, sir. Reverting last action."))
         def _run():
             res = self.pipeline.tool_suite.execute("undo", {"action": "undo"})
             self.pipeline.response_queue.put(res)
@@ -1033,6 +1043,7 @@ class Api:
         """Instant 1-pass Screen Vision Mode: collapses HUD to corner Orb, captures screen in 15ms, and analyzes directly."""
         self.pipeline.last_active = time.time()
         self.pipeline.increment_command_count()
+        self.pipeline.response_queue.put(("ACK", "On it, sir. Scanning your display."))
         self.pipeline.enter_orb_only_mode(sleep_mode=False, vision_mode=True)
         def _run():
             time.sleep(0.22)
@@ -1048,6 +1059,7 @@ class Api:
         """Instant 1-pass Camera Vision using the live WebView2 webcam frame (zero OpenCV camera lock conflict)."""
         self.pipeline.last_active = time.time()
         self.pipeline.increment_command_count()
+        self.pipeline.response_queue.put(("ACK", "Working on it, sir. Analyzing camera feed."))
         def _run():
             try:
                 import base64

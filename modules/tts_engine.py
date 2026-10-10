@@ -314,8 +314,41 @@ def normalize_hinglish_for_indian_tts(text: str) -> str:
     return re.sub(r"\b[a-zA-Z]+\b", _replace_token, text)
 
 
-def speak_text(text: str, mode: str = "JARVIS"):
-    """Synthesize and play speech in-memory without Windows file locking."""
+def get_instant_ack(user_text: str, mode: str = "JARVIS") -> str:
+    """Return a natural, context-aware pre-processing acknowledgment in English or Hindi/Hinglish."""
+    import random
+    t_low = (user_text or "").lower()
+    if is_hindi(t_low):
+        if any(k in t_low for k in ("khol", "chala", "play", "open", "start", "laga")):
+            return random.choice([
+                "Ji sir, abhi khol raha hoon.",
+                "Bilkul boss, abhi chala raha hoon.",
+                "Ji boss, abhi karta hoon.",
+            ])
+        return random.choice([
+            "Ji sir, abhi karta hoon.",
+            "Bilkul boss, dekh raha hoon.",
+            "Ek second sir, kaam chal raha hai.",
+            "Hukum sir, abhi check karta hoon.",
+        ])
+    else:
+        if any(k in t_low for k in ("screen", "camera", "looking at", "what do you see", "analyze")):
+            return random.choice([
+                "On it, sir. Scanning now.",
+                "Working on it, sir. Analyzing visual feed.",
+                "Right away, sir. Inspecting now.",
+            ])
+        return random.choice([
+            "On it, sir.",
+            "Working on it, sir.",
+            "Right away, sir.",
+            "Processing that now, boss.",
+            "One moment, sir.",
+        ])
+
+
+def speak_text(text: str, mode: str = "JARVIS", cache_clip: bool = False):
+    """Synthesize and play speech in-memory without Windows file locking (with instant disk cache for acknowledgments)."""
     if not text or not text.strip():
         return
 
@@ -334,7 +367,27 @@ def speak_text(text: str, mode: str = "JARVIS"):
         synth_text = text
         rate = "+4%"
 
-    temp_wav = f"temp_tts_{int(time.time() * 1000)}.wav"
+    # Fast-path disk cache for short acknowledgment phrases (1ms playback after first synthesis)
+    cache_path = None
+    if cache_clip:
+        import hashlib
+        cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models", "ack_cache")
+        os.makedirs(cache_dir, exist_ok=True)
+        digest = hashlib.md5(f"{edge_voice}|{rate}|{synth_text}".encode("utf-8")).hexdigest()[:16]
+        cache_path = os.path.join(cache_dir, f"ack_{digest}.mp3")
+        if os.path.exists(cache_path) and os.path.getsize(cache_path) > 256:
+            try:
+                if not pygame.mixer.get_init():
+                    pygame.mixer.init()
+                sound = pygame.mixer.Sound(cache_path)
+                sound.play()
+                while pygame.mixer.get_busy():
+                    pygame.time.Clock().tick(20)
+                return
+            except Exception:
+                pass
+
+    temp_wav = cache_path if cache_path else f"temp_tts_{int(time.time() * 1000)}.wav"
 
     played = False
     # 1. High-quality Edge Neural TTS (instant, crystal-clear Indian Hindi/Hinglish & English)
@@ -347,13 +400,14 @@ def speak_text(text: str, mode: str = "JARVIS"):
             if not pygame.mixer.get_init():
                 pygame.mixer.init()
             sound = pygame.mixer.Sound(temp_wav)
-            os.remove(temp_wav)  # Immediate deletion from disk — NO file locking!
+            if not cache_clip:
+                os.remove(temp_wav)  # Immediate deletion from disk — NO file locking!
             sound.play()
             while pygame.mixer.get_busy():
                 pygame.time.Clock().tick(15)
             played = True
     except Exception:
-        if os.path.exists(temp_wav):
+        if not cache_clip and os.path.exists(temp_wav):
             try:
                 os.remove(temp_wav)
             except Exception:
