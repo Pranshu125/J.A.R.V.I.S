@@ -350,12 +350,41 @@ class JarvisPipeline:
         self.voice_mode = 'JARVIS' # Strictly 'JARVIS' or 'FRIDAY'
         self.is_sleeping = False
         self.last_active = time.time()
+        self.session_start = time.time()
+        self.command_count = 0
+        self.session_count = self._init_session_counter()
         self.tool_suite = UnifiedToolSuite(self)
         
         try:
             self.stt_model = WhisperModel('base.en', device='cpu', compute_type='int8')
         except Exception as e:
             print(f"STT Model Load Warning: {e}")
+
+    def _init_session_counter(self) -> int:
+        mem_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jarvis_memory.json")
+        data = {}
+        if os.path.exists(mem_file):
+            try:
+                with open(mem_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception:
+                data = {}
+        count = int(data.get("session_count", 0)) + 1
+        data["session_count"] = count
+        data["last_session_start"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            with open(mem_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+        except Exception:
+            pass
+        return count
+
+    def increment_command_count(self):
+        self.command_count += 1
+        try:
+            self.window.evaluate_js(f"setSessionAndCommands({self.session_count}, {self.command_count})")
+        except Exception:
+            pass
 
     def start_services(self):
         threading.Thread(target=self.stt_worker, daemon=True).start()
@@ -364,6 +393,10 @@ class JarvisPipeline:
         threading.Thread(target=self.telemetry_worker, daemon=True).start()
         threading.Thread(target=self.idle_worker, daemon=True).start()
         threading.Thread(target=self.background_monitors_worker, daemon=True).start()
+        try:
+            self.window.evaluate_js(f"setSessionAndCommands({self.session_count}, {self.command_count})")
+        except Exception:
+            pass
         
         # Dynamic Time-of-Day Bilingual Boot Greeting
         hour = time.localtime().tm_hour
@@ -479,6 +512,13 @@ class JarvisPipeline:
         except Exception as e:
             self.window.evaluate_js(f"addLog('SYSTEM', 'Weather telemetry warning: {e}')")
 
+    def _get_uptime_strings(self):
+        os_sec = max(0, int(time.time() - psutil.boot_time()))
+        os_str = f"{os_sec // 3600:02d}:{(os_sec % 3600) // 60:02d}:{os_sec % 60:02d}"
+        sess_sec = max(0, int(time.time() - getattr(self, 'session_start', time.time())))
+        sess_str = f"{sess_sec // 3600:02d}:{(sess_sec % 3600) // 60:02d}:{sess_sec % 60:02d}"
+        return os_str, sess_str
+
     def push_stats_once(self):
         try:
             cpu = int(psutil.cpu_percent(interval=0.2))
@@ -492,13 +532,17 @@ class JarvisPipeline:
             disk_used_gb = int(disk.used / (1024 ** 3))
             disk_total_gb = int(disk.total / (1024 ** 3))
             disk_str = f"{disk_used_gb}/{disk_total_gb} GB"
+            os_str, sess_str = self._get_uptime_strings()
 
-            self.window.evaluate_js(f"updateSystemStats({cpu}, {ram}, '{ram_str}', '{disk_str}')")
+            self.window.evaluate_js(
+                f"updateSystemStats({cpu}, {ram}, '{ram_str}', '{disk_str}', {self.session_count}, {self.command_count}, '{os_str}', '{sess_str}')"
+            )
         except Exception:
             pass
 
     def run_network_diagnostics(self):
         try:
+            self.increment_command_count()
             self.window.evaluate_js("addLog('SYSTEM', 'Running network diagnostics & latency check...')")
             loc = requests.get('http://ip-api.com/json/', timeout=4).json()
             ip = loc.get('query', 'Unknown')
@@ -538,8 +582,11 @@ class JarvisPipeline:
                 curr_net = psutil.net_io_counters().bytes_recv + psutil.net_io_counters().bytes_sent
                 speed_mbps = (curr_net - last_net) / (1024 * 1024)
                 last_net = curr_net
+                os_str, sess_str = self._get_uptime_strings()
                 
-                self.window.evaluate_js(f"updateSystemStats({cpu}, {ram}, '{ram_str}', '{disk_str}')")
+                self.window.evaluate_js(
+                    f"updateSystemStats({cpu}, {ram}, '{ram_str}', '{disk_str}', {self.session_count}, {self.command_count}, '{os_str}', '{sess_str}')"
+                )
                 self.window.evaluate_js(f"updateNetwork('{speed_mbps:.2f} MB/s')")
 
                 ticks += 1
@@ -600,6 +647,7 @@ class JarvisPipeline:
             try:
                 text = self.text_queue.get()
                 self.last_active = time.time()
+                self.increment_command_count()
                 self.window.evaluate_js("updateState('THINKING')")
                 
                 cmd_lower = text.lower()
@@ -830,6 +878,7 @@ class Api:
 
     def scan_airspace(self):
         """Run immediate 200km OpenSky aircraft radar scan."""
+        self.pipeline.increment_command_count()
         def _run():
             res = self.pipeline.tool_suite.execute("aircraft_report", {"action": "report", "radius_km": 200})
             self.pipeline.response_queue.put(res)
@@ -837,6 +886,7 @@ class Api:
 
     def undo_last_action(self):
         """Revert the most recent file, desktop, or setting change."""
+        self.pipeline.increment_command_count()
         def _run():
             res = self.pipeline.tool_suite.execute("undo", {"action": "undo"})
             self.pipeline.response_queue.put(res)
@@ -844,6 +894,7 @@ class Api:
 
     def show_memory_vault(self):
         """Display stored long-term memories in the HUD conversation log."""
+        self.pipeline.increment_command_count()
         try:
             from memory.memory_manager import all_entries_for_ui
             entries = all_entries_for_ui()

@@ -352,13 +352,26 @@
             </div>
             
             <div class="widget">
-                <div class="widget-header"><span>System Uptime</span> <span id="uptime-top">00:00:00</span></div>
-                <div class="stat-labels" style="margin-bottom:15px;"><span>System Running For:</span><span id="uptime-val" style="color:var(--text-main); font-weight:bold;">00:00:00</span></div>
-                <div class="stat-grid" style="margin-top:0; margin-bottom:15px; grid-template-columns: 1fr 1fr;">
-                    <div><span>Session</span><strong id="session-count">1</strong></div>
-                    <div><span>Commands</span><strong id="cmd-count">0</strong></div>
+                <div class="widget-header">
+                    <span>System Uptime</span>
+                    <span style="display:flex; gap:8px; align-items:center;">
+                        <span id="uptime-top" onclick="toggleUptimeMode()" style="cursor:pointer;" title="Session Uptime (Click to toggle OS/Session display)">00:00:00</span>
+                        <span style="cursor:pointer;" onclick="if(typeof pywebview !== 'undefined') pywebview.api.force_stats_update()" title="Refresh Uptime & Load Telemetry">⟳</span>
+                    </span>
                 </div>
-                <div class="stat-row" style="margin-bottom:0;">
+                <div class="stat-labels" style="margin-bottom:15px; cursor:pointer;" onclick="toggleUptimeMode()" title="Click to toggle between Windows OS Boot Uptime and Session Uptime">
+                    <span id="uptime-label">System Running For:</span>
+                    <span id="uptime-val" style="color:var(--text-main); font-weight:bold;">00:00:00</span>
+                </div>
+                <div class="stat-grid" style="margin-top:0; margin-bottom:15px; grid-template-columns: 1fr 1fr;">
+                    <div onclick="inspectSessionTelemetry()" style="cursor:pointer; transition:0.2s;" onmouseover="this.style.border='1px solid var(--theme-color)'" onmouseout="this.style.border='none'" title="Click to view Session Telemetry in Log">
+                        <span>Session</span><strong id="session-count">1</strong>
+                    </div>
+                    <div onclick="inspectCommandTelemetry()" style="cursor:pointer; transition:0.2s;" onmouseover="this.style.border='1px solid var(--theme-color)'" onmouseout="this.style.border='none'" title="Click to view Command Execution Count in Log">
+                        <span>Commands</span><strong id="cmd-count">0</strong>
+                    </div>
+                </div>
+                <div class="stat-row" style="margin-bottom:0; cursor:pointer;" onclick="quickCmd('Give me a full system status report')" title="Click to run a full spoken hardware & process diagnostic">
                     <div class="stat-labels"><span>System Load</span></div>
                     <div class="stat-bar-bg"><div class="stat-bar-fill" id="load-bar" style="width:10%; background:#00ff88; box-shadow:none;"></div></div>
                     <div class="stat-labels" style="margin-top:4px;"><span id="load-status" style="color:#00ff88;">Optimal</span><span id="load-val">10%</span></div>
@@ -438,7 +451,56 @@
     <script>
         let startTime = Date.now();
         let commandCounter = 0;
+        let sessionNumber = 1;
+        let latestOsUptime = '';
+        let showOsUptimeInRow = true;
         let isMuted = false;
+
+        // Initialize persistent session counter in browser storage as instant fallback before Python syncs
+        try {
+            const storedSess = parseInt(localStorage.getItem('jarvis_session_count') || '0', 10) + 1;
+            localStorage.setItem('jarvis_session_count', String(storedSess));
+            sessionNumber = storedSess;
+            window.addEventListener('DOMContentLoaded', () => {
+                const sEl = document.getElementById('session-count');
+                if (sEl) sEl.innerText = sessionNumber;
+            });
+        } catch (e) {}
+
+        function setSessionAndCommands(sessCount, cmdCount) {
+            if (typeof sessCount === 'number' && sessCount > 0) {
+                sessionNumber = sessCount;
+                const sEl = document.getElementById('session-count');
+                if (sEl) sEl.innerText = sessionNumber;
+            }
+            if (typeof cmdCount === 'number') {
+                commandCounter = Math.max(commandCounter, cmdCount);
+                const cEl = document.getElementById('cmd-count');
+                if (cEl) cEl.innerText = commandCounter;
+            }
+        }
+
+        function bumpCommandCounter() {
+            commandCounter++;
+            const cEl = document.getElementById('cmd-count');
+            if (cEl) cEl.innerText = commandCounter;
+        }
+
+        function toggleUptimeMode() {
+            showOsUptimeInRow = !showOsUptimeInRow;
+            const lbl = document.getElementById('uptime-label');
+            if (lbl) lbl.innerText = showOsUptimeInRow ? 'OS Running For:' : 'Session Running For:';
+        }
+
+        function inspectSessionTelemetry() {
+            const upTop = document.getElementById('uptime-top')?.innerText || '00:00:00';
+            const upVal = document.getElementById('uptime-val')?.innerText || '00:00:00';
+            addLog('SYSTEM', `Session #${sessionNumber} Active | Session Time: ${upTop} | OS Boot Uptime: ${upVal}`);
+        }
+
+        function inspectCommandTelemetry() {
+            addLog('SYSTEM', `Total Commands Executed in Session #${sessionNumber}: ${commandCounter}`);
+        }
 
         // Real-time Clock & Uptime Counter
         setInterval(() => {
@@ -446,20 +508,22 @@
             document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', {hour12: true});
             document.getElementById('date').innerText = now.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}).toUpperCase();
 
-            // Live Uptime calculation
+            // Live Session Uptime calculation
             const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
             const hrs = String(Math.floor(elapsedSec / 3600)).padStart(2, '0');
             const mins = String(Math.floor((elapsedSec % 3600) / 60)).padStart(2, '0');
             const secs = String(elapsedSec % 60).padStart(2, '0');
-            const uptimeStr = `${hrs}:${mins}:${secs}`;
+            const sessUptimeStr = `${hrs}:${mins}:${secs}`;
             const upTop = document.getElementById('uptime-top');
             const upVal = document.getElementById('uptime-val');
-            if (upTop) upTop.innerText = uptimeStr;
-            if (upVal) upVal.innerText = uptimeStr;
+            if (upTop) upTop.innerText = sessUptimeStr;
+            if (upVal) {
+                upVal.innerText = (showOsUptimeInRow && latestOsUptime) ? latestOsUptime : sessUptimeStr;
+            }
         }, 1000);
 
         // System Stats Updates from Python
-        function updateSystemStats(cpu, ram, ramText, diskText) {
+        function updateSystemStats(cpu, ram, ramText, diskText, sessCount, cmdCount, osUptimeStr, sessUptimeStr) {
             document.getElementById('cpu-bar').style.width = cpu + '%';
             document.getElementById('cpu-val').innerText = cpu + '%';
             document.getElementById('cpu-sm').innerText = cpu + '%';
@@ -471,6 +535,20 @@
             if (diskText) {
                 const diskEl = document.getElementById('disk-sm');
                 if (diskEl) diskEl.innerText = diskText;
+            }
+
+            if (typeof sessCount === 'number' || typeof cmdCount === 'number') {
+                setSessionAndCommands(sessCount, cmdCount);
+            }
+
+            if (osUptimeStr) {
+                latestOsUptime = osUptimeStr;
+                const upVal = document.getElementById('uptime-val');
+                const lbl = document.getElementById('uptime-label');
+                if (upVal && showOsUptimeInRow) {
+                    upVal.innerText = osUptimeStr;
+                    if (lbl) lbl.innerText = 'System Running For:';
+                }
             }
 
             // Dynamic System Load Bar
