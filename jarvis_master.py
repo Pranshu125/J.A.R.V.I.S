@@ -770,7 +770,8 @@ class JarvisPipeline:
                     "1. Keep spoken responses short (2 to 4 sentences maximum). "
                     "2. NEVER use markdown lists, asterisks, bullet points, or code formatting in spoken responses. Speak naturally. "
                     "3. Call tools silently and immediately. Never recite raw function names. "
-                    "4. Address the user naturally as 'boss' or 'sir'.\n"
+                    "4. Address the user naturally as 'boss' or 'sir'. "
+                    "5. For playing YouTube videos or songs (even if Brave or Chrome is mentioned), ALWAYS call youtube_video(action='play', query='...') or open_website(url='...'). Never use execute_terminal to launch browsers or URLs.\n"
                     f"{lt_mem}{file_ctx}"
                 )
 
@@ -867,9 +868,25 @@ class JarvisPipeline:
                         elif t_name == "execute_terminal":
                             cmd_str = t_args.get("command", "")
                             try:
-                                out = subprocess.check_output(cmd_str, shell=True, text=True, stderr=subprocess.STDOUT, timeout=10)
-                                clean = out.replace('\n', ' ')[:220]
-                                response = f"Execution completed, sir. Output: {clean}"
+                                import re
+                                url_match = re.search(r"https?://[^\s\"']+", cmd_str)
+                                if url_match:
+                                    target_url = url_match.group(0)
+                                    self.enter_orb_only_mode(sleep_mode=False)
+                                    if "youtube.com/results?search_query=" in target_url:
+                                        q = target_url.split("search_query=", 1)[1].replace("+", " ")
+                                        tool_res = self.tool_suite.execute("youtube_video", {"action": "play", "query": q})
+                                        response = str(tool_res)[:350] if tool_res else f"{ack} Playing {q} on YouTube."
+                                    else:
+                                        webbrowser.open(target_url)
+                                        response = f"{ack} Opened {target_url} in your browser."
+                                else:
+                                    if any(ps_kw in cmd_str for ps_kw in ("Start-Process", "Get-", "Set-", "Invoke-", "$")):
+                                        out = subprocess.check_output(["powershell", "-NoProfile", "-Command", cmd_str], text=True, stderr=subprocess.STDOUT, timeout=10)
+                                    else:
+                                        out = subprocess.check_output(cmd_str, shell=True, text=True, stderr=subprocess.STDOUT, timeout=10)
+                                    clean = out.replace('\n', ' ').strip()[:220]
+                                    response = f"Execution completed, sir. {('Output: ' + clean) if clean else ''}".strip()
                             except Exception as e:
                                 response = f"Terminal execution failed: {e}"
                             break
