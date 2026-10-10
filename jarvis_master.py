@@ -61,6 +61,7 @@ from modules.mark_lv_bridge import (
     mark_model_exhausted,
     run_screen_or_camera_vision,
 )
+from modules.remote_dashboard import RemoteDashboardServer
 from modules.system_control import (
     brightness_control,
     launch_application,
@@ -77,17 +78,22 @@ from modules.world_intel import (
 )
 
 # ========================================================
-# J.A.R.V.I.S. & F.R.I.D.A.Y. UNIFIED COGNITIVE OS
-# Real-Time Voice Assistant with 3D Holographic Orb,
-# MediaPipe Vision (80-Class Item Recognition, Face Lock,
-# Hand Gestures, QR/Barcode & Sentry), 35+ Autonomous Tools,
-# Multi-Step Agent Planner, OpenSky Airspace Radar,
-# Deep Windows OS Control, World Intel & Bilingual Intelligence
+# J.A.R.V.I.S. & F.R.I.D.A.Y. MARK 55 UNIFIED COGNITIVE OS
+# - In-HUD Video on Command (Original Language + Dual Stream)
+# - Talks While It Loads + Instant Voice Cancel ("stop")
+# - Smart Mic Mute (Auto-Mutes Mic When Video Sound Is On)
+# - 9-Model Gemini Fallback Ladder (11s Timeout + Cooldowns)
+# - 12 Focused Core OS Skills + 5x Faster 1-File Plugin Engine
+# - Separate Instant Setup & Controls Drawers + Live Theming
+# - 4 Switchable HUD Centerpieces (Sphere, 3D Face, Reactor, Circuit)
+# - Jared Rhod's Barehands AR Spatial Hand-Tracking Stage
+# - QR Code Remote Smartphone Dashboard (Port 8787)
 # ========================================================
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
 OLLAMA_MODEL = "llama3.2"
 MEMORY_DB = os.path.join(_ROOT_DIR, "jarvis_state.md")
+VAULT_INDEX_PATH = os.path.join(_ROOT_DIR, "vault", "VAULT-INDEX.md")
 
 _KILL_CLEAN_RE = re.compile(r"[^a-z0-9\s\u0900-\u097F]")
 _URL_RE = re.compile(r"https?://[^\s\"']+")
@@ -105,7 +111,7 @@ def _get_screen_size() -> tuple[int, int]:
 
 
 class MemoryModule:
-    """Persistent Conversational & Long-Term Memory Vault (Zoey & Mark-LV style)."""
+    """Persistent Conversational & Two-Layer Vault Memory (Mark-LV + Jared Rhod ai-memory-vault)."""
 
     @staticmethod
     def load() -> list[tuple[str, str]]:
@@ -129,15 +135,27 @@ class MemoryModule:
 
     @staticmethod
     def get_long_term_prompt() -> str:
+        parts: list[str] = []
         try:
             from memory.memory_manager import format_memory_for_prompt, load_memory
-            return format_memory_for_prompt(load_memory())
+            mem_str = format_memory_for_prompt(load_memory())
+            if mem_str:
+                parts.append(mem_str)
         except Exception:
-            return ""
+            pass
+        if os.path.exists(VAULT_INDEX_PATH):
+            try:
+                with open(VAULT_INDEX_PATH, "r", encoding="utf-8") as f:
+                    vault_idx = f.read(650).strip()
+                    if vault_idx:
+                        parts.append(f"[VAULT INDEX]\n{vault_idx}")
+            except Exception:
+                pass
+        return "\n".join(parts)
 
 
 class IntelligenceModule:
-    """Hybrid Cognitive Engine: Cloud Gemini Flash Ladder (35 Native Tools) + Local Ollama Fallback."""
+    """Hybrid Cognitive Engine: 9-Model Gemini Fallback Ladder (11s Timeout) + Local Ollama Fallback."""
 
     @staticmethod
     def chat(
@@ -145,6 +163,7 @@ class IntelligenceModule:
         tools: list[dict[str, Any]],
         window: Any,
         abort_check: Callable[[], bool] | None = None,
+        gemini_tools: list[Any] | None = None,
     ) -> dict[str, Any]:
         if abort_check and abort_check():
             return {"role": "assistant", "content": ""}
@@ -157,6 +176,7 @@ class IntelligenceModule:
 
                 sys_inst = messages[0]["content"] if messages and messages[0]["role"] == "system" else "You are JARVIS."
                 user_prompt = messages[-1]["content"] if messages else "Hello"
+                active_g_tools = gemini_tools if gemini_tools is not None else GEMINI_TOOL_FUNCTIONS
 
                 for m_name in get_active_gemini_ladder():
                     if abort_check and abort_check():
@@ -164,10 +184,13 @@ class IntelligenceModule:
                     try:
                         model = genai.GenerativeModel(
                             m_name,
-                            tools=GEMINI_TOOL_FUNCTIONS,
+                            tools=active_g_tools,
                             system_instruction=sys_inst,
                         )
-                        res = model.generate_content(user_prompt)
+                        res = model.generate_content(
+                            user_prompt,
+                            request_options={"timeout": 11.0},
+                        )
                         if abort_check and abort_check():
                             return {"role": "assistant", "content": ""}
                         if res.candidates and res.candidates[0].content.parts:
@@ -186,8 +209,8 @@ class IntelligenceModule:
                         return {"role": "assistant", "content": res.text.strip()}
                     except Exception as m_err:
                         err_s = str(m_err)
-                        if any(code in err_s for code in ("429", "RESOURCE_EXHAUSTED", "Quota exceeded", "404")):
-                            mark_model_exhausted(m_name)
+                        if any(code in err_s for code in ("429", "RESOURCE_EXHAUSTED", "Quota exceeded", "404", "503", "DeadlineExceeded")):
+                            mark_model_exhausted(m_name, err_s)
                         continue
             except Exception as e:
                 safe_err = json.dumps(f"Gemini fallback to Ollama: {str(e).splitlines()[0][:120]}")
@@ -236,7 +259,14 @@ class JarvisPipeline:
         self.is_fullscreen = True
         self.is_orb_only = False
         self.is_muted = False
+        self.video_sound_active = False  # Smart Mic Mute: True when HUD video audio is unmuted
+        self.wake_word_enabled = False   # Dual-mode activation: Wake Word gate
+        self.push_to_talk_enabled = False  # Dual-mode activation: Hold Ctrl+Space to talk
+        self.ptt_key_held = False
+        self.morning_brief_enabled = True
+        self.proactive_enabled = True
         self.screen_vision_mode = False
+        self.current_hud_state = "ONLINE"
         self.abort_event = threading.Event()
         self.active_cmd_id = 0
         self.active_subprocess: subprocess.Popen | None = None
@@ -248,6 +278,7 @@ class JarvisPipeline:
         self.window.evaluate_js = self._safe_evaluate_js
         threading.Thread(target=self._js_worker, daemon=True).start()
         self.tool_suite = UnifiedToolSuite(self)
+        self.remote_dashboard = RemoteDashboardServer(self)
 
     def _get_hwnd(self) -> int:
         if self._hwnd:
@@ -306,6 +337,13 @@ class JarvisPipeline:
 
     def _safe_evaluate_js(self, script: str, *args: Any, **kwargs: Any) -> Any:
         """Non-blocking evaluate_js wrapper that prevents WebView2 semaphore deadlocks in Minimize / Orb mode."""
+        if isinstance(script, str) and script.startswith("updateState("):
+            try:
+                st = script.split("(", 1)[1].split(")", 1)[0].strip("'\"")
+                if st:
+                    self.current_hud_state = st
+            except Exception:
+                pass
         if not script or not isinstance(script, str) or self._is_window_minimized():
             return None
         # Synchronous path only for queries that expect a return value (e.g. captureCameraFrameBase64)
@@ -410,10 +448,17 @@ class JarvisPipeline:
         return False
 
     def abort_current_command(self, spoken_text: str = "") -> None:
-        """Pre-emptively kill any running command, tool execution, subprocess, and active TTS speech."""
+        """Pre-emptively kill any running command, background video resolution, tool execution, subprocess, and active TTS speech."""
         self.active_cmd_id += 1
         self.abort_event.set()
         stop_speaking()
+
+        # Cancel any resolving or playing HUD video immediately ("Talks While It Loads" -> "stop" cancels before video appears)
+        try:
+            if hasattr(self, "tool_suite") and self.tool_suite and hasattr(self.tool_suite, "ui"):
+                self.tool_suite.ui.stop_video()
+        except Exception:
+            pass
 
         for q in (self.text_queue, self.response_queue):
             while not q.empty():
@@ -433,7 +478,7 @@ class JarvisPipeline:
 
         try:
             self.window.evaluate_js("updateState('ONLINE')")
-            self.window.evaluate_js("addLog('SYSTEM', '[ABORT ⊘] Active command & processes terminated.')")
+            self.window.evaluate_js("addLog('SYSTEM', '[ABORT ⊘] Active command, video stream & processes terminated.')")
         except Exception:
             pass
 
@@ -484,6 +529,9 @@ class JarvisPipeline:
     def enter_orb_only_mode(self, sleep_mode: bool = False, vision_mode: bool = False) -> None:
         """Collapse HUD so ONLY the 3D Holographic Orb floats on a 100% transparent background."""
         try:
+            # Do not collapse HUD while an in-HUD video is actively playing
+            if hasattr(self, "tool_suite") and self.tool_suite and self.tool_suite.ui.video_is_playing():
+                return
             self.is_orb_only = True
             self.is_sleeping = sleep_mode
             self.is_fullscreen = False
@@ -511,6 +559,13 @@ class JarvisPipeline:
 
     def start_services(self) -> None:
         self._configure_native_transparency()
+        # Start Remote Smartphone Dashboard server on port 8787
+        try:
+            url = self.remote_dashboard.start()
+            self.window.evaluate_js(f"addLog('SYSTEM', {json.dumps(f'[REMOTE DECK] Smartphone QR Control Ready: {url}')})")
+        except Exception as e:
+            print(f"Remote dashboard start warning: {e}")
+
         for worker in (
             self.stt_worker,
             self.llm_worker,
@@ -518,6 +573,7 @@ class JarvisPipeline:
             self.telemetry_worker,
             self.idle_worker,
             self.background_monitors_worker,
+            self.ptt_worker,
         ):
             threading.Thread(target=worker, daemon=True).start()
 
@@ -555,6 +611,72 @@ class JarvisPipeline:
         except Exception as e:
             print("Hotkey binding failed:", e)
 
+    def ptt_worker(self) -> None:
+        """Polls Ctrl+Space via Win32 GetAsyncKeyState for zero-latency Push-to-Talk activation."""
+        if os.name != "nt":
+            return
+        user32 = ctypes.windll.user32
+        was_held = False
+        while self.running:
+            try:
+                if self.push_to_talk_enabled:
+                    ctrl_down = bool(user32.GetAsyncKeyState(0x11) & 0x8000)
+                    space_down = bool(user32.GetAsyncKeyState(0x20) & 0x8000)
+                    held = ctrl_down and space_down
+                    self.ptt_key_held = held
+                    if held != was_held:
+                        was_held = held
+                        self.window.evaluate_js(f"setPttActiveState({'true' if held else 'false'})")
+                else:
+                    self.ptt_key_held = False
+                    was_held = False
+            except Exception:
+                pass
+            time.sleep(0.05)
+
+    def trigger_morning_briefing(self) -> None:
+        """Deliver a proactive Morning / Daily Briefing with live weather, system health, and global headlines."""
+        self.last_active = time.time()
+        self.increment_command_count()
+        self.response_queue.put(("ACK", "On it, sir. Compiling your daily briefing."))
+
+        def _compile() -> None:
+            try:
+                loc = get_user_location()
+                city = loc.get("city", "your sector")
+                w_url = (
+                    f"https://api.open-meteo.com/v1/forecast?latitude={loc['lat']}&longitude={loc['lon']}"
+                    "&current=temperature_2m,weather_code"
+                )
+                t_str = "pleasant"
+                try:
+                    w_data = requests.get(w_url, timeout=4).json()["current"]
+                    t_str = f"{w_data['temperature_2m']} degrees Celsius"
+                except Exception:
+                    pass
+                cpu = int(psutil.cpu_percent(interval=0.2))
+                mem = int(psutil.virtual_memory().percent)
+                news_snip = ""
+                try:
+                    raw_news = get_world_news_sync()
+                    if raw_news:
+                        first_line = raw_news.splitlines()[0].strip("•- ")
+                        news_snip = f" Top global headline: {first_line[:130]}."
+                except Exception:
+                    pass
+                hour = time.localtime().tm_hour
+                tod = "morning" if hour < 12 else ("afternoon" if hour < 18 else "evening")
+                brief = (
+                    f"Good {tod}, sir. In {city}, current temperature is {t_str}. "
+                    f"System diagnostics show CPU at {cpu} percent and memory at {mem} percent.{news_snip} "
+                    "All Mark 55 subsystems and plugins are standing by."
+                )
+                self.response_queue.put(brief)
+            except Exception as e:
+                self.response_queue.put(f"Briefing telemetry partially available, sir: {e}")
+
+        threading.Thread(target=_compile, daemon=True).start()
+
     def trigger_hotkey_wake(self) -> None:
         if self.is_orb_only or self.is_sleeping:
             self.exit_orb_only_mode()
@@ -564,12 +686,17 @@ class JarvisPipeline:
 
     def idle_worker(self) -> None:
         while self.running:
-            if not self.is_sleeping and not self.is_orb_only and (time.time() - self.last_active > 90):
+            if (
+                not self.is_sleeping
+                and not self.is_orb_only
+                and not self.tool_suite.ui.video_is_playing()
+                and (time.time() - self.last_active > 120)
+            ):
                 self.enter_orb_only_mode(sleep_mode=False)
             time.sleep(2)
 
     def background_monitors_worker(self) -> None:
-        """Runs Mark-LV SystemMonitor threshold checks and BackgroundMonitor topic checks."""
+        """Runs Mark-LV SystemMonitor threshold checks, BackgroundMonitor topic checks, and Proactive Check-Ins."""
         time.sleep(15)
         ticks = 0
         while self.running:
@@ -582,6 +709,16 @@ class JarvisPipeline:
                     from actions.background_monitor import check_all
                     for ta in check_all():
                         self.window.evaluate_js(f"addLog('SYSTEM', {json.dumps(ta)})")
+                if self.proactive_enabled and ticks > 0 and ticks % 90 == 0:
+                    try:
+                        from actions.proactive import check_proactive
+                        suggestion = check_proactive()
+                        if suggestion:
+                            self.window.evaluate_js(f"addLog('JARVIS', {json.dumps('[PROACTIVE] ' + suggestion)})")
+                            if not self.video_sound_active and not self.is_muted:
+                                self.response_queue.put(suggestion)
+                    except Exception:
+                        pass
             except Exception:
                 pass
             ticks += 1
@@ -692,7 +829,7 @@ class JarvisPipeline:
             time.sleep(1)
 
     def stt_worker(self) -> None:
-        """Bilingual Speech Recognition (English & Hindi/Hinglish) with Voice Barge-In Kill Support."""
+        """Bilingual Speech Recognition with Smart Mic Mute, Push-to-Talk, Wake Word, and Barge-In Kill Support."""
         recognizer = sr.Recognizer()
         recognizer.pause_threshold = 0.8
         recognizer.non_speaking_duration = 0.5
@@ -704,6 +841,18 @@ class JarvisPipeline:
             self.window.evaluate_js("updateState('ONLINE')")
 
             while self.running:
+                # 1. SMART MIC MUTE: Auto-mute mic when HUD video audio is playing or user muted mic
+                if self.is_muted or self.video_sound_active:
+                    self.window.evaluate_js("updateState('MUTED')")
+                    time.sleep(0.25)
+                    continue
+
+                # 2. PUSH-TO-TALK GATE: Wait for Ctrl+Space if Push-to-Talk mode is enabled
+                if self.push_to_talk_enabled and not self.ptt_key_held:
+                    self.window.evaluate_js("updateState('ONLINE')")
+                    time.sleep(0.12)
+                    continue
+
                 if recognizer.energy_threshold < 240:
                     recognizer.energy_threshold = 240
                 was_speaking = bool(pygame.mixer.get_init() and pygame.mixer.get_busy())
@@ -712,13 +861,16 @@ class JarvisPipeline:
                 try:
                     p_limit = 3 if was_speaking else 9
                     audio = recognizer.listen(source, timeout=2 if was_speaking else 3, phrase_time_limit=p_limit)
+                    if self.is_muted or self.video_sound_active:
+                        continue
                     if not was_speaking:
                         self.window.evaluate_js("updateState('PROCESSING')")
                     text = recognizer.recognize_google(audio, language="en-IN").lower()
 
                     if text:
+                        has_wake_word = any(w in text for w in ("jarvis", "friday", "system", "hey jarvis", "hey friday"))
                         cmd = text
-                        for w in ("jarvis", "friday", "system"):
+                        for w in ("hey jarvis", "hey friday", "jarvis", "friday", "system"):
                             cmd = cmd.replace(w, "")
                         cmd = cmd.strip()
 
@@ -729,6 +881,10 @@ class JarvisPipeline:
                             continue
 
                         if was_speaking or (pygame.mixer.get_init() and pygame.mixer.get_busy()):
+                            continue
+
+                        # 3. WAKE WORD GATE: If Wake-Word mode is active (and not PTT), require "Jarvis" or "Friday"
+                        if self.wake_word_enabled and not self.push_to_talk_enabled and not has_wake_word:
                             continue
 
                         if self.is_sleeping:
@@ -771,7 +927,7 @@ class JarvisPipeline:
                 self.increment_command_count()
                 self.window.evaluate_js("updateState('THINKING')")
 
-                cmd_lower = text.lower()
+                cmd_lower = text.lower().strip()
                 handled = False
 
                 if "switch to friday" in cmd_lower or "friday mode" in cmd_lower:
@@ -783,6 +939,92 @@ class JarvisPipeline:
                     self.voice_mode = "JARVIS"
                     self.window.evaluate_js("switchMode('JARVIS')")
                     self.response_queue.put("Reverting to J.A.R.V.I.S. mode, sir. Back in blue.")
+                    handled = True
+                elif any(k in cmd_lower for k in ("unmute video", "video sound on", "turn on video sound", "unmute movie", "video unmute")):
+                    self.tool_suite.ui.set_video_muted(False)
+                    self.response_queue.put("Video audio enabled, sir. Smart mic mute is now active so I won't interrupt the movie.")
+                    handled = True
+                elif any(k in cmd_lower for k in ("mute video", "video sound off", "turn off video sound", "mute movie", "video mute")):
+                    self.tool_suite.ui.set_video_muted(True)
+                    self.response_queue.put("Video audio muted, sir. Microphone is active again.")
+                    handled = True
+                elif any(k in cmd_lower for k in ("close video", "stop video", "exit video", "hide video", "video band karo")):
+                    self.tool_suite.ui.stop_video()
+                    self.response_queue.put("Closing the HUD video player, sir.")
+                    handled = True
+                elif any(k in cmd_lower for k in ("morning briefing", "daily briefing", "status briefing", "give me a briefing")):
+                    self.trigger_morning_briefing()
+                    handled = True
+                elif any(k in cmd_lower for k in ("network radar", "wifi radar", "scan lan", "lan radar")):
+                    self.exit_orb_only_mode()
+                    self.response_queue.put(("ACK", "On it, sir. Scanning local network radar."))
+                    threading.Thread(
+                        target=lambda: self.response_queue.put(self.tool_suite.execute("network_radar", {"action": "scan"})),
+                        daemon=True,
+                    ).start()
+                    handled = True
+                elif any(k in cmd_lower for k in ("disk map", "storage map", "analyze disk", "disk treemap", "folder weights")):
+                    self.exit_orb_only_mode()
+                    self.response_queue.put(("ACK", "Working on it, sir. Mapping storage sectors."))
+                    threading.Thread(
+                        target=lambda: self.response_queue.put(self.tool_suite.execute("disk_analyzer", {"path": "D:\\"})),
+                        daemon=True,
+                    ).start()
+                    handled = True
+                elif any(k in cmd_lower for k in ("earth globe", "3d globe", "seismic globe", "earthquake map", "global telemetry")):
+                    self.exit_orb_only_mode()
+                    self.response_queue.put(("ACK", "On it, sir. Projecting 3D Earth telemetry globe."))
+                    threading.Thread(
+                        target=lambda: self.response_queue.put(self.tool_suite.execute("earth_globe", {"focus": "seismic"})),
+                        daemon=True,
+                    ).start()
+                    handled = True
+                elif any(k in cmd_lower for k in ("hardware schematic", "pinout diagram", "circuit schematic", "analyze hardware")):
+                    self.exit_orb_only_mode()
+                    self.response_queue.put(("ACK", "On it, sir. Generating interactive hardware pinout schematic."))
+                    threading.Thread(
+                        target=lambda: self.response_queue.put(self.tool_suite.execute("hardware_schematic", {"component": text})),
+                        daemon=True,
+                    ).start()
+                    handled = True
+                elif any(k in cmd_lower for k in ("pomodoro", "focus timer", "start focus")):
+                    self.exit_orb_only_mode()
+                    mins = 25
+                    m_match = re.search(r"(\d+)\s*min", cmd_lower)
+                    if m_match:
+                        mins = int(m_match.group(1))
+                    res = self.tool_suite.execute("pomodoro_timer", {"action": "start", "minutes": mins, "label": "DEEP WORK"})
+                    self.response_queue.put(res)
+                    handled = True
+                elif any(k in cmd_lower for k in ("barehands", "spatial mode", "ar hand", "hand ring", "holo table", "spatial ar")):
+                    self.exit_orb_only_mode()
+                    off = any(w in cmd_lower for w in ("off", "disable", "exit", "close"))
+                    if off:
+                        self.window.evaluate_js("setBarehandsMode(false)")
+                        self.response_queue.put("Exiting Barehands spatial AR stage, sir.")
+                    else:
+                        self.window.evaluate_js("toggleCenterCameraMode(true); setBarehandsMode(true);")
+                        self.response_queue.put("Activating Barehands spatial AR hand-tracking stage, sir. Pinch your thumb to your index knuckle to summon the command ring.")
+                    handled = True
+                elif any(k in cmd_lower for k in ("3d face", "face avatar", "holographic face", "lip sync avatar")):
+                    self.exit_orb_only_mode()
+                    self.window.evaluate_js("setCenterpieceMode('FACE')")
+                    self.response_queue.put("Switching centerpiece to the 3D Holographic Face Avatar with real-time viseme lip-sync, sir.")
+                    handled = True
+                elif any(k in cmd_lower for k in ("circuit board", "living circuit", "circuit visualizer")):
+                    self.exit_orb_only_mode()
+                    self.window.evaluate_js("setCenterpieceMode('CIRCUIT')")
+                    self.response_queue.put("Switching centerpiece to the Living Circuit Board visualizer, sir.")
+                    handled = True
+                elif any(k in cmd_lower for k in ("arc reactor", "reactor core")):
+                    self.exit_orb_only_mode()
+                    self.window.evaluate_js("setCenterpieceMode('REACTOR')")
+                    self.response_queue.put("Switching centerpiece to the Classic Arc Reactor Core, sir.")
+                    handled = True
+                elif any(k in cmd_lower for k in ("orbital sphere", "3d sphere", "holographic orb")):
+                    self.exit_orb_only_mode()
+                    self.window.evaluate_js("setCenterpieceMode('SPHERE')")
+                    self.response_queue.put("Restoring the 3D Orbital Sphere centerpiece, sir.")
                     handled = True
                 elif any(k in cmd_lower for k in ("show hud", "open hud", "restore hud", "full screen", "fullscreen", "maximize hud", "wapas aao", "hud dikhao")):
                     self.exit_orb_only_mode()
@@ -814,6 +1056,27 @@ class JarvisPipeline:
                 elif any(k in cmd_lower for k in ("read text on camera", "ocr camera", "scan text on camera", "read label on camera", "camera ocr")):
                     self.exit_orb_only_mode()
                     self.window.evaluate_js("triggerCameraOCR()")
+                    handled = True
+                elif cmd_lower.startswith("play ") or " play kar" in cmd_lower or "video chala" in cmd_lower or "trailer" in cmd_lower:
+                    # Direct In-HUD Video on Command fast-path (Talks While It Loads + Original Language + Instant Stop Cancel)
+                    self.exit_orb_only_mode()
+                    q_clean = re.sub(r"^(?:please\s+)?play\s+(?:the\s+)?", "", text, flags=re.I).strip()
+                    q_clean = re.sub(r"\s+(?:on\s+youtube|in\s+hud|video|for\s+me|please)$", "", q_clean, flags=re.I).strip() or text
+                    url_m = _URL_RE.search(text)
+                    vp_params: dict[str, Any] = {"action": "play"}
+                    if url_m:
+                        vp_params["source"] = url_m.group(0)
+                    elif os.path.exists(q_clean.strip("\"'")):
+                        vp_params["source"] = q_clean.strip("\"'")
+                    else:
+                        vp_params["query"] = q_clean
+                    # Immediate spoken response while yt-dlp resolves in the background ("Talks While It Loads")
+                    spoken_opening = f"Pulling up {q_clean} right inside the HUD in its original language, sir. Say stop at any time to cancel."
+                    self.response_queue.put(spoken_opening)
+                    self.tool_suite.execute("video_player", vp_params)
+                    self.history.append(("USER", text))
+                    self.history.append(("JARVIS", spoken_opening))
+                    MemoryModule.save(self.history)
                     handled = True
 
                 if handled:
@@ -878,7 +1141,7 @@ class JarvisPipeline:
                 self.response_queue.put(vision_ans)
                 return
 
-            if any(k in cmd_lower for k in ("open ", "khol", "launch ", "start ", "play ", "world news", "finance news", "financial market")):
+            if any(k in cmd_lower for k in ("open ", "khol", "launch ", "start ", "world news", "finance news", "financial market")):
                 self.enter_orb_only_mode(sleep_mode=False)
 
             lt_mem = MemoryModule.get_long_term_prompt()
@@ -890,15 +1153,15 @@ class JarvisPipeline:
                 "LANGUAGE INSTRUCTION: "
                 "You are 100% fluent in both English and Hindi / Hinglish. "
                 "Always reply in the exact language the user speaks: "
-                "- If the user speaks Hindi or Hinglish (e.g. 'WhatsApp khol do', 'kya haal hai boss', 'Starboy play kar do YouTube pe', 'volume badha do', 'left side pe Chrome set kar do', 'asman mein kitne planes hain'), "
-                "reply in natural, warm, conversational Hindi / Hinglish (e.g. 'Ji boss, WhatsApp khol diya hai.', 'Bilkul sir, YouTube par play kar diya hai.'). "
+                "- If the user speaks Hindi or Hinglish (e.g. 'WhatsApp khol do', 'kya haal hai boss', 'Dune trailer play kar do', 'volume badha do', 'left side pe Chrome set kar do', 'asman mein kitne planes hain'), "
+                "reply in natural, warm, conversational Hindi / Hinglish (e.g. 'Ji boss, WhatsApp khol diya hai.', 'Bilkul sir, HUD mein play kar raha hoon.'). "
                 "- If the user speaks English, reply in sharp, natural English. "
                 "CRITICAL SPOKEN RULES: "
                 "1. Keep spoken responses short (2 to 4 sentences maximum). "
                 "2. NEVER use markdown lists, asterisks, bullet points, or code formatting in spoken responses. Speak naturally. "
                 "3. Call tools silently and immediately. Never recite raw function names. "
                 "4. Address the user naturally as 'boss' or 'sir'. "
-                "5. For playing YouTube videos or songs (even if Brave or Chrome is mentioned), ALWAYS call youtube_video(action='play', query='...') or open_website(url='...'). Never use execute_terminal to launch browsers or URLs.\n"
+                "5. For playing any video, movie, trailer, song, YouTube link, or local video file, ALWAYS call video_player(action='play', query='...') or video_player(action='play', source='...') so it plays directly inside the HUD in its original language.\n"
                 f"{lt_mem}{file_ctx}"
             )
 
@@ -908,7 +1171,14 @@ class JarvisPipeline:
             messages.append({"role": "user", "content": text})
 
             tools = self.tool_suite.get_ollama_tools()
-            msg_obj = IntelligenceModule.chat(messages, tools, self.window, abort_check=is_aborted)
+            g_tools = self.tool_suite.get_gemini_tools()
+            msg_obj = IntelligenceModule.chat(
+                messages,
+                tools,
+                self.window,
+                abort_check=is_aborted,
+                gemini_tools=g_tools,
+            )
             if is_aborted():
                 return
 
@@ -921,7 +1191,24 @@ class JarvisPipeline:
                     t_name = tool["function"]["name"]
                     t_args = tool["function"]["arguments"] or {}
 
-                    if t_name == "get_world_news":
+                    if t_name in ("video_player", "youtube_video"):
+                        self.exit_orb_only_mode()
+                        act = str(t_args.get("action", "play")).lower()
+                        if act in ("play", "open", "resume"):
+                            q = t_args.get("query") or t_args.get("source") or text
+                            vp_args = {"action": "play"}
+                            if t_args.get("source"):
+                                vp_args["source"] = t_args["source"]
+                            else:
+                                vp_args["query"] = q
+                            self.tool_suite.execute("video_player", vp_args)
+                            response = f"Loading {q} inside the HUD in its original language, sir. Say stop at any time to cancel."
+                        else:
+                            res = self.tool_suite.execute("video_player", t_args)
+                            response = str(res)[:300]
+                        break
+
+                    elif t_name == "get_world_news":
                         self.window.evaluate_js("addLog('SYSTEM', 'Polling Global Feeds...')")
                         self.enter_orb_only_mode(sleep_mode=False)
                         news_data = get_world_news_sync()
@@ -994,12 +1281,17 @@ class JarvisPipeline:
                             url_match = _URL_RE.search(cmd_str)
                             if url_match:
                                 target_url = url_match.group(0)
-                                self.enter_orb_only_mode(sleep_mode=False)
-                                if "youtube.com/results?search_query=" in target_url:
-                                    q = target_url.split("search_query=", 1)[1].replace("+", " ")
-                                    tool_res = self.tool_suite.execute("youtube_video", {"action": "play", "query": q})
-                                    response = str(tool_res)[:350] if tool_res else f"Playing {q} on YouTube, sir."
+                                if "youtube.com" in target_url or "youtu.be" in target_url:
+                                    self.exit_orb_only_mode()
+                                    if "search_query=" in target_url:
+                                        q = target_url.split("search_query=", 1)[1].replace("+", " ")
+                                        self.tool_suite.execute("video_player", {"action": "play", "query": q})
+                                        response = f"Playing {q} inside the HUD in its original language, sir."
+                                    else:
+                                        self.tool_suite.execute("video_player", {"action": "play", "source": target_url})
+                                        response = "Playing the requested YouTube stream inside the HUD, sir."
                                 else:
+                                    self.enter_orb_only_mode(sleep_mode=False)
                                     webbrowser.open(target_url)
                                     response = f"Opened {target_url} in your browser, sir."
                             else:
@@ -1140,6 +1432,156 @@ class Api:
         except Exception:
             pass
 
+    def hud_video_control(self, action: str) -> str:
+        """Control the in-HUD video player and synchronize Smart Mic Mute state."""
+        self.pipeline.last_active = time.time()
+        act = (action or "").lower().strip()
+        ui = self.pipeline.tool_suite.ui
+        if act == "mute":
+            ui.set_video_muted(True)
+        elif act == "unmute":
+            ui.set_video_muted(False)
+        elif act == "toggle_mute":
+            ui.set_video_muted(not ui._video_muted)
+        elif act in ("stop", "close", "ended"):
+            ui.stop_video()
+        return json.dumps({
+            "playing": ui.video_is_playing(),
+            "muted": ui._video_muted,
+            "smart_mic_muted": self.pipeline.video_sound_active,
+        })
+
+    def set_control_toggle(self, key: str, enabled: bool) -> str:
+        """Instant Controls Drawer toggle handler for Wake Word, Push-to-Talk, Morning Brief, Proactive, and Mic Mute."""
+        self.pipeline.last_active = time.time()
+        k = (key or "").lower().strip()
+        val = bool(enabled)
+        if k == "wake_word":
+            self.pipeline.wake_word_enabled = val
+        elif k == "push_to_talk":
+            self.pipeline.push_to_talk_enabled = val
+        elif k == "morning_brief":
+            self.pipeline.morning_brief_enabled = val
+        elif k == "proactive":
+            self.pipeline.proactive_enabled = val
+        elif k == "mic_mute":
+            self.pipeline.is_muted = val
+        elif k == "screen_vision":
+            self.pipeline.screen_vision_mode = val
+        self.pipeline.window.evaluate_js(
+            f"addLog('SYSTEM', {json.dumps(f'[CONTROLS] {k.upper()} set to {val}')})"
+        )
+        return self.get_controls_state()
+
+    def get_controls_state(self) -> str:
+        """Return JSON snapshot of all Controls & Setup states."""
+        return json.dumps({
+            "voice_mode": self.pipeline.voice_mode,
+            "is_muted": self.pipeline.is_muted,
+            "video_sound_active": self.pipeline.video_sound_active,
+            "wake_word_enabled": self.pipeline.wake_word_enabled,
+            "push_to_talk_enabled": self.pipeline.push_to_talk_enabled,
+            "morning_brief_enabled": self.pipeline.morning_brief_enabled,
+            "proactive_enabled": self.pipeline.proactive_enabled,
+            "screen_vision_mode": self.pipeline.screen_vision_mode,
+            "remote": self.pipeline.remote_dashboard.get_pairing_info(),
+        })
+
+    def get_remote_pairing(self) -> str:
+        """Return QR code pairing URL, LAN IP, port, and 6-char PIN for the Remote Smartphone Dashboard."""
+        return json.dumps(self.pipeline.remote_dashboard.get_pairing_info())
+
+    def regenerate_remote_pin(self) -> str:
+        """Generate a fresh 6-char PIN for the Remote Smartphone Dashboard."""
+        self.pipeline.remote_dashboard.regenerate_pin()
+        return json.dumps(self.pipeline.remote_dashboard.get_pairing_info())
+
+    def get_plugins_list(self) -> str:
+        """Return JSON list of discovered single-file plugins and their load latency."""
+        reg = self.pipeline.tool_suite.plugin_registry
+        return json.dumps({
+            "load_ms": reg.last_scan_ms,
+            "plugins": reg.to_ui_list(),
+        })
+
+    def toggle_plugin_state(self, name: str, enabled: bool) -> str:
+        """Enable or disable a single-file plugin and refresh tool declarations."""
+        reg = self.pipeline.tool_suite.plugin_registry
+        reg.set_enabled(name, bool(enabled))
+        self.pipeline.tool_suite.reload_plugins()
+        return self.get_plugins_list()
+
+    def reload_plugins_now(self) -> str:
+        """Hot-reload D:\\JARVIS\\plugins\\*.py in ~1-3ms."""
+        info = self.pipeline.tool_suite.reload_plugins()
+        msg = f"[PLUGINS] Hot-reloaded {info['count']} plugins in {info['load_ms']}ms."
+        self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {json.dumps(msg)})")
+        return self.get_plugins_list()
+
+    def run_plugin_direct(self, name: str, params_json: str = "{}") -> None:
+        """Execute a plugin directly from the HUD Controls/Plugins drawer."""
+        self.pipeline.last_active = time.time()
+        self.pipeline.increment_command_count()
+
+        def _run() -> None:
+            try:
+                params = json.loads(params_json) if params_json else {}
+            except Exception:
+                params = {}
+            res = self.pipeline.tool_suite.execute(name, params)
+            if res:
+                self.pipeline.response_queue.put(str(res)[:320])
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    def get_memory_vault_items(self) -> str:
+        """Return JSON with Mark-LV structured memory entries and Jared Rhod VAULT-INDEX.md content."""
+        entries: list[dict[str, Any]] = []
+        try:
+            from memory.memory_manager import all_entries_for_ui
+            entries = all_entries_for_ui()
+        except Exception:
+            pass
+        vault_md = ""
+        if os.path.exists(VAULT_INDEX_PATH):
+            try:
+                with open(VAULT_INDEX_PATH, "r", encoding="utf-8") as f:
+                    vault_md = f.read(4000)
+            except Exception:
+                pass
+        return json.dumps({"entries": entries, "vault_index": vault_md})
+
+    def delete_memory_vault_item(self, category: str, key: str) -> str:
+        """Delete a specific key from persistent memory."""
+        try:
+            from memory.memory_manager import forget_entry
+            forget_entry(category, key)
+        except Exception:
+            pass
+        return self.get_memory_vault_items()
+
+    def trigger_morning_briefing(self) -> None:
+        """Run the proactive Morning / Daily Briefing from the HUD Controls drawer."""
+        self.pipeline.trigger_morning_briefing()
+
+    def create_desktop_shortcut(self) -> None:
+        """Create a native Windows Desktop shortcut for J.A.R.V.I.S. Mark 55."""
+        try:
+            desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+            bat_path = os.path.join(_ROOT_DIR, "START_JARVIS.bat")
+            ps_cmd = (
+                f"$s=(New-Object -COM WScript.Shell).CreateShortcut('{desktop}\\JARVIS Mark 55.lnk');"
+                f"$s.TargetPath='{bat_path}';"
+                f"$s.WorkingDirectory='{_ROOT_DIR}';"
+                "$s.Save()"
+            )
+            subprocess.run(["powershell", "-NoProfile", "-Command", ps_cmd], timeout=5)
+            self.pipeline.window.evaluate_js("addLog('SYSTEM', '[SETUP] Desktop shortcut created: JARVIS Mark 55.lnk')")
+            self.pipeline.response_queue.put("Desktop shortcut created, sir.")
+        except Exception as e:
+            safe_err = json.dumps(f"Shortcut warning: {str(e)[:90]}")
+            self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
+
     def pick_file(self) -> None:
         """Open native file dialog to attach a file for Mark-LV file_processor."""
         try:
@@ -1188,17 +1630,18 @@ class Api:
         threading.Thread(target=_run, daemon=True).start()
 
     def show_memory_vault(self) -> None:
-        """Display stored long-term memories in the HUD conversation log."""
+        """Display stored long-term memories in the HUD conversation log and open the Memory Vault modal."""
         self.pipeline.increment_command_count()
         try:
             from memory.memory_manager import all_entries_for_ui
             entries = all_entries_for_ui()
             if not entries:
-                self.pipeline.window.evaluate_js("addLog('SYSTEM', 'Memory Vault is currently empty. Tell me facts to remember!')")
+                self.pipeline.window.evaluate_js("addLog('SYSTEM', 'Memory Vault is ready. Opening Vault inspector...')")
             else:
                 summary = " | ".join(f"{e['category']}.{e['key']}: {e['value']}" for e in entries[:10])
                 safe = json.dumps(f"Memory Vault ({len(entries)} entries): {summary}")
                 self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {safe})")
+            self.pipeline.window.evaluate_js("openHudModal('memory')")
         except Exception as e:
             safe_err = json.dumps(f"Memory Vault error: {str(e).splitlines()[0][:100]}")
             self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
@@ -1361,6 +1804,19 @@ if __name__ == "__main__":
         api.force_stats_update,
         api.network_diagnostics,
         api.toggle_mute,
+        api.hud_video_control,
+        api.set_control_toggle,
+        api.get_controls_state,
+        api.get_remote_pairing,
+        api.regenerate_remote_pin,
+        api.get_plugins_list,
+        api.toggle_plugin_state,
+        api.reload_plugins_now,
+        api.run_plugin_direct,
+        api.get_memory_vault_items,
+        api.delete_memory_vault_item,
+        api.trigger_morning_briefing,
+        api.create_desktop_shortcut,
         api.pick_file,
         api.scan_airspace,
         api.undo_last_action,
