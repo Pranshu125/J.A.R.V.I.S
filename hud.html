@@ -324,7 +324,7 @@
         body.orb-only .left-panel,
         body.orb-only .right-panel,
         body.orb-only .radar-ring,
-        body.orb-only .center-panel > *:not(#orb-mount) {
+        body.orb-only .center-panel > *:not(#center-stage-slot):not(#orb-mount) {
             display: none !important;
         }
         body.orb-only .main-container {
@@ -380,6 +380,56 @@
         .mini-orb-btn:hover {
             background: var(--theme-color);
             color: #000;
+        }
+
+        /* CENTER CAMERA STAGE MODE (Swaps Camera & Hand Gestures to Center Panel and docks 3D Orb in Left Panel) */
+        #center-stage-slot {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+        body.camera-centered #center-stage-slot #cam-stage {
+            width: 100%;
+            max-width: 560px;
+            background: rgba(5, 10, 22, 0.88);
+            border: 1px solid var(--theme-color);
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 0 35px rgba(0, 255, 255, 0.16), inset 0 0 20px rgba(0, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+        }
+        body.camera-centered #center-stage-slot #cam-wrap {
+            height: 300px !important;
+            border: 1px solid var(--theme-color) !important;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);
+        }
+        body.camera-centered #center-stage-slot #cam-video {
+            height: 300px !important;
+        }
+        body.camera-centered #center-stage-slot #cam-off {
+            height: 280px !important;
+        }
+        body.camera-centered #cam-dock-slot {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 195px;
+        }
+        body.camera-centered #cam-dock-slot #orb-mount {
+            width: 190px !important;
+            height: 190px !important;
+            margin: 0 auto !important;
+        }
+        body.camera-centered #cam-dock-slot #orb-canvas {
+            width: 190px !important;
+            height: 190px !important;
+        }
+        body.camera-centered .center-title {
+            margin-top: 18px !important;
+        }
+        body.camera-centered .friday-btn {
+            margin-top: 16px !important;
         }
 
     </style>
@@ -458,28 +508,35 @@
 
             <div class="widget">
                 <div class="widget-header">
-                    <span>Camera & Hand Gestures</span>
-                    <span style="display:flex; gap:8px; align-items:center;">
+                    <span id="cam-widget-title">Camera & Hand Gestures</span>
+                    <span style="display:flex; gap:6px; align-items:center;">
+                        <span id="cam-center-header-btn" onclick="toggleCenterCameraMode()" style="font-size:10px; padding:2px 6px; border:1px solid var(--theme-color); border-radius:4px; color:var(--theme-color); cursor:pointer; font-weight:700;" title="Bring Camera Mode to Center Stage / Swap with Orb">⤢ CENTER</span>
                         <span id="gesture-badge" onclick="toggleHandTracking()" style="font-size:10px; padding:2px 6px; border:1px solid var(--panel-border); border-radius:4px; color:var(--text-muted); cursor:pointer;" title="Click to toggle Hand Gesture Tracking">OFF</span>
                         <span style="cursor:pointer;" onclick="toggleCamera()" title="Toggle Live Camera & Hand Gestures">⏻</span>
                     </span>
                 </div>
-                <select id="camera-select" style="background:rgba(0,0,0,0.5); color:var(--theme-color); border:1px solid var(--theme-color); border-radius:4px; margin-bottom:8px; display:none; width:100%; font-size:12px; padding:3px;" onchange="switchCamera()"></select>
-                <div id="cam-off" style="height: 135px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted); cursor:pointer; border:1px dashed rgba(255,255,255,0.08);" onclick="toggleCamera()">
-                    <span style="font-size:22px; margin-bottom:8px; color:var(--theme-color);">◎</span>
-                    <span style="font-size:12px; letter-spacing:0.5px;">Optical Sensor Standby (Click to Enable)</span>
-                </div>
-                <div id="cam-wrap" style="position:relative; display:none; width:100%; height:145px; border-radius:8px; overflow:hidden; border:1px solid var(--panel-border);">
-                    <video id="cam-video" autoplay playsinline muted style="width:100%; height:145px; border-radius:8px; object-fit:cover; transform:scaleX(-1); display:block;"></video>
-                    <canvas id="cam-overlay" width="290" height="145" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></canvas>
-                </div>
-                <div id="cam-actions" style="display:none; gap:6px; margin-top:8px;">
-                    <button onclick="triggerCameraVision()" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 6px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; letter-spacing:0.5px;" title="Instant 1-Pass AI Camera Vision">◈ AI Vision</button>
-                    <button onclick="takeCameraSnapshot()" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 6px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; letter-spacing:0.5px;" title="Save High-Res Webcam Snapshot to Desktop">◎ Capture</button>
-                    <button id="gesture-toggle-btn" onclick="toggleHandTracking()" style="flex:1; background:var(--theme-color); border:1px solid var(--theme-color); color:#000; padding:5px 6px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; letter-spacing:0.5px;" title="Toggle Hand Gesture Commands">◈ GESTURES: ON</button>
-                </div>
-                <div id="cam-hint" style="font-size:10px; text-align:center; margin-top:8px; color:var(--text-muted); line-height:1.4; letter-spacing:0.3px;">
-                    ◈ Pinch: Spin · ◎ 2-Hand: Zoom · ◇ V-Sign: Vision · ⊘ Fist: Mute · ▲/▼ Thumb: Vol · ⌬ 3-Finger: Mode
+                <div id="cam-dock-slot">
+                    <div id="cam-stage">
+                        <select id="camera-select" style="background:rgba(0,0,0,0.5); color:var(--theme-color); border:1px solid var(--theme-color); border-radius:4px; margin-bottom:8px; display:none; width:100%; font-size:12px; padding:3px;" onchange="switchCamera()"></select>
+                        <div id="cam-off" style="height: 135px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted); cursor:pointer; border:1px dashed rgba(255,255,255,0.08);" onclick="toggleCamera()" ondblclick="event.stopPropagation(); toggleCenterCameraMode();">
+                            <span style="font-size:22px; margin-bottom:8px; color:var(--theme-color);">◎</span>
+                            <span style="font-size:12px; letter-spacing:0.5px;">Optical Sensor Standby (Click to Enable · ⤢ Center)</span>
+                        </div>
+                        <div id="cam-wrap" ondblclick="toggleCenterCameraMode()" title="Double-click to toggle Center Camera Stage" style="position:relative; display:none; width:100%; height:145px; border-radius:8px; overflow:hidden; border:1px solid var(--panel-border); cursor:pointer;">
+                            <video id="cam-video" autoplay playsinline muted style="width:100%; height:145px; border-radius:8px; object-fit:cover; transform:scaleX(-1); display:block;"></video>
+                            <canvas id="cam-overlay" width="290" height="145" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></canvas>
+                            <button id="cam-expand-overlay-btn" onclick="event.stopPropagation(); toggleCenterCameraMode();" title="Bring Camera Mode to Center Stage / Dock to Left Panel" style="position:absolute; top:8px; right:8px; background:rgba(5,8,17,0.85); border:1px solid var(--theme-color); color:var(--theme-color); padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; cursor:pointer; z-index:20; letter-spacing:0.8px;">⤢ CENTER</button>
+                        </div>
+                        <div id="cam-actions" style="display:none; gap:6px; margin-top:8px;">
+                            <button onclick="triggerCameraVision()" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 6px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; letter-spacing:0.5px;" title="Instant 1-Pass AI Camera Vision">◈ AI Vision</button>
+                            <button onclick="takeCameraSnapshot()" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 6px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; letter-spacing:0.5px;" title="Save High-Res Webcam Snapshot to Desktop">◎ Capture</button>
+                            <button id="gesture-toggle-btn" onclick="toggleHandTracking()" style="flex:1; background:var(--theme-color); border:1px solid var(--theme-color); color:#000; padding:5px 6px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; letter-spacing:0.5px;" title="Toggle Hand Gesture Commands">◈ GESTURES: ON</button>
+                            <button id="cam-center-action-btn" onclick="toggleCenterCameraMode()" style="background:rgba(0,255,255,0.12); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 8px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;" title="Toggle Center Camera Stage">⤢</button>
+                        </div>
+                        <div id="cam-hint" style="font-size:10px; text-align:center; margin-top:8px; color:var(--text-muted); line-height:1.4; letter-spacing:0.3px;">
+                            ◈ Pinch: Spin · ◎ 2-Hand: Zoom · ◇ V-Sign: Vision · ⊘ Fist: Mute · ▲/▼ Thumb: Vol · ⌬ 3-Finger: Mode
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -513,12 +570,14 @@
 
         <!-- CENTER PANEL -->
         <div class="center-panel">
-            <div class="arc-reactor" id="orb-mount" title="Drag to rotate · Scroll to zoom · Double-click or click ⤢ HUD in Mini Mode to restore">
-                <canvas id="orb-canvas" width="320" height="320"></canvas>
-                <div class="radar-ring"></div>
-                <div id="mini-orb-controls">
-                    <button class="mini-orb-btn" onclick="event.stopPropagation(); restoreFullHud();" title="Restore Full HUD Interface (Alt+Space)">⤢ HUD</button>
-                    <button class="mini-orb-btn" style="border-color:#ff3355; color:#ff3355;" onclick="event.stopPropagation(); triggerKillCommand();" title="Stop / Kill Active Command (Esc)">⊘</button>
+            <div id="center-stage-slot">
+                <div class="arc-reactor" id="orb-mount" title="Drag to rotate · Scroll to zoom · Double-click or click ⤢ HUD in Mini Mode to restore">
+                    <canvas id="orb-canvas" width="320" height="320"></canvas>
+                    <div class="radar-ring"></div>
+                    <div id="mini-orb-controls">
+                        <button class="mini-orb-btn" onclick="event.stopPropagation(); restoreFullHud();" title="Restore Full HUD Interface (Alt+Space)">⤢ HUD</button>
+                        <button class="mini-orb-btn" style="border-color:#ff3355; color:#ff3355;" onclick="event.stopPropagation(); triggerKillCommand();" title="Stop / Kill Active Command (Esc)">⊘</button>
+                    </div>
                 </div>
             </div>
 
@@ -536,6 +595,9 @@
             <div class="controls">
                 <button class="icon-btn" id="cam-btn" onclick="toggleCamera()" title="Toggle Optical Camera & Hand Gestures">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </button>
+                <button class="icon-btn" id="center-cam-stage-btn" onclick="toggleCenterCameraMode()" title="Bring Camera Mode to Center Stage / Swap with 3D Orb">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
                 </button>
                 <button class="icon-btn" id="mic-btn" onclick="startMicVisualizer()" title="Connect Audio Visualizer">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -804,9 +866,75 @@
             }
         });
 
+        let isCameraCentered = false;
+
+        async function toggleCenterCameraMode(forceState) {
+            const targetState = (typeof forceState === 'boolean') ? forceState : !isCameraCentered;
+            const centerSlot = document.getElementById('center-stage-slot');
+            const dockSlot = document.getElementById('cam-dock-slot');
+            const camStage = document.getElementById('cam-stage');
+            const orbMount = document.getElementById('orb-mount');
+            const overlay = document.getElementById('cam-overlay');
+            const vid = document.getElementById('cam-video');
+            const headerBtn = document.getElementById('cam-center-header-btn');
+            const overlayBtn = document.getElementById('cam-expand-overlay-btn');
+            const actionBtn = document.getElementById('cam-center-action-btn');
+            const centerCtrlBtn = document.getElementById('center-cam-stage-btn');
+            const widgetTitle = document.getElementById('cam-widget-title');
+
+            if (!centerSlot || !dockSlot || !camStage || !orbMount) return;
+
+            if (targetState) {
+                if (document.body.classList.contains('orb-only')) {
+                    restoreFullHud();
+                }
+                isCameraCentered = true;
+                document.body.classList.add('camera-centered');
+                centerSlot.appendChild(camStage);
+                dockSlot.appendChild(orbMount);
+                if (orbRenderer) orbRenderer.setSize(190, 190);
+                if (overlay) { overlay.width = 530; overlay.height = 300; }
+                if (headerBtn) headerBtn.innerText = '⤡ DOCK';
+                if (overlayBtn) overlayBtn.innerText = '⤡ DOCK LEFT';
+                if (actionBtn) actionBtn.innerText = '⤡';
+                if (widgetTitle) widgetTitle.innerText = '3D Core (Docked)';
+                if (centerCtrlBtn) {
+                    centerCtrlBtn.style.background = 'var(--theme-color)';
+                    centerCtrlBtn.style.color = '#000';
+                }
+                if (!camStream) {
+                    await toggleCamera();
+                } else if (vid && vid.paused) {
+                    vid.play().catch(() => {});
+                }
+            } else {
+                isCameraCentered = false;
+                document.body.classList.remove('camera-centered');
+                centerSlot.appendChild(orbMount);
+                dockSlot.appendChild(camStage);
+                if (orbRenderer) orbRenderer.setSize(320, 320);
+                if (overlay) { overlay.width = 290; overlay.height = 145; }
+                if (headerBtn) headerBtn.innerText = '⤢ CENTER';
+                if (overlayBtn) overlayBtn.innerText = '⤢ CENTER';
+                if (actionBtn) actionBtn.innerText = '⤢';
+                if (widgetTitle) widgetTitle.innerText = 'Camera & Hand Gestures';
+                if (centerCtrlBtn) {
+                    centerCtrlBtn.style.background = 'var(--panel-bg)';
+                    centerCtrlBtn.style.color = 'var(--theme-color)';
+                }
+                if (camStream && vid && vid.paused) {
+                    vid.play().catch(() => {});
+                }
+            }
+        }
+        window.toggleCenterCameraMode = toggleCenterCameraMode;
+
         // Orb-Only Transparent Mode (App Open / Screen Vision / PiP)
         function toggleMiniMode(on) {
             if (on) {
+                if (isCameraCentered) {
+                    toggleCenterCameraMode(false);
+                }
                 document.documentElement.classList.add('orb-only');
                 document.body.classList.add('orb-only');
                 document.body.style.backgroundColor = 'transparent';
@@ -824,10 +952,12 @@
             }
         }
         
-        // Double click Arc Reactor / Orb to manually restore Full HUD
+        // Double click Arc Reactor / Orb to manually restore Full HUD or swap back from Docked Left Panel
         document.querySelector('.arc-reactor').addEventListener('dblclick', () => {
             if (document.body.classList.contains('orb-only') || document.body.style.backgroundColor === 'transparent') {
                 restoreFullHud();
+            } else if (isCameraCentered) {
+                toggleCenterCameraMode(false);
             }
         });
 

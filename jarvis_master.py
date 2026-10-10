@@ -966,6 +966,15 @@ class JarvisPipeline:
                     self.enter_orb_only_mode(sleep_mode=False)
                     self.response_queue.put("Switching to transparent Orb mode, sir.")
                     handled = True
+                elif any(k in cmd_lower for k in ("center camera", "camera to center", "camera in center", "camera mode to center", "bring camera to center", "expand camera", "maximize camera", "camera beech mein", "camera center mein")):
+                    self.exit_orb_only_mode()
+                    self.window.evaluate_js("toggleCenterCameraMode(true)")
+                    self.response_queue.put("Bringing optical camera mode to center stage, sir.")
+                    handled = True
+                elif any(k in cmd_lower for k in ("dock camera", "minimize camera", "camera to side", "orb to center", "center orb", "restore orb", "camera side mein")):
+                    self.window.evaluate_js("toggleCenterCameraMode(false)")
+                    self.response_queue.put("Docking camera to the side panel and restoring the holographic orb to center stage, sir.")
+                    handled = True
 
                 if handled:
                     self.text_queue.task_done()
