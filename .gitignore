@@ -5,3 +5,6 @@ __pycache__/
 *.mp3
 jarvis_state.md
 jarvis_memory.json
+.env
+temp_*.wav
+vision_cache.png

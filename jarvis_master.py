@@ -14,6 +14,21 @@ import pygame
 import psutil
 import webview
 
+# Automatically load environment variables from .env
+_env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+if os.path.exists(_env_path):
+    try:
+        with open(_env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    k, v = k.strip(), v.strip().strip('"').strip("'")
+                    if k and not os.environ.get(k):
+                        os.environ[k] = v
+    except Exception:
+        pass
+
 # Global Process Patch (Mark-LV Architecture): Suppress background console flashing
 if os.name == 'nt':
     _orig_popen = subprocess.Popen
@@ -66,19 +81,102 @@ class MemoryModule:
             pass
 
 class IntelligenceModule:
-    """Hybrid Cognitive Engine: Cloud Gemini 2.5 Flash + Local Ollama Fallback"""
+    """Hybrid Cognitive Engine: Cloud Gemini 3.8 Flash + Local Ollama Fallback"""
     @staticmethod
     def chat(messages, tools, window):
-        # 1. Cloud Fast Mode if GEMINI_API_KEY is present
+        # 1. Cloud Fast Mode via Google Gemini
         api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         if api_key:
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-2.5-flash')
-                last_user_prompt = messages[-1]["content"] if messages else "Hello"
-                res = model.generate_content(last_user_prompt)
-                return {"role": "assistant", "content": res.text}
+
+                # Tool definitions for Gemini Native Function Calling
+                def split_workspace(left_app: str, right_app: str):
+                    """Tile two applications side-by-side on screen (e.g. WhatsApp left, Chrome right)."""
+                    pass
+
+                def launch_application(app_name: str):
+                    """Launch or open an installed desktop application (e.g. whatsapp, chrome, spotify, vscode, notepad, calculator)."""
+                    pass
+
+                def system_hardware_control(action: str, app_name: str = ""):
+                    """Control volume (volume_up, volume_down, mute), brightness (brightness_up, brightness_down), or launch an application (launch_app with app_name)."""
+                    pass
+
+                def window_management(action: str):
+                    """Manage desktop windows (minimize, maximize, snap_left, snap_right, show_desktop, lock_screen, screenshot, task_manager)."""
+                    pass
+
+                def open_website(url: str):
+                    """Open any website URL, YouTube song or video search in the default web browser."""
+                    pass
+
+                def get_world_news():
+                    """Fetch live breaking global news headlines from international wire services."""
+                    pass
+
+                def get_finance_news():
+                    """Fetch current market and financial news headlines from global financial feeds."""
+                    pass
+
+                def open_world_monitor():
+                    """Open the live interactive satellite World Monitor dashboard on screen."""
+                    pass
+
+                def open_finance_monitor():
+                    """Open the live financial markets dashboard on screen."""
+                    pass
+
+                def execute_terminal(command: str):
+                    """Execute a shell or PowerShell command on the machine."""
+                    pass
+
+                gemini_tools = [
+                    split_workspace,
+                    launch_application,
+                    system_hardware_control,
+                    window_management,
+                    open_website,
+                    get_world_news,
+                    get_finance_news,
+                    open_world_monitor,
+                    open_finance_monitor,
+                    execute_terminal
+                ]
+
+                sys_inst = messages[0]["content"] if messages and messages[0]["role"] == "system" else "You are JARVIS."
+                user_prompt = messages[-1]["content"] if messages else "Hello"
+
+                model = None
+                for m_name in ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.5-flash']:
+                    try:
+                        model = genai.GenerativeModel(m_name, tools=gemini_tools, system_instruction=sys_inst)
+                        break
+                    except Exception:
+                        continue
+
+                if model:
+                    res = model.generate_content(user_prompt)
+                    if res.candidates and res.candidates[0].content.parts:
+                        parts = res.candidates[0].content.parts
+                        tool_calls = []
+                        for p in parts:
+                            if p.function_call:
+                                fn = p.function_call
+                                tool_calls.append({
+                                    "function": {
+                                        "name": fn.name,
+                                        "arguments": dict(fn.args)
+                                    }
+                                })
+                        if tool_calls:
+                            return {"role": "assistant", "content": "", "tool_calls": tool_calls}
+
+                        text_parts = [p.text for p in parts if p.text]
+                        if text_parts:
+                            return {"role": "assistant", "content": "".join(text_parts).strip()}
+                    return {"role": "assistant", "content": res.text.strip()}
             except Exception as e:
                 window.evaluate_js(f"addLog('SYSTEM', 'Gemini fallback to Ollama: {e}')")
 
@@ -475,6 +573,19 @@ class JarvisPipeline:
                                 self.is_sleeping = True
                                 self.window.evaluate_js("toggleMiniMode(true)")
                                 self.window.resize(400, 400)
+                            break
+
+                        elif t_name == "launch_application":
+                            app = t_args.get("app_name", "")
+                            response = f"{ack} " + launch_application(app)
+                            self.is_sleeping = True
+                            self.window.evaluate_js("toggleMiniMode(true)")
+                            self.window.resize(400, 400)
+                            break
+
+                        elif t_name == "volume_control":
+                            act = t_args.get("action", "")
+                            response = f"{ack} " + volume_control(act)
                             break
 
                         elif t_name == "window_management":
