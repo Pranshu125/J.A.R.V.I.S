@@ -38,7 +38,7 @@ if os.name == 'nt':
         return _orig_popen(*args, **kwargs)
     subprocess.Popen = _silent_popen
 
-# Modular capabilities ported from Sagar's Friday, Mark-LV, Mark-XXXIX, and Zoey 3D HUD
+# Modular capabilities ported from Sagar's Friday, Ultron, Mark-LV, Mark-XXXIX, Mark-X.1, AI-Assistant-1.1, and Zoey 3D HUD
 from modules.world_intel import (
     get_world_news_sync,
     get_finance_news_sync,
@@ -53,10 +53,13 @@ from modules.system_control import (
     split_workspace
 )
 from modules.tts_engine import speak_text
+from modules.mark_lv_bridge import UnifiedToolSuite
 
 # ========================================================
 # J.A.R.V.I.S. & F.R.I.D.A.Y. UNIFIED COGNITIVE OS
 # Real-Time Voice Assistant with 3D Holographic Orb,
+# MediaPipe Hand Gestures, 29+ Autonomous Tools,
+# Multi-Step Agent Planner, OpenSky Airspace Radar,
 # Deep Windows OS Control, World Intel & Bilingual Intelligence
 # ========================================================
 
@@ -65,7 +68,7 @@ OLLAMA_MODEL = "llama3.2"
 MEMORY_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jarvis_state.md")
 
 class MemoryModule:
-    """Persistent Conversational Memory Vault (Zoey & Mark-LV style)"""
+    """Persistent Conversational & Long-Term Memory Vault (Zoey & Mark-LV style)"""
     @staticmethod
     def load():
         return []
@@ -80,18 +83,126 @@ class MemoryModule:
         except Exception:
             pass
 
+    @staticmethod
+    def get_long_term_prompt() -> str:
+        try:
+            from memory.memory_manager import load_memory, format_memory_for_prompt
+            return format_memory_for_prompt(load_memory())
+        except Exception:
+            return ""
+
+
 class IntelligenceModule:
-    """Hybrid Cognitive Engine: Cloud Gemini 3.8 Flash + Local Ollama Fallback"""
+    """Hybrid Cognitive Engine: Cloud Gemini 3.8 Flash (29+ Native Tools) + Local Ollama Fallback"""
     @staticmethod
     def chat(messages, tools, window):
-        # 1. Cloud Fast Mode via Google Gemini
         api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         if api_key:
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
 
-                # Tool definitions for Gemini Native Function Calling
+                # Native Function Calling declarations covering all 29+ integrated repo capabilities
+                def open_app(app_name: str, action: str = "open"):
+                    """Open, close, minimize, maximize, or switch to any installed desktop application (action: open | close | minimize | maximize | switch)."""
+                    pass
+
+                def web_search(query: str, mode: str = "search", items: str = "", aspect: str = ""):
+                    """Search the web via DuckDuckGo (mode='search'), search breaking news (mode='news'), or compare products (mode='compare' with comma-separated items)."""
+                    pass
+
+                def weather_report(city: str, time: str = "today"):
+                    """Get detailed weather report and open live Windy radar for any city (time: today | tomorrow | week)."""
+                    pass
+
+                def send_message(platform: str, contact: str, message: str):
+                    """Send a message on WhatsApp, Telegram, Instagram, or Discord to a contact."""
+                    pass
+
+                def reminder(date: str, time: str, message: str):
+                    """Schedule a desktop reminder via Windows Task Scheduler (date: YYYY-MM-DD, time: HH:MM)."""
+                    pass
+
+                def youtube_video(action: str, query: str = "", url: str = "", save: bool = False):
+                    """Control YouTube: play a video (action='play', query='...'), summarize a video transcript (action='summarize', url='...'), get video info (action='info'), or show trending (action='trending')."""
+                    pass
+
+                def computer_settings(action: str, value: str = ""):
+                    """Control computer settings: volume_up, volume_down, volume_set, mute, unmute, brightness_up, brightness_down, brightness_set, dark_mode, wifi_toggle, bluetooth_toggle, lock_screen, sleep, restart, shutdown, reload_page, close_tab, new_tab, zoom_in, zoom_out, scroll_up, scroll_down."""
+                    pass
+
+                def browser_control(action: str, url: str = "", query: str = "", text: str = "", selector: str = "", direction: str = "down"):
+                    """Automate web browser via Playwright/CDP: go_to, search, click, type, scroll, fill_form, smart_click, smart_type, get_text, press, close."""
+                    pass
+
+                def file_controller(action: str, path: str = "", name: str = "", destination: str = "", content: str = "", extension: str = ""):
+                    """Manage files and folders: list, create_file, create_folder, delete, move, copy, rename, read, write, find, largest, disk_usage, organize, info."""
+                    pass
+
+                def desktop_control(action: str, path: str = "", url: str = "", mode: str = "by_type"):
+                    """Manage Windows Desktop: wallpaper (from file path), wallpaper_url (from image URL), organize (by_type or by_date), clean, list, stats."""
+                    pass
+
+                def code_helper(action: str, description: str = "", language: str = "python", file_path: str = "", code: str = "", save_path: str = ""):
+                    """Write, edit, explain, run, or fix code files in any programming language and open in VS Code (action: write | edit | explain | run | auto | build)."""
+                    pass
+
+                def dev_agent(description: str, project_name: str = "", language: str = "python", open_vscode: bool = True, run_project: bool = False):
+                    """Autonomous multi-file software engineer: plans architecture, writes all project files, installs dependencies, opens VS Code, and auto-fixes bugs."""
+                    pass
+
+                def computer_control(action: str, text: str = "", x: int = 0, y: int = 0, key: str = "", description: str = "", window_title: str = ""):
+                    """Direct GUI mouse/keyboard automation: type, smart_type, click, double_click, right_click, hotkey, press, scroll, move, drag, copy, paste, screenshot, wait, clear_field, focus_window, screen_find, random_data."""
+                    pass
+
+                def game_updater(action: str, game: str = "", platform: str = "all", schedule_time: str = "03:00"):
+                    """Manage PC games across Steam, Epic, Riot, Xbox, GOG, Ubisoft, EA, Battle.net: launch, list_installed, update, update_all, install, status, schedule, cancel_schedule."""
+                    pass
+
+                def flight_finder(origin: str, destination: str, departure_date: str, return_date: str = "", passengers: int = 1, cabin: str = "economy", save: bool = False):
+                    """Search Google Flights for live flight routes, airlines, durations, and prices."""
+                    pass
+
+                def file_processor(action: str, file_path: str = "", question: str = "", target_language: str = "en", output_format: str = "png"):
+                    """Process uploaded or local files (PDF, image, DOCX, Excel/CSV, audio/video, ZIP): analyze, summarize, ocr, describe, extract_text, to_word, translate, fix_writing, resize, compress, convert, filter, chart."""
+                    pass
+
+                def video_player(action: str, source: str = "", timestamp: str = "", question: str = ""):
+                    """Play, stop, summarize, or analyze local or online video streams (action: play | stop | Summary | analyze | timestamp | mute | unmute)."""
+                    pass
+
+                def screen_process(text: str, angle: str = "screen"):
+                    """Capture the user's screen (angle='screen') or webcam camera (angle='camera') and analyze what is visible using Gemini Vision."""
+                    pass
+
+                def aircraft_report(action: str = "report", radius_km: int = 200):
+                    """Scan live OpenSky airspace radar within 200km for nearby aircraft (callsign, country, distance, speed, heading) or open the FlightRadar24 map (action: report | map)."""
+                    pass
+
+                def agent_task(goal: str):
+                    """Deploy the Mark-XXXIX autonomous multi-step Agent Planner and Executor for complex multi-step goals."""
+                    pass
+
+                def save_memory(category: str, key: str, value: str):
+                    """Save a permanent fact about the user to structured long-term memory (category: identity | preferences | projects | relationships | wishes | notes)."""
+                    pass
+
+                def recall_memory(query: str = ""):
+                    """Search structured long-term memory for stored facts about the user."""
+                    pass
+
+                def manage_monitor(action: str, topic: str = ""):
+                    """Manage background daily news/topic monitors (action: add | remove | list | check)."""
+                    pass
+
+                def system_status():
+                    """Get a full hardware diagnostic report: CPU %, RAM GB, GPU %, CPU temperature, uptime, and process count."""
+                    pass
+
+                def undo(action: str = "undo"):
+                    """Undo the last reversible file, desktop, or setting change made by the assistant (action: undo | list)."""
+                    pass
+
                 def split_workspace(left_app: str, right_app: str):
                     """Tile two applications side-by-side on screen (e.g. WhatsApp left, Chrome right)."""
                     pass
@@ -113,11 +224,11 @@ class IntelligenceModule:
                     pass
 
                 def get_world_news():
-                    """Fetch live breaking global news headlines from international wire services."""
+                    """Fetch live breaking global news headlines and open the interactive satellite World Monitor dashboard."""
                     pass
 
                 def get_finance_news():
-                    """Fetch current market and financial news headlines from global financial feeds."""
+                    """Fetch current market and financial news headlines and open the interactive Finance Monitor dashboard."""
                     pass
 
                 def open_world_monitor():
@@ -133,6 +244,31 @@ class IntelligenceModule:
                     pass
 
                 gemini_tools = [
+                    open_app,
+                    web_search,
+                    weather_report,
+                    send_message,
+                    reminder,
+                    youtube_video,
+                    computer_settings,
+                    browser_control,
+                    file_controller,
+                    desktop_control,
+                    code_helper,
+                    dev_agent,
+                    computer_control,
+                    game_updater,
+                    flight_finder,
+                    file_processor,
+                    video_player,
+                    screen_process,
+                    aircraft_report,
+                    agent_task,
+                    save_memory,
+                    recall_memory,
+                    manage_monitor,
+                    system_status,
+                    undo,
                     split_workspace,
                     launch_application,
                     system_hardware_control,
@@ -142,7 +278,7 @@ class IntelligenceModule:
                     get_finance_news,
                     open_world_monitor,
                     open_finance_monitor,
-                    execute_terminal
+                    execute_terminal,
                 ]
 
                 sys_inst = messages[0]["content"] if messages and messages[0]["role"] == "system" else "You are JARVIS."
@@ -214,6 +350,7 @@ class JarvisPipeline:
         self.voice_mode = 'JARVIS' # Strictly 'JARVIS' or 'FRIDAY'
         self.is_sleeping = False
         self.last_active = time.time()
+        self.tool_suite = UnifiedToolSuite(self)
         
         try:
             self.stt_model = WhisperModel('base.en', device='cpu', compute_type='int8')
@@ -226,13 +363,14 @@ class JarvisPipeline:
         threading.Thread(target=self.tts_worker, daemon=True).start()
         threading.Thread(target=self.telemetry_worker, daemon=True).start()
         threading.Thread(target=self.idle_worker, daemon=True).start()
+        threading.Thread(target=self.background_monitors_worker, daemon=True).start()
         
         # Dynamic Time-of-Day Bilingual Boot Greeting
         hour = time.localtime().tm_hour
         mode_name = getattr(self, "voice_mode", "JARVIS")
         if hour < 12:
             g = [
-                "Good morning, sir. Core systems are online.",
+                "Good morning, sir. All 35 Mark-LV and Mark-XXXIX subsystems are online.",
                 f"Good morning, boss. {mode_name} is operational.",
                 "Namaste sir! Good morning. Sabhi systems online aur ready hain."
             ]
@@ -268,11 +406,33 @@ class JarvisPipeline:
 
     def idle_worker(self):
         while self.running:
-            if not getattr(self, "is_sleeping", False) and time.time() - self.last_active > 45:
+            if not getattr(self, "is_sleeping", False) and time.time() - self.last_active > 90:
                 self.is_sleeping = True
                 self.window.evaluate_js("toggleMiniMode(true)")
                 self.window.resize(400, 400)
             time.sleep(2)
+
+    def background_monitors_worker(self):
+        """Runs Mark-LV SystemMonitor threshold checks and BackgroundMonitor topic checks."""
+        time.sleep(15)
+        ticks = 0
+        while self.running:
+            try:
+                if self.tool_suite.sys_monitor:
+                    alert = self.tool_suite.sys_monitor.check()
+                    if alert:
+                        safe_alert = json.dumps(alert)
+                        self.window.evaluate_js(f"addLog('SYSTEM', {safe_alert})")
+                if ticks % 60 == 0:
+                    from actions.background_monitor import check_all
+                    topic_alerts = check_all()
+                    for ta in topic_alerts:
+                        safe_ta = json.dumps(ta)
+                        self.window.evaluate_js(f"addLog('SYSTEM', {safe_ta})")
+            except Exception:
+                pass
+            ticks += 1
+            time.sleep(30)
             
     def fetch_weather(self):
         try:
@@ -410,7 +570,6 @@ class JarvisPipeline:
                     text = recognizer.recognize_google(audio, language="en-IN").lower()
                     
                     if text:
-                        mode_name = getattr(self, "voice_mode", "JARVIS").lower()
                         wake_triggers = ["jarvis", "friday", "wake", "uth jao", "uth ja"]
                         
                         # Strict Wake-Word filtering in Sleep / PiP Mode
@@ -440,6 +599,7 @@ class JarvisPipeline:
         while self.running:
             try:
                 text = self.text_queue.get()
+                self.last_active = time.time()
                 self.window.evaluate_js("updateState('THINKING')")
                 
                 cmd_lower = text.lower()
@@ -465,20 +625,25 @@ class JarvisPipeline:
                     self.text_queue.task_done()
                     continue
 
-                # Bilingual Spoken Persona (Ported from Iris & Mark-LV)
+                # Bilingual Spoken Persona + Long-Term Memory Injection (Mark-LV + Iris)
+                lt_mem = MemoryModule.get_long_term_prompt()
+                attached_file = self.tool_suite.ui.current_file
+                file_ctx = f"\n[ATTACHED FILE READY FOR file_processor: {attached_file}]\n" if attached_file else ""
+
                 system_prompt = (
                     f"You are {self.voice_mode}, an advanced, loyal, and sharp personal AI assistant. "
                     "LANGUAGE INSTRUCTION: "
                     "You are 100% fluent in both English and Hindi / Hinglish. "
                     "Always reply in the exact language the user speaks: "
-                    "- If the user speaks Hindi or Hinglish (e.g. 'WhatsApp khol do', 'kya haal hai boss', 'Starboy play kar do YouTube pe', 'volume badha do', 'left side pe Chrome set kar do'), "
+                    "- If the user speaks Hindi or Hinglish (e.g. 'WhatsApp khol do', 'kya haal hai boss', 'Starboy play kar do YouTube pe', 'volume badha do', 'left side pe Chrome set kar do', 'asman mein kitne planes hain'), "
                     "reply in natural, warm, conversational Hindi / Hinglish (e.g. 'Ji boss, WhatsApp khol raha hoon.', 'Bilkul sir, YouTube par play kar diya hai.'). "
                     "- If the user speaks English, reply in sharp, natural English. "
                     "CRITICAL SPOKEN RULES: "
                     "1. Keep spoken responses short (2 to 4 sentences maximum). "
                     "2. NEVER use markdown lists, asterisks, bullet points, or code formatting in spoken responses. Speak naturally. "
                     "3. Call tools silently and immediately. Never recite raw function names. "
-                    "4. Address the user naturally as 'boss' or 'sir'."
+                    "4. Address the user naturally as 'boss' or 'sir'.\n"
+                    f"{lt_mem}{file_ctx}"
                 )
 
                 messages = [{"role": "system", "content": system_prompt}]
@@ -486,126 +651,7 @@ class JarvisPipeline:
                     messages.append({"role": "user" if role == "USER" else "assistant", "content": msg})
                 messages.append({"role": "user", "content": text})
 
-                tools = [
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "get_world_news",
-                            "description": "Fetch live breaking world news headlines from major international wire services.",
-                            "parameters": {"type": "object", "properties": {}}
-                        }
-                    },
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "get_finance_news",
-                            "description": "Fetch current market and financial news headlines from global market feeds.",
-                            "parameters": {"type": "object", "properties": {}}
-                        }
-                    },
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "open_world_monitor",
-                            "description": "Open the live visual satellite World Monitor dashboard on screen.",
-                            "parameters": {"type": "object", "properties": {}}
-                        }
-                    },
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "open_finance_monitor",
-                            "description": "Open the live visual financial markets dashboard on screen.",
-                            "parameters": {"type": "object", "properties": {}}
-                        }
-                    },
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "system_hardware_control",
-                            "description": "Control laptop audio volume, mute, brightness, or launch applications.",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "action": {"type": "string", "enum": ["volume_up", "volume_down", "mute", "brightness_up", "brightness_down", "launch_app"]},
-                                    "app_name": {"type": "string", "description": "Application name to open (e.g. chrome, vscode, notepad, spotify, steam, calc, whatsapp)."}
-                                },
-                                "required": ["action"]
-                            }
-                        }
-                    },
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "window_management",
-                            "description": "Manage desktop windows (minimize, maximize, snap left/right, show desktop, lock screen).",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "action": {"type": "string", "enum": ["minimize", "maximize", "snap_left", "snap_right", "show_desktop", "lock_screen", "screenshot", "task_manager"]}
-                                },
-                                "required": ["action"]
-                            }
-                        }
-                    },
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "split_workspace",
-                            "description": "Split screen between two applications: snaps the first application to the left tile and the second application to the right tile (e.g. WhatsApp left, Chrome right).",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "left_app": {"type": "string", "description": "Application name to snap on the left side (e.g. whatsapp, code, spotify)."},
-                                    "right_app": {"type": "string", "description": "Application name to snap on the right side (e.g. chrome, edge, terminal)."}
-                                },
-                                "required": ["left_app", "right_app"]
-                            }
-                        }
-                    },
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "open_website",
-                            "description": "Open any website, YouTube song/video, or web search in the browser.",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "url": {"type": "string", "description": "The exact URL or YouTube video search to open."}
-                                },
-                                "required": ["url"]
-                            }
-                        }
-                    },
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "execute_terminal",
-                            "description": "Execute a shell or PowerShell command on the machine.",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "command": {"type": "string", "description": "Command line string to execute."}
-                                },
-                                "required": ["command"]
-                            }
-                        }
-                    },
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "analyze_screen",
-                            "description": "Take a silent screenshot and inspect what the user is reading or viewing on screen.",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "query": {"type": "string", "description": "Visual query description."}
-                                },
-                                "required": ["query"]
-                            }
-                        }
-                    }
-                ]
+                tools = self.tool_suite.get_ollama_tools()
 
                 msg_obj = IntelligenceModule.chat(messages, tools, self.window)
                 response = ""
@@ -616,11 +662,11 @@ class JarvisPipeline:
                 else:
                     ack = random.choice(["Right away, sir.", "At your service, sir.", "Processing, sir.", "On it, boss."])
 
-                # Tool Routing & Execution
+                # Tool Routing & Execution across all 35+ tools
                 if "tool_calls" in msg_obj and msg_obj["tool_calls"]:
                     for tool in msg_obj["tool_calls"]:
                         t_name = tool["function"]["name"]
-                        t_args = tool["function"]["arguments"]
+                        t_args = tool["function"]["arguments"] or {}
 
                         if t_name == "get_world_news":
                             self.window.evaluate_js("addLog('SYSTEM', 'Polling Global Feeds...')")
@@ -653,17 +699,11 @@ class JarvisPipeline:
                                 response = f"{ack} " + brightness_control(act)
                             elif act == "launch_app":
                                 response = f"{ack} " + launch_application(app)
-                                self.is_sleeping = True
-                                self.window.evaluate_js("toggleMiniMode(true)")
-                                self.window.resize(400, 400)
                             break
 
                         elif t_name == "launch_application":
                             app = t_args.get("app_name", "")
                             response = f"{ack} " + launch_application(app)
-                            self.is_sleeping = True
-                            self.window.evaluate_js("toggleMiniMode(true)")
-                            self.window.resize(400, 400)
                             break
 
                         elif t_name == "volume_control":
@@ -683,42 +723,25 @@ class JarvisPipeline:
                             break
 
                         elif t_name == "open_website":
-                            url = t_args.get("url")
+                            url = t_args.get("url", "")
                             webbrowser.open(url)
                             response = f"{ack} Opening {url}."
-                            self.is_sleeping = True
-                            self.window.evaluate_js("toggleMiniMode(true)")
-                            self.window.resize(400, 400)
                             break
 
                         elif t_name == "execute_terminal":
-                            cmd_str = t_args.get("command")
+                            cmd_str = t_args.get("command", "")
                             try:
-                                out = subprocess.check_output(cmd_str, shell=True, text=True, stderr=subprocess.STDOUT, timeout=8)
-                                clean = out.replace('\n', ' ')[:180]
+                                out = subprocess.check_output(cmd_str, shell=True, text=True, stderr=subprocess.STDOUT, timeout=10)
+                                clean = out.replace('\n', ' ')[:220]
                                 response = f"Execution completed, sir. Output: {clean}"
                             except Exception as e:
                                 response = f"Terminal execution failed: {e}"
                             break
 
-                        elif t_name == "analyze_screen":
-                            q = t_args.get("query", "Describe this display.")
-                            try:
-                                import pyautogui, base64
-                                pyautogui.screenshot("vision_cache.png")
-                                with open("vision_cache.png", "rb") as img:
-                                    b64 = base64.b64encode(img.read()).decode('utf-8')
-                                payload = {
-                                    "model": "moondream",
-                                    "prompt": q,
-                                    "images": [b64],
-                                    "stream": False
-                                }
-                                res = requests.post("http://localhost:11434/api/generate", json=payload, timeout=30).json()
-                                vis_text = res.get('response', '')
-                                response = f"Looking at your display now, sir. {vis_text}"
-                            except Exception:
-                                response = "Vision sensors are processing slowly. Please verify moondream is ready."
+                        else:
+                            # Dispatch to UnifiedToolSuite (17 Mark-LV actions + Mark-XXXIX Agent + OpenSky Radar + Vision + Memory + Undo)
+                            tool_res = self.tool_suite.execute(t_name, t_args)
+                            response = str(tool_res)[:350] if tool_res else f"{ack} Completed {t_name}."
                             break
 
                 if not response:
@@ -759,6 +782,7 @@ class Api:
         self.pipeline = pipeline
     
     def send_command(self, text):
+        self.pipeline.last_active = time.time()
         safe_text = json.dumps(text)
         self.pipeline.window.evaluate_js(f"addLog('USER', {safe_text})")
         self.pipeline.text_queue.put(text)
@@ -789,6 +813,48 @@ class Api:
             self.pipeline.window.evaluate_js("addLog('SYSTEM', 'System audio mute toggled.')")
         except Exception:
             pass
+
+    def pick_file(self):
+        """Open native file dialog to attach a file for Mark-LV file_processor."""
+        try:
+            result = self.pipeline.window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=False)
+            if result and len(result) > 0:
+                chosen = result[0]
+                self.pipeline.tool_suite.ui.current_file = chosen
+                fname = os.path.basename(chosen)
+                safe_msg = json.dumps(f"Attached file ready for processing: {fname} ({chosen})")
+                self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {safe_msg})")
+                self.pipeline.window.evaluate_js(f"setAttachedFile({json.dumps(fname)})")
+        except Exception as e:
+            self.pipeline.window.evaluate_js(f"addLog('SYSTEM', 'File picker warning: {e}')")
+
+    def scan_airspace(self):
+        """Run immediate 200km OpenSky aircraft radar scan."""
+        def _run():
+            res = self.pipeline.tool_suite.execute("aircraft_report", {"action": "report", "radius_km": 200})
+            self.pipeline.response_queue.put(res)
+        threading.Thread(target=_run, daemon=True).start()
+
+    def undo_last_action(self):
+        """Revert the most recent file, desktop, or setting change."""
+        def _run():
+            res = self.pipeline.tool_suite.execute("undo", {"action": "undo"})
+            self.pipeline.response_queue.put(res)
+        threading.Thread(target=_run, daemon=True).start()
+
+    def show_memory_vault(self):
+        """Display stored long-term memories in the HUD conversation log."""
+        try:
+            from memory.memory_manager import all_entries_for_ui
+            entries = all_entries_for_ui()
+            if not entries:
+                self.pipeline.window.evaluate_js("addLog('SYSTEM', 'Memory Vault is currently empty. Tell me facts to remember!')")
+            else:
+                summary = " | ".join([f"{e['category']}.{e['key']}: {e['value']}" for e in entries[:10]])
+                safe = json.dumps(f"Memory Vault ({len(entries)} entries): {summary}")
+                self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {safe})")
+        except Exception as e:
+            self.pipeline.window.evaluate_js(f"addLog('SYSTEM', 'Memory Vault error: {e}')")
 
     def enter_mini(self):
         self.pipeline.window.resize(400, 400)
@@ -821,6 +887,10 @@ if __name__ == '__main__':
         api.force_stats_update,
         api.network_diagnostics,
         api.toggle_mute,
+        api.pick_file,
+        api.scan_airspace,
+        api.undo_last_action,
+        api.show_memory_vault,
         api.enter_mini,
         api.exit_mini
     )

@@ -8,3 +8,8 @@ jarvis_memory.json
 .env
 temp_*.wav
 vision_cache.png
+Repos/
+config/
+memory/*.json
+memory/*.txt
+projects/

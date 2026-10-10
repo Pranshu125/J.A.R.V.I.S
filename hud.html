@@ -332,14 +332,23 @@
             </div>
 
             <div class="widget">
-                <div class="widget-header"><span>Camera</span> <span style="cursor:pointer;" onclick="toggleCamera()" title="Toggle Live Camera">⏻</span></div>
+                <div class="widget-header">
+                    <span>Camera & Hand Gestures</span>
+                    <span style="display:flex; gap:8px; align-items:center;">
+                        <span id="gesture-badge" style="font-size:10px; color:var(--text-muted); padding:1px 6px; border:1px solid var(--panel-border); border-radius:4px;">IDLE</span>
+                        <span style="cursor:pointer;" onclick="toggleCamera()" title="Toggle Live Camera">⏻</span>
+                    </span>
+                </div>
                 <select id="camera-select" style="background:rgba(0,0,0,0.5); color:var(--theme-color); border:1px solid var(--theme-color); border-radius:4px; margin-bottom:10px; display:none; width:100%; font-size:12px; padding:2px;" onchange="switchCamera()"></select>
                 <div id="cam-off" style="height: 120px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted); cursor:pointer;" onclick="toggleCamera()">
                     <span style="font-size:24px; margin-bottom:10px; color:var(--theme-color);">📷</span>
                     <span style="font-size:12px;">Camera Off (Click to Enable)</span>
                 </div>
-                <video id="cam-video" autoplay playsinline style="display:none; width:100%; height:120px; border-radius:8px; object-fit:cover;"></video>
-                <div style="font-size:10px; text-align:center; margin-top:10px; color:var(--text-muted);">Click the power icon to toggle live feed.</div>
+                <div id="cam-wrap" style="position:relative; display:none; width:100%; height:120px; border-radius:8px; overflow:hidden;">
+                    <video id="cam-video" autoplay playsinline muted style="width:100%; height:120px; border-radius:8px; object-fit:cover; transform:scaleX(-1);"></video>
+                    <canvas id="cam-overlay" width="320" height="180" style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none;"></canvas>
+                </div>
+                <div style="font-size:10px; text-align:center; margin-top:10px; color:var(--text-muted);">Click ✋ below to control the 3D Orb with pinch gestures (1 hand = spin, 2 hands = zoom).</div>
             </div>
             
             <div class="widget">
@@ -359,7 +368,7 @@
 
         <!-- CENTER PANEL -->
         <div class="center-panel">
-            <div class="arc-reactor" id="orb-mount">
+            <div class="arc-reactor" id="orb-mount" title="Drag to rotate · Scroll to zoom · Double-click in Mini Mode to restore">
                 <canvas id="orb-canvas" width="320" height="320"></canvas>
                 <div class="radar-ring"></div>
             </div>
@@ -376,9 +385,22 @@
             </div>
 
             <div class="controls">
-                <button class="icon-btn" onclick="toggleCamera()" title="Toggle Camera">📷</button>
-                <button class="icon-btn" onclick="startMicVisualizer()" title="Connect Audio Visualizer">🎙️</button>
+                <button class="icon-btn" id="cam-btn" onclick="toggleCamera()" title="Toggle Live Camera">📷</button>
+                <button class="icon-btn" id="mic-btn" onclick="startMicVisualizer()" title="Connect Audio Visualizer">🎙️</button>
+                <button class="icon-btn" id="hand-btn" onclick="toggleHandTracking()" title="Toggle MediaPipe Hand Gesture Orb Control (1-Hand Pinch Spin / 2-Hand Pinch Zoom)">✋</button>
+                <button class="icon-btn" onclick="triggerAirspaceRadar()" title="Scan 200km OpenSky Airspace Radar">✈️</button>
+                <button class="icon-btn" onclick="triggerMemoryVault()" title="Inspect Long-Term Memory Vault">🧠</button>
+                <button class="icon-btn" onclick="triggerUndo()" title="Undo Last System/File Action">↩️</button>
                 <button class="icon-btn" onclick="focusInput()" title="Focus Command Input">⌨️</button>
+            </div>
+
+            <!-- Tactical Quick-Command Pills (Mark-LV, Mark-XXXIX & Friday Capabilities) -->
+            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:14px; max-width:440px;">
+                <button onclick="quickCmd('Scan nearby aircraft radar')" style="background:rgba(0,255,255,0.06); border:1px solid var(--panel-border); color:var(--text-main); padding:4px 10px; border-radius:14px; font-size:11px; cursor:pointer;">✈️ Airspace Radar</button>
+                <button onclick="quickCmd('Analyze my screen and tell me what I am looking at')" style="background:rgba(0,255,255,0.06); border:1px solid var(--panel-border); color:var(--text-main); padding:4px 10px; border-radius:14px; font-size:11px; cursor:pointer;">🖥️ Screen Vision</button>
+                <button onclick="quickCmd('Give me breaking world news')" style="background:rgba(0,255,255,0.06); border:1px solid var(--panel-border); color:var(--text-main); padding:4px 10px; border-radius:14px; font-size:11px; cursor:pointer;">🌍 World Intel</button>
+                <button onclick="quickCmd('Give me financial market news')" style="background:rgba(0,255,255,0.06); border:1px solid var(--panel-border); color:var(--text-main); padding:4px 10px; border-radius:14px; font-size:11px; cursor:pointer;">📈 Finance Intel</button>
+                <button onclick="quickCmd('Give me a full system status report')" style="background:rgba(0,255,255,0.06); border:1px solid var(--panel-border); color:var(--text-main); padding:4px 10px; border-radius:14px; font-size:11px; cursor:pointer;">⚡ System Status</button>
             </div>
         </div>
 
@@ -394,13 +416,19 @@
             
             <div class="chat-box" id="chat-box">
                 <div class="msg jarvis">
-                    Hello, I am JARVIS. Core systems initialized and online. How can I assist you today, sir?
+                    Hello, I am JARVIS. All 35 Mark-LV, Mark-XXXIX, and Airspace Radar subsystems are online. How can I assist you today, sir?
                     <span class="time-stamp">Now</span>
                 </div>
             </div>
 
+            <div id="attached-file-bar" style="display:none; padding:6px 15px; background:rgba(0,255,255,0.08); border-top:1px solid var(--panel-border); font-size:12px; color:var(--theme-color); justify-content:space-between; align-items:center;">
+                <span id="attached-file-name">📎 file.pdf</span>
+                <span style="cursor:pointer; color:var(--text-muted);" onclick="clearAttachedFile()">✕</span>
+            </div>
+
             <div class="chat-input">
-                <input type="text" id="cmd-input" placeholder="Type a message..." onkeypress="handleEnter(event)">
+                <button class="icon-btn" style="width:40px; height:40px; font-size:16px; flex-shrink:0;" onclick="triggerFilePicker()" title="Attach File (PDF, Image, DOCX, CSV, Code, Audio/Video) for File Processor">📎</button>
+                <input type="text" id="cmd-input" placeholder="Type a command or question (English / Hindi)..." onkeypress="handleEnter(event)">
                 <button class="send-btn" onclick="sendCommand()">➤</button>
             </div>
         </div>
@@ -579,8 +607,9 @@
 
         // Mode Switching
         
-        // --- 3D HOLOGRAPHIC PARTICLE ORB (ZOEY & IRIS STYLE) ---
-        let orbScene, orbCamera, orbRenderer, particleMesh, orbMaterial;
+        // --- 3D HOLOGRAPHIC MULTI-LAYER ORB (ZOEY, IRIS & ULTRON ORBSCENE) ---
+        let orbScene, orbCamera, orbRenderer, orbGroup, particleMesh, outerShell, orbitalRingsGroup, orbMaterial;
+        let lineMaterials = [];
         let basePositions = [];
         let orbSpeed = 0.008;
         let orbPulse = 1.0;
@@ -594,21 +623,23 @@
 
             orbScene = new THREE.Scene();
             orbCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
-            orbCamera.position.z = 180;
+            orbCamera.position.z = 185;
 
             orbRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
             orbRenderer.setSize(320, 320);
             orbRenderer.setPixelRatio(window.devicePixelRatio || 1);
 
-            // Create 1,200 particle nodes distributed uniformly on a sphere
+            orbGroup = new THREE.Group();
+            orbScene.add(orbGroup);
+
+            // LAYER 1: 1,200 Fibonacci Particle Core (Zoey / Iris)
             const particleCount = 1200;
-            const radius = 62;
+            const radius = 56;
             const geometry = new THREE.BufferGeometry();
             const positions = new Float32Array(particleCount * 3);
             basePositions = [];
 
             for (let i = 0; i < particleCount; i++) {
-                // Fibonacci sphere distribution for uniform organic spacing
                 const phi = Math.acos(-1 + (2 * i) / particleCount);
                 const theta = Math.sqrt(particleCount * Math.PI) * phi;
 
@@ -625,7 +656,6 @@
 
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-            // Custom glowing particle canvas texture
             const pCanvas = document.createElement('canvas');
             pCanvas.width = 16;
             pCanvas.height = 16;
@@ -642,7 +672,7 @@
 
             orbMaterial = new THREE.PointsMaterial({
                 color: orbColor,
-                size: 3.2,
+                size: 3.1,
                 map: pTexture,
                 transparent: true,
                 blending: THREE.AdditiveBlending,
@@ -650,22 +680,92 @@
             });
 
             particleMesh = new THREE.Points(geometry, orbMaterial);
-            orbScene.add(particleMesh);
+            orbGroup.add(particleMesh);
 
-            // Interactive 3D mouse drag rotation
+            // Helper for additive holographic line materials
+            function makeLineMat(opacity) {
+                const m = new THREE.LineBasicMaterial({
+                    color: orbColor,
+                    transparent: true,
+                    opacity: opacity,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+                lineMaterials.push(m);
+                return m;
+            }
+
+            function latRingGeo(r, lat, segs = 96) {
+                const ringR = r * Math.cos(lat);
+                const y = r * Math.sin(lat);
+                const pts = [];
+                for (let i = 0; i <= segs; i++) {
+                    const a = (i / segs) * Math.PI * 2;
+                    pts.push(new THREE.Vector3(ringR * Math.cos(a), y, ringR * Math.sin(a)));
+                }
+                return new THREE.BufferGeometry().setFromPoints(pts);
+            }
+
+            function meridianGeo(r, lon, segs = 96) {
+                const pts = [];
+                for (let i = 0; i <= segs; i++) {
+                    const lat = (i / segs) * Math.PI - Math.PI / 2;
+                    pts.push(new THREE.Vector3(
+                        r * Math.cos(lat) * Math.cos(lon),
+                        r * Math.sin(lat),
+                        r * Math.cos(lat) * Math.sin(lon)
+                    ));
+                }
+                return new THREE.BufferGeometry().setFromPoints(pts);
+            }
+
+            // LAYER 2: Holographic Wireframe Shell (Ported from Sagar's orbScene.ts)
+            outerShell = new THREE.Group();
+            const shellR = 64;
+            for (let i = -6; i <= 6; i++) {
+                const lat = (i / 6) * (Math.PI / 2) * 0.92;
+                const op = (i === 0) ? 0.45 : (i % 2 === 0 ? 0.22 : 0.08);
+                outerShell.add(new THREE.Line(latRingGeo(shellR, lat), makeLineMat(op)));
+            }
+            for (let i = 0; i < 12; i++) {
+                const lon = (i / 12) * Math.PI * 2;
+                const op = (i % 3 === 0) ? 0.35 : 0.1;
+                outerShell.add(new THREE.Line(meridianGeo(shellR, lon), makeLineMat(op)));
+            }
+            orbGroup.add(outerShell);
+
+            // LAYER 3: Inclined Gyroscopic HUD Rings
+            orbitalRingsGroup = new THREE.Group();
+            const ringConfigs = [
+                { r: 72, rx: 0.45, ry: 0.2, rz: 0.0, op: 0.55 },
+                { r: 78, rx: -0.6, ry: 0.4, rz: 0.3, op: 0.35 },
+                { r: 84, rx: 1.1, ry: -0.3, rz: -0.2, op: 0.25 }
+            ];
+            ringConfigs.forEach(cfg => {
+                const rGeo = latRingGeo(cfg.r, 0, 128);
+                const rMesh = new THREE.Line(rGeo, makeLineMat(cfg.op));
+                rMesh.rotation.set(cfg.rx, cfg.ry, cfg.rz);
+                orbitalRingsGroup.add(rMesh);
+            });
+            orbGroup.add(orbitalRingsGroup);
+
+            // Interactive 3D mouse drag rotation & scroll wheel zoom
             canvas.addEventListener('mousedown', (e) => {
                 isDragging = true;
                 prevMousePos = { x: e.clientX, y: e.clientY };
             });
             window.addEventListener('mouseup', () => { isDragging = false; });
             window.addEventListener('mousemove', (e) => {
-                if (!isDragging || !particleMesh) return;
+                if (!isDragging || !orbGroup) return;
                 const dx = e.clientX - prevMousePos.x;
                 const dy = e.clientY - prevMousePos.y;
-                particleMesh.rotation.y += dx * 0.01;
-                particleMesh.rotation.x += dy * 0.01;
+                rotateOrbBy(dx * 0.01, dy * 0.01);
                 prevMousePos = { x: e.clientX, y: e.clientY };
             });
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                zoomOrbBy(e.deltaY > 0 ? 1.08 : 0.92);
+            }, { passive: false });
 
             // Animation Loop
             let clock = new THREE.Clock();
@@ -676,7 +776,17 @@
                 if (particleMesh) {
                     if (!isDragging) {
                         particleMesh.rotation.y += orbSpeed;
-                        particleMesh.rotation.x += orbSpeed * 0.5;
+                        particleMesh.rotation.x += orbSpeed * 0.4;
+                    }
+                    if (outerShell) {
+                        outerShell.rotation.y -= orbSpeed * 0.6;
+                        outerShell.rotation.z += orbSpeed * 0.2;
+                    }
+                    if (orbitalRingsGroup) {
+                        orbitalRingsGroup.children.forEach((ring, idx) => {
+                            ring.rotation.z += (idx % 2 === 0 ? 1 : -1) * orbSpeed * (0.8 + idx * 0.3);
+                            ring.rotation.y += orbSpeed * 0.35;
+                        });
                     }
 
                     // Audio & state ripple deformation
@@ -685,9 +795,8 @@
 
                     for (let i = 0; i < basePositions.length; i++) {
                         const bp = basePositions[i];
-                        // Harmonic surface undulation
                         const wave = Math.sin(bp.phi * 4 + time * 3) * Math.cos(bp.theta * 3 + time * 2) * (3.5 * orbPulse);
-                        const rScale = 1 + wave / 62;
+                        const rScale = 1 + wave / 56;
 
                         posArray[i * 3] = bp.x * rScale;
                         posArray[i * 3 + 1] = bp.y * rScale;
@@ -701,11 +810,23 @@
             animateOrb();
         }
 
+        function rotateOrbBy(deltaTheta, deltaPhi) {
+            if (!orbGroup) return;
+            orbGroup.rotation.y += deltaTheta;
+            orbGroup.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, orbGroup.rotation.x + deltaPhi));
+        }
+
+        function zoomOrbBy(factor) {
+            if (!orbCamera) return;
+            orbCamera.position.z = Math.max(95, Math.min(320, orbCamera.position.z * factor));
+        }
+
         window.addEventListener('DOMContentLoaded', initThreeOrb);
 
         function setOrbColor(hex) {
             orbColor = hex;
             if (orbMaterial) orbMaterial.color.setHex(hex);
+            lineMaterials.forEach(m => m.color.setHex(hex));
         }
 
         function switchMode(mode) {
@@ -729,13 +850,59 @@
             if (typeof pywebview !== 'undefined') {
                 pywebview.api.send_command("switch to friday");
             } else {
-                switchMode('FRIDAY'); // local test fallback
+                switchMode('FRIDAY');
             }
         }
         
         function triggerJarvis() {
             if (typeof pywebview !== 'undefined') pywebview.api.send_command("switch to jarvis");
             else switchMode('JARVIS');
+        }
+
+        function quickCmd(cmdText) {
+            if (typeof pywebview !== 'undefined') {
+                pywebview.api.send_command(cmdText);
+            } else {
+                addLog('USER', cmdText);
+            }
+        }
+
+        function triggerAirspaceRadar() {
+            if (typeof pywebview !== 'undefined') {
+                pywebview.api.scan_airspace();
+            }
+        }
+
+        function triggerMemoryVault() {
+            if (typeof pywebview !== 'undefined') {
+                pywebview.api.show_memory_vault();
+            }
+        }
+
+        function triggerUndo() {
+            if (typeof pywebview !== 'undefined') {
+                pywebview.api.undo_last_action();
+            }
+        }
+
+        function triggerFilePicker() {
+            if (typeof pywebview !== 'undefined') {
+                pywebview.api.pick_file();
+            }
+        }
+
+        function setAttachedFile(fileName) {
+            const bar = document.getElementById('attached-file-bar');
+            const label = document.getElementById('attached-file-name');
+            if (bar && label) {
+                label.innerText = '📎 Ready for File Processor: ' + fileName;
+                bar.style.display = 'flex';
+            }
+        }
+
+        function clearAttachedFile() {
+            const bar = document.getElementById('attached-file-bar');
+            if (bar) bar.style.display = 'none';
         }
 
         function focusInput() {
@@ -760,25 +927,33 @@
             a.click();
         }
 
-        // Live Camera Feed
+        // --- LIVE CAMERA FEED & MEDIAPIPE HAND GESTURE TRACKING (Ported from Sagar's handTracker.ts) ---
         let camStream = null;
+        let handLandmarker = null;
+        let handTrackingActive = false;
+        let handRafId = 0;
+        let lastVideoTime = -1;
+        let handStates = new Map();
+        let prevGestureMode = 'idle';
+        let prevSpinGrab = null;
+        let prevZoomDist = null;
+
         async function toggleCamera() {
             const vid = document.getElementById('cam-video');
+            const wrap = document.getElementById('cam-wrap');
             const offBox = document.getElementById('cam-off');
             const select = document.getElementById('camera-select');
             
             if (camStream) {
+                if (handTrackingActive) stopHandTrackingLoop();
                 camStream.getTracks().forEach(t => t.stop());
                 camStream = null;
-                vid.style.display = 'none';
+                wrap.style.display = 'none';
                 offBox.style.display = 'flex';
                 select.style.display = 'none';
             } else {
                 try {
-                    // Ask for initial permission
-                    camStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    
-                    // Populate select box
+                    camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
                     const devices = await navigator.mediaDevices.enumerateDevices();
                     const videoDevices = devices.filter(d => d.kind === 'videoinput');
                     select.innerHTML = '';
@@ -788,13 +963,13 @@
                         opt.text = d.label || 'Camera ' + (select.length + 1);
                         select.appendChild(opt);
                     });
-                    
                     if (videoDevices.length > 1) select.style.display = 'block';
-                    
                     vid.srcObject = camStream;
-                    vid.style.display = 'block';
+                    wrap.style.display = 'block';
                     offBox.style.display = 'none';
-                } catch(e) { addLog('SYSTEM', 'Webcam access denied. Check Windows Privacy Settings.'); }
+                } catch(e) {
+                    addLog('SYSTEM', 'Webcam access denied. Check Windows Privacy Settings.');
+                }
             }
         }
 
@@ -806,6 +981,164 @@
                 camStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } } });
                 document.getElementById('cam-video').srcObject = camStream;
             } catch(e) { addLog('SYSTEM', 'Failed to switch camera.'); }
+        }
+
+        function dist2d(a, b) {
+            return Math.hypot(a.x - b.x, a.y - b.y);
+        }
+
+        async function toggleHandTracking() {
+            const handBtn = document.getElementById('hand-btn');
+            const badge = document.getElementById('gesture-badge');
+            if (handTrackingActive) {
+                stopHandTrackingLoop();
+                if (handBtn) { handBtn.style.background = 'var(--panel-bg)'; handBtn.style.color = 'var(--theme-color)'; }
+                if (badge) badge.innerText = 'IDLE';
+                addLog('SYSTEM', 'Hand gesture orb control disabled.');
+                return;
+            }
+
+            if (!camStream) {
+                await toggleCamera();
+                if (!camStream) return;
+            }
+
+            try {
+                addLog('SYSTEM', 'Initializing MediaPipe Hand Gesture Tracker (1-hand pinch = spin, 2-hand pinch = zoom)...');
+                if (!handLandmarker) {
+                    const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm');
+                    const fileset = await vision.FilesetResolver.forVisionTasks(
+                        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
+                    );
+                    handLandmarker = await vision.HandLandmarker.createFromOptions(fileset, {
+                        baseOptions: {
+                            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+                            delegate: 'GPU'
+                        },
+                        runningMode: 'VIDEO',
+                        numHands: 2,
+                        minHandDetectionConfidence: 0.55,
+                        minHandPresenceConfidence: 0.55,
+                        minTrackingConfidence: 0.55
+                    });
+                }
+                handTrackingActive = true;
+                if (handBtn) { handBtn.style.background = 'var(--theme-color)'; handBtn.style.color = '#000'; }
+                if (badge) badge.innerText = 'ACTIVE';
+                runHandLoop();
+                addLog('SYSTEM', 'Hand Gesture Control online! Pinch thumb + index finger to rotate or zoom the 3D Orb.');
+            } catch (e) {
+                addLog('SYSTEM', 'Hand tracker initialization warning: ' + e.message);
+            }
+        }
+
+        function stopHandTrackingLoop() {
+            handTrackingActive = false;
+            cancelAnimationFrame(handRafId);
+            handStates.clear();
+            prevGestureMode = 'idle';
+            prevSpinGrab = null;
+            prevZoomDist = null;
+            const overlay = document.getElementById('cam-overlay');
+            if (overlay) {
+                const ctx = overlay.getContext('2d');
+                if (ctx) ctx.clearRect(0, 0, overlay.width, overlay.height);
+            }
+        }
+
+        function runHandLoop() {
+            if (!handTrackingActive) return;
+            handRafId = requestAnimationFrame(runHandLoop);
+            const vid = document.getElementById('cam-video');
+            const overlay = document.getElementById('cam-overlay');
+            if (!handLandmarker || !vid || vid.readyState < 2) return;
+            if (vid.currentTime === lastVideoTime) return;
+            lastVideoTime = vid.currentTime;
+
+            const result = handLandmarker.detectForVideo(vid, performance.now());
+            const landmarks = result.landmarks || [];
+            const labels = (result.handedness || []).map((h, idx) => (h[0] && h[0].categoryName) ? h[0].categoryName : ('H' + idx));
+
+            const pinchedGrabs = [];
+            const seen = new Set();
+
+            landmarks.forEach((lm, i) => {
+                const label = labels[i];
+                seen.add(label);
+                const handScale = dist2d(lm[0], lm[9]);
+                if (handScale < 1e-6) return;
+                const pinchRatio = dist2d(lm[4], lm[8]) / handScale;
+                const raw = {
+                    x: 1 - (lm[4].x + lm[8].x) / 2,
+                    y: (lm[4].y + lm[8].y) / 2
+                };
+                let st = handStates.get(label);
+                if (!st) {
+                    st = { pinching: false, grab: raw };
+                    handStates.set(label, st);
+                }
+                if (st.pinching && pinchRatio > 0.45) st.pinching = false;
+                else if (!st.pinching && pinchRatio < 0.32) st.pinching = true;
+
+                st.grab = {
+                    x: st.grab.x + (raw.x - st.grab.x) * 0.4,
+                    y: st.grab.y + (raw.y - st.grab.y) * 0.4
+                };
+                if (st.pinching) pinchedGrabs.push(st.grab);
+            });
+
+            for (const k of handStates.keys()) {
+                if (!seen.has(k)) handStates.delete(k);
+            }
+
+            const mode = pinchedGrabs.length >= 2 ? 'zoom' : (pinchedGrabs.length === 1 ? 'spin' : 'idle');
+            if (mode !== prevGestureMode) {
+                prevSpinGrab = null;
+                prevZoomDist = null;
+                prevGestureMode = mode;
+            }
+
+            if (mode === 'spin') {
+                const grab = pinchedGrabs[0];
+                if (prevSpinGrab) {
+                    const dx = grab.x - prevSpinGrab.x;
+                    const dy = grab.y - prevSpinGrab.y;
+                    if (Math.abs(dx) > 1e-4 || Math.abs(dy) > 1e-4) {
+                        rotateOrbBy(dx * 5.0, dy * 5.0);
+                    }
+                }
+                prevSpinGrab = grab;
+            } else if (mode === 'zoom') {
+                const d = Math.hypot(pinchedGrabs[0].x - pinchedGrabs[1].x, pinchedGrabs[0].y - pinchedGrabs[1].y);
+                if (prevZoomDist && d > 1e-4) {
+                    const factor = Math.min(1.18, Math.max(0.85, prevZoomDist / d));
+                    zoomOrbBy(factor);
+                }
+                prevZoomDist = d;
+            }
+
+            const badge = document.getElementById('gesture-badge');
+            if (badge) badge.innerText = `HANDS: ${landmarks.length} · ${mode.toUpperCase()}`;
+
+            // Draw pinch indicators on overlay
+            if (overlay) {
+                const ctx = overlay.getContext('2d');
+                ctx.clearRect(0, 0, overlay.width, overlay.height);
+                for (const lm of landmarks) {
+                    const thumb = lm[4], index = lm[8];
+                    const tx = (1 - thumb.x) * overlay.width, ty = thumb.y * overlay.height;
+                    const ix = (1 - index.x) * overlay.width, iy = index.y * overlay.height;
+                    const hs = dist2d(lm[0], lm[9]);
+                    const pinched = hs > 1e-6 && (dist2d(thumb, index) / hs < 0.32);
+                    ctx.strokeStyle = pinched ? '#00ff88' : '#00ffff';
+                    ctx.lineWidth = pinched ? 2.5 : 1.2;
+                    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(ix, iy); ctx.stroke();
+                    ctx.fillStyle = pinched ? '#00ff88' : '#00ffff';
+                    [[tx, ty], [ix, iy]].forEach(([x, y]) => {
+                        ctx.beginPath(); ctx.arc(x, y, pinched ? 5 : 3, 0, Math.PI * 2); ctx.fill();
+                    });
+                }
+            }
         }
 
         // Live Microphone Visualizer
