@@ -188,30 +188,6 @@
             animation: spin 35s linear infinite;
         }
 
-        .ring {
-            position: absolute;
-            border-radius: 50%;
-            border: 2px solid transparent;
-            border-top-color: var(--theme-color);
-            border-bottom-color: var(--theme-color);
-            box-shadow: 0 0 15px rgba(0,255,255,0.1), inset 0 0 15px rgba(0,255,255,0.1);
-            animation: spin linear infinite;
-        }
-        .ring-1 { width: 100%; height: 100%; animation-duration: 10s; }
-        .ring-2 { width: 80%; height: 80%; animation-duration: 7s; animation-direction: reverse; border-width: 4px; opacity: 0.5; }
-        .ring-3 { width: 60%; height: 60%; animation-duration: 4s; border-left-color: var(--theme-color); border-right-color: var(--theme-color); }
-        .core {
-            width: 45%; height: 45%;
-            background: radial-gradient(circle, rgba(0,255,255,0.2) 0%, rgba(0,0,0,0.8) 100%);
-            border-radius: 50%;
-            border: 2px solid var(--theme-color);
-            box-shadow: 0 0 30px var(--theme-color);
-            display: flex; align-items: center; justify-content: center;
-        }
-
-        .waveform { display: flex; gap: 4px; height: 30px; align-items: center; }
-        .bar { width: 4px; background: var(--theme-color); border-radius: 2px; height: 10%; transition: height 0.1s ease; }
-
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
         .center-title { font-size: 28px; font-weight: 700; color: var(--text-main); margin-top: 40px; letter-spacing: 4px; text-shadow: 0 0 10px rgba(255,255,255,0.3);}
@@ -790,62 +766,50 @@
         function updateState(state) {
             const pill = document.getElementById('state-pill');
             const text = document.getElementById('state-text');
-            const bars = document.querySelectorAll('.bar');
+            if (!pill || !text) return;
             const dot = pill.querySelector('.dot');
-            
+
             orbSpeed = (state === 'THINKING') ? 0.025 : (state === 'SPEAKING') ? 0.015 : 0.008;
             orbPulse = (state === 'SPEAKING') ? 2.5 : (state === 'THINKING') ? 1.8 : 1.0;
             if (state === 'LISTENING') {
                 text.innerText = 'Listening for wake word...';
-                dot.style.background = 'var(--theme-color)';
-                dot.style.boxShadow = '0 0 8px var(--theme-color)';
-                bars.forEach(b => b.style.height = '10%');
+                if (dot) { dot.style.background = 'var(--theme-color)'; dot.style.boxShadow = '0 0 8px var(--theme-color)'; }
             } else if (state === 'THINKING') {
                 text.innerText = 'Processing command...';
-                dot.style.background = '#f39c12';
-                dot.style.boxShadow = '0 0 8px #f39c12';
-                bars.forEach(b => b.style.height = '30%');
+                if (dot) { dot.style.background = '#f39c12'; dot.style.boxShadow = '0 0 8px #f39c12'; }
             } else if (state === 'SPEAKING') {
                 text.innerText = 'Transmitting audio...';
-                dot.style.background = '#00ff00';
-                dot.style.boxShadow = '0 0 8px #00ff00';
-                // Animate bars randomly for speaking effect
-                bars.forEach(b => b.style.height = Math.floor(Math.random() * 80 + 20) + '%');
+                if (dot) { dot.style.background = '#00ff00'; dot.style.boxShadow = '0 0 8px #00ff00'; }
             } else {
                 text.innerText = 'System Online.';
-                dot.style.background = 'var(--theme-color)';
-                dot.style.boxShadow = '0 0 8px var(--theme-color)';
-                bars.forEach(b => b.style.height = '10%');
+                if (dot) { dot.style.background = 'var(--theme-color)'; dot.style.boxShadow = '0 0 8px var(--theme-color)'; }
             }
         }
 
-        setInterval(() => {
-            if (document.getElementById('state-text').innerText === 'Transmitting audio...') {
-                updateState('SPEAKING'); // re-trigger animation
-            }
-        }, 150);
-
-        // Chat Interface
+        // Chat Interface (HTML-safe text rendering)
         function addLog(sender, message) {
             const box = document.getElementById('chat-box');
+            if (!box) return;
             const div = document.createElement('div');
-            
-            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
 
-            if (sender === 'USER') {
-                div.className = 'msg user';
-                div.innerHTML = `${message} <span class="time-stamp">${time}</span>`;
-                commandCounter++;
-                const cmdEl = document.getElementById('cmd-count');
-                if (cmdEl) cmdEl.innerText = commandCounter;
-            } else if (sender === 'SYSTEM') {
+            if (sender === 'SYSTEM') {
                 div.className = 'msg system';
-                div.innerText = `— ${message} —`;
+                div.textContent = `— ${message} —`;
             } else {
-                div.className = 'msg jarvis';
-                div.innerHTML = `${message} <span class="time-stamp">${time}</span>`;
+                div.className = sender === 'USER' ? 'msg user' : 'msg jarvis';
+                div.textContent = String(message ?? '') + ' ';
+                const ts = document.createElement('span');
+                ts.className = 'time-stamp';
+                ts.textContent = time;
+                div.appendChild(ts);
+                if (sender === 'USER') {
+                    commandCounter++;
+                    const cmdEl = document.getElementById('cmd-count');
+                    if (cmdEl) cmdEl.innerText = commandCounter;
+                }
             }
-            
+
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
         }
@@ -1299,18 +1263,20 @@
         function exportChatLog() {
             const box = document.getElementById('chat-box');
             const messages = box.querySelectorAll('.msg');
-            let log = '# JARVIS / FRIDAY SESSION LOG\\n\\nExported: ' + new Date().toLocaleString() + '\\n\\n---\\n\\n';
+            let log = '# JARVIS / FRIDAY SESSION LOG\n\nExported: ' + new Date().toLocaleString() + '\n\n---\n\n';
             messages.forEach(m => {
-                let text = m.innerText.trim();
-                if (m.classList.contains('user')) log += '**USER:** ' + text + '\\n\\n';
-                else if (m.classList.contains('system')) log += '*SYSTEM:* ' + text + '\\n\\n';
-                else log += '**ASSISTANT:** ' + text + '\\n\\n';
+                const text = m.innerText.trim();
+                if (m.classList.contains('user')) log += '**USER:** ' + text + '\n\n';
+                else if (m.classList.contains('system')) log += '*SYSTEM:* ' + text + '\n\n';
+                else log += '**ASSISTANT:** ' + text + '\n\n';
             });
             const blob = new Blob([log], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
+            a.href = url;
             a.download = `jarvis_transcript_${Date.now()}.md`;
             a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
 
         // --- LIVE CAMERA FEED, REAL-TIME 80-CLASS ITEM RECOGNITION, BIOMETRIC FACE LOCK & HAND GESTURE ENGINE ---
@@ -2207,38 +2173,56 @@
             }
         }
 
-        // Live Microphone Visualizer
+        // Live Microphone Visualizer (Toggleable)
+        let micVisStream = null;
+        let micVisAudioCtx = null;
+        let micVisRafId = 0;
+
         async function startMicVisualizer() {
+            const micBtn = document.getElementById('mic-btn');
+            if (micVisStream) {
+                cancelAnimationFrame(micVisRafId);
+                micVisRafId = 0;
+                micVisStream.getTracks().forEach(t => t.stop());
+                micVisStream = null;
+                if (micVisAudioCtx) {
+                    micVisAudioCtx.close().catch(() => {});
+                    micVisAudioCtx = null;
+                }
+                orbPulse = 1.0;
+                if (micBtn) {
+                    micBtn.style.background = 'var(--panel-bg)';
+                    micBtn.style.color = 'var(--theme-color)';
+                }
+                return;
+            }
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const source = audioCtx.createMediaStreamSource(stream);
-                const analyser = audioCtx.createAnalyser();
+                micVisStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                micVisAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const source = micVisAudioCtx.createMediaStreamSource(micVisStream);
+                const analyser = micVisAudioCtx.createAnalyser();
                 analyser.fftSize = 32;
                 source.connect(analyser);
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                const bars = document.querySelectorAll('.waveform .bar');
-                
+
                 function renderFrame() {
-                    requestAnimationFrame(renderFrame);
-                    if(document.getElementById('state-text').innerText === 'Transmitting audio...') return; // Let TTS override
-                    
+                    if (!micVisStream) return;
+                    micVisRafId = requestAnimationFrame(renderFrame);
+                    if (document.getElementById('state-text')?.innerText === 'Transmitting audio...') return;
                     analyser.getByteFrequencyData(dataArray);
                     let sum = 0;
-                    for(let i=0; i<bars.length; i++) {
-                        let val = dataArray[i] || 0;
-                        sum += val;
-                        let h = (val / 255) * 100;
-                        if(h < 10) h = 10;
-                        bars[i].style.height = h + '%';
-                    }
-                    let avg = sum / (bars.length || 1);
+                    for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                    const avg = sum / (dataArray.length || 1);
                     orbPulse = 1.0 + (avg / 255.0) * 3.5;
                 }
                 renderFrame();
-                document.querySelector('.icon-btn:nth-child(2)').style.background = 'var(--theme-color)';
-                document.querySelector('.icon-btn:nth-child(2)').style.color = '#000';
-            } catch(e) { console.log("Mic vis error:", e); }
+                if (micBtn) {
+                    micBtn.style.background = 'var(--theme-color)';
+                    micBtn.style.color = '#000';
+                }
+            } catch (e) {
+                console.log('Mic vis error:', e);
+            }
         }
 
         // Network Speed, Diagnostics, Audio Mute & Weather (Called from Python & UI)

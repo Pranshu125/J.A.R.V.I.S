@@ -6,6 +6,7 @@ and Gemini 3.8 Flash Vision (screen + camera) into D:\\JARVIS.
 """
 from __future__ import annotations
 
+import base64
 import io
 import json
 import math
@@ -19,7 +20,7 @@ from typing import Any, Callable
 
 import requests
 
-# Ensure Windows stdout/stderr never fail on Unicode/emoji logs from Mark-LV / Mark-XXXIX modules
+# Ensure Windows stdout/stderr never fail on Unicode/symbol logs from Mark-LV / Mark-XXXIX modules
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         try:
@@ -32,12 +33,12 @@ MARK_LV_DIR = ROOT_DIR / "Repos" / "Mark-LV"
 MARK_XXXIX_DIR = ROOT_DIR / "Repos" / "Mark-XXXIX-OR"
 
 # Ensure Mark-LV takes priority over Mark-XXXIX-OR in sys.path (Mark-LV has the newest actions & memory_manager)
-for repo_path in (MARK_XXXIX_DIR, MARK_LV_DIR):
-    p_str = str(repo_path)
-    if repo_path.exists():
-        if p_str in sys.path:
-            sys.path.remove(p_str)
-        sys.path.insert(0, p_str)
+for _repo_path in (MARK_XXXIX_DIR, MARK_LV_DIR):
+    _p_str = str(_repo_path)
+    if _repo_path.exists():
+        if _p_str in sys.path:
+            sys.path.remove(_p_str)
+        sys.path.insert(0, _p_str)
 
 
 def sync_api_keys_config() -> str:
@@ -54,7 +55,7 @@ def sync_api_keys_config() -> str:
                 cfg_dir = base / "config"
                 cfg_dir.mkdir(parents=True, exist_ok=True)
                 cfg_file = cfg_dir / "api_keys.json"
-                existing = {}
+                existing: dict[str, Any] = {}
                 if cfg_file.exists():
                     try:
                         existing = json.loads(cfg_file.read_text(encoding="utf-8"))
@@ -69,7 +70,7 @@ def sync_api_keys_config() -> str:
     return api_key
 
 
-GEMINI_MODEL_LADDER = (
+GEMINI_MODEL_LADDER: tuple[str, ...] = (
     "gemini-3.5-flash-lite",
     "gemini-3.5-flash",
     "gemini-3.6-flash",
@@ -112,7 +113,7 @@ def patch_gemini_models() -> None:
         _NO_RETRY = g_retry.Retry(predicate=lambda exc: False)
 
         class _PatchedGenModel(_OrigGenModel):
-            def __init__(self, model_name="gemini-3.5-flash-lite", *args, **kwargs):
+            def __init__(self, model_name: str = "gemini-3.5-flash-lite", *args: Any, **kwargs: Any):
                 self._init_args = args
                 self._init_kwargs = kwargs
                 ladder = get_active_gemini_ladder()
@@ -125,13 +126,13 @@ def patch_gemini_models() -> None:
                 self._current_model_name = model_name
                 super().__init__(model_name, *args, **kwargs)
 
-            def generate_content(self, contents, *args, **kwargs):
+            def generate_content(self, contents: Any, *args: Any, **kwargs: Any):
                 kwargs.setdefault("request_options", {"retry": _NO_RETRY})
                 try:
                     return super().generate_content(contents, *args, **kwargs)
                 except Exception as first_err:
                     err_str = str(first_err)
-                    if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "Quota exceeded" in err_str or "404" in err_str:
+                    if any(code in err_str for code in ("429", "RESOURCE_EXHAUSTED", "Quota exceeded", "404")):
                         mark_model_exhausted(self._current_model_name)
                         for fallback_name in get_active_gemini_ladder():
                             if fallback_name == self._current_model_name:
@@ -141,7 +142,7 @@ def patch_gemini_models() -> None:
                                 return alt.generate_content(contents, *args, **kwargs)
                             except Exception as sub_err:
                                 s_str = str(sub_err)
-                                if "429" in s_str or "RESOURCE_EXHAUSTED" in s_str or "404" in s_str:
+                                if any(code in s_str for code in ("429", "RESOURCE_EXHAUSTED", "404")):
                                     mark_model_exhausted(fallback_name)
                                 continue
                     raise first_err
@@ -151,13 +152,164 @@ def patch_gemini_models() -> None:
         print(f"[Bridge] genai model redirect warning: {e}")
 
 
+# ==============================================================================
+# PRE-DECLARED GEMINI FUNCTION SIGNATURES (O(1) Reuse — Zero Per-Turn Reallocation)
+# ==============================================================================
+def _t_open_app(app_name: str, action: str = "open"):
+    """Open, close, minimize, maximize, or switch to any installed desktop application (action: open | close | minimize | maximize | switch)."""
+
+def _t_web_search(query: str, mode: str = "search", items: str = "", aspect: str = ""):
+    """Search the web via DuckDuckGo (mode='search'), search breaking news (mode='news'), or compare products (mode='compare' with comma-separated items)."""
+
+def _t_weather_report(city: str, time: str = "today"):
+    """Get detailed weather report and open live Windy radar for any city (time: today | tomorrow | week)."""
+
+def _t_send_message(platform: str, contact: str, message: str):
+    """Send a message on WhatsApp, Telegram, Instagram, or Discord to a contact."""
+
+def _t_reminder(date: str, time: str, message: str):
+    """Schedule a desktop reminder via Windows Task Scheduler (date: YYYY-MM-DD, time: HH:MM)."""
+
+def _t_youtube_video(action: str, query: str = "", url: str = "", save: bool = False):
+    """Control YouTube: play a video (action='play', query='...'), summarize a video transcript (action='summarize', url='...'), get video info (action='info'), or show trending (action='trending')."""
+
+def _t_computer_settings(action: str, value: str = ""):
+    """Control computer settings: volume_up, volume_down, volume_set, mute, unmute, brightness_up, brightness_down, brightness_set, dark_mode, wifi_toggle, bluetooth_toggle, lock_screen, sleep, restart, shutdown, reload_page, close_tab, new_tab, zoom_in, zoom_out, scroll_up, scroll_down."""
+
+def _t_browser_control(action: str, url: str = "", query: str = "", text: str = "", selector: str = "", direction: str = "down"):
+    """Automate web browser via Playwright/CDP: go_to, search, click, type, scroll, fill_form, smart_click, smart_type, get_text, press, close."""
+
+def _t_file_controller(action: str, path: str = "", name: str = "", destination: str = "", content: str = "", extension: str = ""):
+    """Manage files and folders: list, create_file, create_folder, delete, move, copy, rename, read, write, find, largest, disk_usage, organize, info."""
+
+def _t_desktop_control(action: str, path: str = "", url: str = "", mode: str = "by_type"):
+    """Manage Windows Desktop: wallpaper (from file path), wallpaper_url (from image URL), organize (by_type or by_date), clean, list, stats."""
+
+def _t_code_helper(action: str, description: str = "", language: str = "python", file_path: str = "", code: str = "", save_path: str = ""):
+    """Write, edit, explain, run, or fix code files in any programming language and open in VS Code (action: write | edit | explain | run | auto | build)."""
+
+def _t_dev_agent(description: str, project_name: str = "", language: str = "python", open_vscode: bool = True, run_project: bool = False):
+    """Autonomous multi-file software engineer: plans architecture, writes all project files, installs dependencies, opens VS Code, and auto-fixes bugs."""
+
+def _t_computer_control(action: str, text: str = "", x: int = 0, y: int = 0, key: str = "", description: str = "", window_title: str = ""):
+    """Direct GUI mouse/keyboard automation: type, smart_type, click, double_click, right_click, hotkey, press, scroll, move, drag, copy, paste, screenshot, wait, clear_field, focus_window, screen_find, random_data."""
+
+def _t_game_updater(action: str, game: str = "", platform: str = "all", schedule_time: str = "03:00"):
+    """Manage PC games across Steam, Epic, Riot, Xbox, GOG, Ubisoft, EA, Battle.net: launch, list_installed, update, update_all, install, status, schedule, cancel_schedule."""
+
+def _t_flight_finder(origin: str, destination: str, departure_date: str, return_date: str = "", passengers: int = 1, cabin: str = "economy", save: bool = False):
+    """Search Google Flights for live flight routes, airlines, durations, and prices."""
+
+def _t_file_processor(action: str, file_path: str = "", question: str = "", target_language: str = "en", output_format: str = "png"):
+    """Process uploaded or local files (PDF, image, DOCX, Excel/CSV, audio/video, ZIP): analyze, summarize, ocr, describe, extract_text, to_word, translate, fix_writing, resize, compress, convert, filter, chart."""
+
+def _t_video_player(action: str, source: str = "", timestamp: str = "", question: str = ""):
+    """Play, stop, summarize, or analyze local or online video streams (action: play | stop | Summary | analyze | timestamp | mute | unmute)."""
+
+def _t_screen_process(text: str, angle: str = "screen"):
+    """Capture the user's screen (angle='screen') or webcam camera (angle='camera') and analyze what is visible using Gemini Vision."""
+
+def _t_aircraft_report(action: str = "report", radius_km: int = 200):
+    """Scan live OpenSky airspace radar within 200km for nearby aircraft (callsign, country, distance, speed, heading) or open the FlightRadar24 map (action: report | map)."""
+
+def _t_agent_task(goal: str):
+    """Deploy the Mark-XXXIX autonomous multi-step Agent Planner and Executor for complex multi-step goals."""
+
+def _t_save_memory(category: str, key: str, value: str):
+    """Save a permanent fact about the user to structured long-term memory (category: identity | preferences | projects | relationships | wishes | notes)."""
+
+def _t_recall_memory(query: str = ""):
+    """Search structured long-term memory for stored facts about the user."""
+
+def _t_manage_monitor(action: str, topic: str = ""):
+    """Manage background daily news/topic monitors (action: add | remove | list | check)."""
+
+def _t_system_status():
+    """Get a full hardware diagnostic report: CPU %, RAM GB, GPU %, CPU temperature, uptime, and process count."""
+
+def _t_undo(action: str = "undo"):
+    """Undo the last reversible file, desktop, or setting change made by the assistant (action: undo | list)."""
+
+def _t_split_workspace(left_app: str, right_app: str):
+    """Tile two applications side-by-side on screen (e.g. WhatsApp left, Chrome right)."""
+
+def _t_launch_application(app_name: str):
+    """Launch or open an installed desktop application (e.g. whatsapp, chrome, spotify, vscode, notepad, calculator)."""
+
+def _t_system_hardware_control(action: str, app_name: str = ""):
+    """Control volume (volume_up, volume_down, mute), brightness (brightness_up, brightness_down), or launch an application (launch_app with app_name)."""
+
+def _t_window_management(action: str):
+    """Manage desktop windows (minimize, maximize, snap_left, snap_right, show_desktop, lock_screen, screenshot, task_manager)."""
+
+def _t_open_website(url: str):
+    """Open any website URL, YouTube song or video search in the default web browser."""
+
+def _t_get_world_news():
+    """Fetch live breaking global news headlines and open the interactive satellite World Monitor dashboard."""
+
+def _t_get_finance_news():
+    """Fetch current market and financial news headlines and open the interactive Finance Monitor dashboard."""
+
+def _t_open_world_monitor():
+    """Open the live interactive satellite World Monitor dashboard on screen."""
+
+def _t_open_finance_monitor():
+    """Open the live financial markets dashboard on screen."""
+
+def _t_execute_terminal(command: str):
+    """Execute a shell or PowerShell command on the machine."""
+
+_RAW_GEMINI_TOOLS = (
+    (_t_open_app, "open_app"),
+    (_t_web_search, "web_search"),
+    (_t_weather_report, "weather_report"),
+    (_t_send_message, "send_message"),
+    (_t_reminder, "reminder"),
+    (_t_youtube_video, "youtube_video"),
+    (_t_computer_settings, "computer_settings"),
+    (_t_browser_control, "browser_control"),
+    (_t_file_controller, "file_controller"),
+    (_t_desktop_control, "desktop_control"),
+    (_t_code_helper, "code_helper"),
+    (_t_dev_agent, "dev_agent"),
+    (_t_computer_control, "computer_control"),
+    (_t_game_updater, "game_updater"),
+    (_t_flight_finder, "flight_finder"),
+    (_t_file_processor, "file_processor"),
+    (_t_video_player, "video_player"),
+    (_t_screen_process, "screen_process"),
+    (_t_aircraft_report, "aircraft_report"),
+    (_t_agent_task, "agent_task"),
+    (_t_save_memory, "save_memory"),
+    (_t_recall_memory, "recall_memory"),
+    (_t_manage_monitor, "manage_monitor"),
+    (_t_system_status, "system_status"),
+    (_t_undo, "undo"),
+    (_t_split_workspace, "split_workspace"),
+    (_t_launch_application, "launch_application"),
+    (_t_system_hardware_control, "system_hardware_control"),
+    (_t_window_management, "window_management"),
+    (_t_open_website, "open_website"),
+    (_t_get_world_news, "get_world_news"),
+    (_t_get_finance_news, "get_finance_news"),
+    (_t_open_world_monitor, "open_world_monitor"),
+    (_t_open_finance_monitor, "open_finance_monitor"),
+    (_t_execute_terminal, "execute_terminal"),
+)
+for _fn, _public_name in _RAW_GEMINI_TOOLS:
+    _fn.__name__ = _public_name
+
+GEMINI_TOOL_FUNCTIONS: list[Callable] = [fn for fn, _ in _RAW_GEMINI_TOOLS]
+
+
 class JarvisUIAdapter:
     """
     Adapter passed as `player` to Mark-LV and Mark-XXXIX actions.
     Bridges `.write_log()`, `.show_content()`, `.show_video()`, and `.current_file`
     directly to our pywebview `hud.html` interface.
     """
-    def __init__(self, pipeline):
+    def __init__(self, pipeline: Any):
         self.pipeline = pipeline
         self.current_file: str | None = None
 
@@ -181,10 +333,54 @@ class JarvisUIAdapter:
 
 
 # ==============================================================================
-# OPENSKY AIRCRAFT RADAR (Ported from AI-Assistant-1.1 / Mark-X.1)
+# SHARED GEOLOCATION & OPENSKY AIRCRAFT RADAR (Ported from AI-Assistant-1.1 / Mark-X.1)
 # ==============================================================================
 OPENSKY_STATES = "https://opensky-network.org/api/states/all"
-OPENSKY_FLIGHTS = "https://opensky-network.org/api/flights/aircraft"
+_LOCATION_CACHE: dict[str, Any] | None = None
+
+
+def get_user_location(force_refresh: bool = False) -> dict[str, Any]:
+    """Return cached user geolocation (lat, lon, city, country, ip, isp) with dual-API fallback."""
+    global _LOCATION_CACHE
+    now = time.time()
+    if not force_refresh and _LOCATION_CACHE and (now - _LOCATION_CACHE.get("ts", 0) < 900):
+        return _LOCATION_CACHE
+
+    data: dict[str, Any] = {
+        "lat": 22.7196,
+        "lon": 75.8577,
+        "city": "Indore",
+        "country": "IN",
+        "ip": "Unknown",
+        "isp": "Unknown ISP",
+        "ts": now,
+    }
+    try:
+        loc = requests.get("http://ip-api.com/json/", timeout=4).json()
+        data.update({
+            "lat": float(loc.get("lat", 22.7196)),
+            "lon": float(loc.get("lon", 75.8577)),
+            "city": str(loc.get("city") or "Indore"),
+            "country": str(loc.get("countryCode") or ""),
+            "ip": str(loc.get("query") or "Unknown"),
+            "isp": str(loc.get("isp") or "Unknown ISP"),
+        })
+    except Exception:
+        try:
+            loc = requests.get("https://ipapi.co/json/", timeout=4).json()
+            data.update({
+                "lat": float(loc.get("latitude", 22.7196)),
+                "lon": float(loc.get("longitude", 75.8577)),
+                "city": str(loc.get("city") or "Indore"),
+                "country": str(loc.get("country_code") or ""),
+                "ip": str(loc.get("ip") or "Unknown"),
+                "isp": str(loc.get("org") or "Unknown ISP"),
+            })
+        except Exception:
+            pass
+
+    _LOCATION_CACHE = data
+    return data
 
 
 def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -200,26 +396,10 @@ def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * r * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-_USER_COORDS_CACHE: tuple[float, float, str, float] | None = None
-
-
-def _get_user_coords() -> tuple[float, float, str]:
-    global _USER_COORDS_CACHE
-    now = time.time()
-    if _USER_COORDS_CACHE and (now - _USER_COORDS_CACHE[3] < 900):
-        return _USER_COORDS_CACHE[0], _USER_COORDS_CACHE[1], _USER_COORDS_CACHE[2]
-    try:
-        loc = requests.get("http://ip-api.com/json/", timeout=4).json()
-        lat, lon, city = float(loc.get("lat", 22.7196)), float(loc.get("lon", 75.8577)), str(loc.get("city", "Indore"))
-        _USER_COORDS_CACHE = (lat, lon, city, now)
-        return lat, lon, city
-    except Exception:
-        return 22.7196, 75.8577, "Indore"
-
-
 def run_aircraft_radar(action: str = "report", radius_km: float = 200.0) -> str:
     """Scan nearby airspace within radius_km using OpenSky Network API or open FlightRadar24 map."""
-    lat, lon, city = _get_user_coords()
+    loc = get_user_location()
+    lat, lon, city = loc["lat"], loc["lon"], loc["city"]
     act = (action or "report").lower().strip()
 
     if act in ("map", "open", "radar"):
@@ -333,7 +513,7 @@ def run_screen_or_camera_vision(
     angle: str = "screen",
     text: str = "Analyze what is on my screen and help me with what I am looking at.",
     raw_image_bytes: bytes | None = None,
-    window=None,
+    window: Any = None,
 ) -> str:
     """Capture screen or webcam frame in ~2-15ms and analyze in a single pass with Gemini Vision."""
     global _VISION_CLIENT
@@ -344,10 +524,8 @@ def run_screen_or_camera_vision(
             src_tag = "[IMAGE SOURCE: LIVE HUD WEBCAM]" if source_label == "webcam" else "[IMAGE SOURCE: SCREEN CAPTURE]"
         elif (angle or "screen").lower().strip() in ("camera", "webcam", "cam", "face"):
             img_bytes, mime = None, "image/jpeg"
-            # Fast-path: grab live frame directly from HUD <video id="cam-video"> in ~2ms (avoids Windows camera lock conflict)
             if window is not None:
                 try:
-                    import base64
                     b64_data = window.evaluate_js("typeof captureCameraFrameBase64 === 'function' ? captureCameraFrameBase64() : ''")
                     if b64_data and isinstance(b64_data, str) and "," in b64_data:
                         img_bytes = base64.b64decode(b64_data.split(",", 1)[1])
@@ -392,7 +570,7 @@ def run_screen_or_camera_vision(
                         return resp.text.strip().replace("*", "")
                 except Exception as m_err:
                     err_s = str(m_err)
-                    if "429" in err_s or "RESOURCE_EXHAUSTED" in err_s or "404" in err_s:
+                    if any(code in err_s for code in ("429", "RESOURCE_EXHAUSTED", "404")):
                         mark_model_exhausted(model_name)
                     continue
         except Exception as e:
@@ -400,7 +578,6 @@ def run_screen_or_camera_vision(
 
     # Offline / Local Vision Fallback via Ollama moondream:latest
     try:
-        import base64
         b64_img = base64.b64encode(img_bytes).decode("utf-8")
         r = requests.post(
             "http://localhost:11434/api/generate",
@@ -423,7 +600,7 @@ def run_screen_or_camera_vision(
 class UnifiedToolSuite:
     """Holds Mark-LV ActionRegistry + 12 Core/Agent/Memory/Radar/World tools."""
 
-    def __init__(self, pipeline):
+    def __init__(self, pipeline: Any):
         self.pipeline = pipeline
         self.ui = JarvisUIAdapter(pipeline)
         sync_api_keys_config()
@@ -454,7 +631,7 @@ class UnifiedToolSuite:
         self.sys_monitor = None
         self.proactive_engine = None
         self.agent_executor = None
-        self._cached_ollama_tools: list[dict] | None = None
+        self._cached_ollama_tools: list[dict[str, Any]] | None = None
         try:
             from actions.system_monitor import SystemMonitor
             from actions.proactive import ProactiveEngine
@@ -467,12 +644,12 @@ class UnifiedToolSuite:
         if text and hasattr(self.pipeline, "response_queue"):
             self.pipeline.response_queue.put(str(text))
 
-    def get_ollama_tools(self) -> list[dict]:
+    def get_ollama_tools(self) -> list[dict[str, Any]]:
         """Return OpenAI/Ollama-formatted tool declarations for all 29+ tools (cached after first build)."""
         if self._cached_ollama_tools is not None:
             return self._cached_ollama_tools
 
-        tools: list[dict] = []
+        tools: list[dict[str, Any]] = []
 
         # 1. All 17 auto-discovered Mark-LV actions
         if self.registry:
@@ -488,7 +665,7 @@ class UnifiedToolSuite:
                 })
 
         # 2. Core / Inline / Agent / Memory / Radar / World tools
-        extra_tools = [
+        extra_tools = (
             {
                 "name": "screen_process",
                 "description": "Capture the user's screen or webcam camera and analyze it with Gemini Vision.",
@@ -606,7 +783,7 @@ class UnifiedToolSuite:
                     "required": ["command"],
                 },
             },
-        ]
+        )
 
         existing_names = {t["function"]["name"] for t in tools}
         for et in extra_tools:
@@ -616,11 +793,11 @@ class UnifiedToolSuite:
         self._cached_ollama_tools = tools
         return tools
 
-    def _normalize_schema(self, schema: dict) -> dict:
+    def _normalize_schema(self, schema: dict[str, Any]) -> dict[str, Any]:
         """Convert uppercase Gemini schema types ('OBJECT', 'STRING') to lowercase JSON Schema."""
         if not isinstance(schema, dict):
             return {"type": "object", "properties": {}}
-        out = {}
+        out: dict[str, Any] = {}
         for k, v in schema.items():
             if k == "type" and isinstance(v, str):
                 out[k] = v.lower()
@@ -632,12 +809,11 @@ class UnifiedToolSuite:
                 out[k] = v
         return out
 
-    def execute(self, name: str, args: dict) -> str:
+    def execute(self, name: str, args: dict[str, Any]) -> str:
         """Execute any of the 29+ registered tools and return a spoken/logged result string."""
         args = args or {}
         self.ui.write_log(f"Executing tool: {name}")
 
-        # Automatically switch to Orb-Only Transparent Mode for Screen Vision or App/Browser-opening tools
         orb_only_tools = {
             "screen_process", "analyze_screen", "open_app", "browser_control",
             "youtube_video", "weather_report", "flight_finder", "code_helper",
@@ -683,8 +859,9 @@ class UnifiedToolSuite:
                 from agent.executor import AgentExecutor
                 executor = AgentExecutor()
                 self.agent_executor = executor
+                cancel_evt = getattr(self.pipeline, "abort_event", None)
                 threading.Thread(
-                    target=lambda: executor.execute(goal=goal, speak=self.speak),
+                    target=lambda: executor.execute(goal=goal, speak=self.speak, cancel_flag=cancel_evt),
                     daemon=True,
                 ).start()
                 return f"Autonomous agent deployed for goal: {goal}. I will brief you as each step completes, sir."
