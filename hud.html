@@ -363,8 +363,8 @@
         <div class="top-center">
             <div class="top-center-box" style="-webkit-app-region: no-drag;">
                 <span id="net-speed" title="Live Network Throughput">0.00 MB/s</span> |
-                <span id="net-btn" onclick="triggerNetworkDiag()" title="Run Network Diagnostics & Ping" style="cursor:pointer; padding:2px 6px; border-radius:4px; transition:0.2s;" onmouseover="this.style.background='rgba(0,255,255,0.15)'" onmouseout="this.style.background='transparent'">📶</span>
-                <span id="vol-btn" onclick="triggerVolumeToggle()" title="Toggle System Audio Mute" style="cursor:pointer; padding:2px 6px; border-radius:4px; transition:0.2s;" onmouseover="this.style.background='rgba(0,255,255,0.15)'" onmouseout="this.style.background='transparent'">🔊</span>
+                <span id="net-btn" onclick="triggerNetworkDiag()" title="Run Network Diagnostics & Ping" style="cursor:pointer; padding:2px 6px; border-radius:4px; transition:0.2s; color:var(--theme-color); font-weight:700; letter-spacing:1px;" onmouseover="this.style.background='rgba(0,255,255,0.15)'" onmouseout="this.style.background='transparent'">◈ NET</span>
+                <span id="vol-btn" onclick="triggerVolumeToggle()" title="Toggle System Audio Mute" style="cursor:pointer; padding:2px 6px; border-radius:4px; transition:0.2s; color:var(--theme-color); font-weight:700; letter-spacing:1px;" onmouseover="this.style.background='rgba(0,255,255,0.15)'" onmouseout="this.style.background='transparent'">◉ AUD</span>
             </div>
             <div class="top-center-box">
                 <div class="clock" id="clock">00:00:00</div> | <div id="date">JAN 01 2026</div>
@@ -377,7 +377,7 @@
             <div class="window-controls" style="-webkit-app-region: no-drag;">
                 <button onclick="pywebview.api.minimize()" title="Minimize">—</button>
                 <button onclick="pywebview.api.toggle_fullscreen()" title="Toggle Fullscreen">☐</button>
-                <button onclick="pywebview.api.destroy()" title="Close">X</button>
+                <button onclick="pywebview.api.destroy()" title="Close">✕</button>
             </div>
         </div>
     </div>
@@ -414,7 +414,7 @@
                         <div class="weather-loc" id="w-loc">Locating...</div>
                         <div class="weather-desc" id="w-desc">synchronizing satellite...</div>
                     </div>
-                    <div id="w-icon" style="font-size:40px;">☀️</div>
+                    <div id="w-icon" style="font-size:34px; color:var(--theme-color); text-shadow:0 0 12px var(--theme-color); font-weight:300;">☼</div>
                 </div>
                 <div class="stat-grid" style="margin-top:15px; border-top:1px solid var(--panel-border); padding-top:10px;">
                     <div><span>Humidity</span><strong id="w-hum">--%</strong></div>
@@ -432,21 +432,21 @@
                     </span>
                 </div>
                 <select id="camera-select" style="background:rgba(0,0,0,0.5); color:var(--theme-color); border:1px solid var(--theme-color); border-radius:4px; margin-bottom:8px; display:none; width:100%; font-size:12px; padding:3px;" onchange="switchCamera()"></select>
-                <div id="cam-off" style="height: 135px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted); cursor:pointer;" onclick="toggleCamera()">
-                    <span style="font-size:24px; margin-bottom:8px; color:var(--theme-color);">📷</span>
-                    <span style="font-size:12px;">Camera Off (Click to Enable Camera + Hand Gestures)</span>
+                <div id="cam-off" style="height: 135px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted); cursor:pointer; border:1px dashed rgba(255,255,255,0.08);" onclick="toggleCamera()">
+                    <span style="font-size:22px; margin-bottom:8px; color:var(--theme-color);">◎</span>
+                    <span style="font-size:12px; letter-spacing:0.5px;">Optical Sensor Standby (Click to Enable)</span>
                 </div>
                 <div id="cam-wrap" style="position:relative; display:none; width:100%; height:145px; border-radius:8px; overflow:hidden; border:1px solid var(--panel-border);">
                     <video id="cam-video" autoplay playsinline muted style="width:100%; height:145px; border-radius:8px; object-fit:cover; transform:scaleX(-1); display:block;"></video>
                     <canvas id="cam-overlay" width="290" height="145" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></canvas>
                 </div>
                 <div id="cam-actions" style="display:none; gap:6px; margin-top:8px;">
-                    <button onclick="triggerCameraVision()" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 6px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer;" title="Instant 1-Pass AI Camera Vision">👁️ AI Vision</button>
-                    <button onclick="takeCameraSnapshot()" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 6px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer;" title="Save High-Res Webcam Snapshot to Desktop">📸 Snap</button>
-                    <button id="gesture-toggle-btn" onclick="toggleHandTracking()" style="flex:1; background:var(--theme-color); border:1px solid var(--theme-color); color:#000; padding:5px 6px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;" title="Toggle Hand Gesture Commands">✋ ON</button>
+                    <button onclick="triggerCameraVision()" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 6px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; letter-spacing:0.5px;" title="Instant 1-Pass AI Camera Vision">◈ AI Vision</button>
+                    <button onclick="takeCameraSnapshot()" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 6px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; letter-spacing:0.5px;" title="Save High-Res Webcam Snapshot to Desktop">◎ Capture</button>
+                    <button id="gesture-toggle-btn" onclick="toggleHandTracking()" style="flex:1; background:var(--theme-color); border:1px solid var(--theme-color); color:#000; padding:5px 6px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; letter-spacing:0.5px;" title="Toggle Hand Gesture Commands">◈ GESTURES: ON</button>
                 </div>
-                <div id="cam-hint" style="font-size:10px; text-align:center; margin-top:8px; color:var(--text-muted); line-height:1.35;">
-                    👌 Pinch=Spin · 🤏 2-Hand=Zoom · ✌️ Peace=AI Vision · ✊ Fist=Mute · 👍/👎 Vol · 🤟 Persona
+                <div id="cam-hint" style="font-size:10px; text-align:center; margin-top:8px; color:var(--text-muted); line-height:1.4; letter-spacing:0.3px;">
+                    ◈ Pinch: Spin · ◎ 2-Hand: Zoom · ◇ V-Sign: Vision · ⊘ Fist: Mute · ▲/▼ Thumb: Vol · ⌬ 3-Finger: Mode
                 </div>
             </div>
             
@@ -497,10 +497,18 @@
             </div>
 
             <div class="controls">
-                <button class="icon-btn" id="cam-btn" onclick="toggleCamera()" title="Toggle Live Camera">📷</button>
-                <button class="icon-btn" id="mic-btn" onclick="startMicVisualizer()" title="Connect Audio Visualizer">🎙️</button>
-                <button class="icon-btn" id="vision-btn" onclick="triggerScreenVision()" title="Screen Vision Mode (Instant 1-Pass Screen Analysis)">🖥️</button>
-                <button class="icon-btn" onclick="focusInput()" title="Focus Command Input">⌨️</button>
+                <button class="icon-btn" id="cam-btn" onclick="toggleCamera()" title="Toggle Optical Camera & Hand Gestures">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </button>
+                <button class="icon-btn" id="mic-btn" onclick="startMicVisualizer()" title="Connect Audio Visualizer">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                </button>
+                <button class="icon-btn" id="vision-btn" onclick="triggerScreenVision()" title="Screen Vision Mode (Instant 1-Pass Screen Analysis)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </button>
+                <button class="icon-btn" onclick="focusInput()" title="Focus Command Input">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                </button>
             </div>
         </div>
 
@@ -509,8 +517,8 @@
             <div class="chat-header">
                 Conversation
                 <div class="chat-actions">
-                    <button onclick="document.getElementById('chat-box').innerHTML=''">🗑️ Clear</button>
-                    <button onclick="exportChatLog()" title="Download Session Transcript">⬇️ Extract</button>
+                    <button onclick="document.getElementById('chat-box').innerHTML=''">⌫ Clear</button>
+                    <button onclick="exportChatLog()" title="Download Session Transcript">⤓ Extract</button>
                 </div>
             </div>
             
@@ -522,12 +530,12 @@
             </div>
 
             <div id="attached-file-bar" style="display:none; padding:6px 15px; background:rgba(0,255,255,0.08); border-top:1px solid var(--panel-border); font-size:12px; color:var(--theme-color); justify-content:space-between; align-items:center;">
-                <span id="attached-file-name">📎 file.pdf</span>
+                <span id="attached-file-name">◈ file.pdf</span>
                 <span style="cursor:pointer; color:var(--text-muted);" onclick="clearAttachedFile()">✕</span>
             </div>
 
             <div class="chat-input">
-                <button class="icon-btn" style="width:40px; height:40px; font-size:16px; flex-shrink:0;" onclick="triggerFilePicker()" title="Attach File (PDF, Image, DOCX, CSV, Code, Audio/Video) for File Processor">📎</button>
+                <button class="icon-btn" style="width:40px; height:40px; font-size:18px; font-weight:700; flex-shrink:0;" onclick="triggerFilePicker()" title="Attach File (PDF, Image, DOCX, CSV, Code, Audio/Video) for File Processor">⊕</button>
                 <input type="text" id="cmd-input" placeholder="Type a command or question (English / Hindi)..." onkeypress="handleEnter(event)">
                 <button class="send-btn" onclick="sendCommand()">➤</button>
             </div>
@@ -1070,7 +1078,7 @@
             const bar = document.getElementById('attached-file-bar');
             const label = document.getElementById('attached-file-name');
             if (bar && label) {
-                label.innerText = '📎 Ready for File Processor: ' + fileName;
+                label.innerText = '◈ Ready for File Processor: ' + fileName;
                 bar.style.display = 'flex';
             }
         }
@@ -1175,7 +1183,7 @@
                 a.href = dataUrl;
                 a.download = `jarvis_cam_${Date.now()}.jpg`;
                 a.click();
-                addLog('SYSTEM', '📸 Webcam snapshot downloaded.');
+                addLog('SYSTEM', '[CAPTURE] Webcam snapshot downloaded.');
             }
         }
 
@@ -1293,7 +1301,7 @@
                     badge.style.borderColor = '#00ff88';
                 }
                 if (gBtn) {
-                    gBtn.innerText = '✋ ON';
+                    gBtn.innerText = '◈ GESTURES: ON';
                     gBtn.style.background = 'var(--theme-color)';
                     gBtn.style.color = '#000';
                 }
@@ -1316,7 +1324,7 @@
                     badge.style.borderColor = 'var(--panel-border)';
                 }
                 if (gBtn) {
-                    gBtn.innerText = '✋ OFF';
+                    gBtn.innerText = '◈ GESTURES: OFF';
                     gBtn.style.background = 'transparent';
                     gBtn.style.color = 'var(--theme-color)';
                 }
@@ -1360,25 +1368,25 @@
 
             // 1. Open Palm (all 4 fingers + thumb extended) -> Wake / Ready
             if (extCount === 4 && thumbOut) {
-                return { id: 'palm_wake', label: 'PALM ✋ READY', holdMs: 750 };
+                return { id: 'palm_wake', label: '◈ PALM · READY', holdMs: 750 };
             }
             // 2. Peace Sign (Index + Middle extended, Ring + Pinky curled) -> Instant AI Camera Vision
             if (indexExt && middleExt && !ringExt && !pinkyExt) {
-                return { id: 'camera_vision', label: 'PEACE ✌️ AI VISION', holdMs: 780 };
+                return { id: 'camera_vision', label: '◇ VISION SCAN', holdMs: 780 };
             }
             // 3. Three Fingers (Index + Middle + Ring extended, Pinky curled) -> Switch JARVIS / FRIDAY
             if (indexExt && middleExt && ringExt && !pinkyExt) {
-                return { id: 'switch_persona', label: '3-FINGER 🤟 PERSONA', holdMs: 850 };
+                return { id: 'switch_persona', label: '⌬ SWITCH PERSONA', holdMs: 850 };
             }
             // 4. Thumbs Up / Thumbs Down (4 fingers curled, thumb clearly vertical)
             if (extCount === 0 && thumbOut) {
                 const dy = lm[4].y - lm[2].y;
-                if (dy < -0.05) return { id: 'volume_up', label: 'THUMB 👍 VOL+', holdMs: 650 };
-                if (dy > 0.05)  return { id: 'volume_down', label: 'THUMB 👎 VOL-', holdMs: 650 };
+                if (dy < -0.05) return { id: 'volume_up', label: '▲ VOLUME UP', holdMs: 650 };
+                if (dy > 0.05)  return { id: 'volume_down', label: '▼ VOLUME DOWN', holdMs: 650 };
             }
             // 5. Closed Fist (all 4 fingers curled and thumb tucked) -> Toggle Audio Mute
             if (extCount === 0 && !thumbOut) {
-                return { id: 'mute_toggle', label: 'FIST ✊ MUTE', holdMs: 820 };
+                return { id: 'mute_toggle', label: '⊘ AUDIO MUTE', holdMs: 820 };
             }
             return null;
         }
@@ -1497,7 +1505,7 @@
                     activeCommandGesture = null;
                 }
             } else if (mode !== 'idle') {
-                statusText = mode === 'spin' ? '👌 SPIN ORB' : '🤏 ZOOM ORB';
+                statusText = mode === 'spin' ? '◈ SPIN ORB' : '◎ ZOOM ORB';
             } else {
                 activeCommandGesture = null;
             }
@@ -1632,7 +1640,7 @@
         function triggerVolumeToggle() {
             isMuted = !isMuted;
             const volBtn = document.getElementById('vol-btn');
-            if (volBtn) volBtn.innerText = isMuted ? '🔇' : '🔊';
+            if (volBtn) volBtn.innerText = isMuted ? '⊘ MUTE' : '◉ AUD';
             if (typeof pywebview !== 'undefined') {
                 pywebview.api.toggle_mute();
             }
@@ -1651,7 +1659,7 @@
                 const wData = (await wRes.json()).current;
                 const code = wData.weather_code;
                 const desc = code === 0 ? 'clear sky' : code < 4 ? 'partly cloudy' : code < 50 ? 'overcast clouds' : code < 80 ? 'rain showers' : 'thunderstorm';
-                const icon = code === 0 ? '☀️' : code < 4 ? '⛅' : code < 50 ? '☁️' : code < 80 ? '🌧️' : '⛈️';
+                const icon = code === 0 ? '☼' : code < 4 ? '◐' : code < 50 ? '☁\uFE0E' : code < 80 ? '☂\uFE0E' : '↯';
                 updateWeather(
                     `${wData.temperature_2m}°C`,
                     `${city}, ${country}`,

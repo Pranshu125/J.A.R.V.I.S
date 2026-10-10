@@ -538,15 +538,15 @@ class JarvisPipeline:
                 code = w_data['weather_code']
 
                 if code == 0:
-                    desc, icon = "clear sky", "☀️"
+                    desc, icon = "clear sky", "☼"
                 elif code < 4:
-                    desc, icon = "partly cloudy", "⛅"
+                    desc, icon = "partly cloudy", "◐"
                 elif code < 50:
-                    desc, icon = "overcast clouds", "☁️"
+                    desc, icon = "overcast clouds", "☁\uFE0E"
                 elif code < 80:
-                    desc, icon = "rain showers", "🌧️"
+                    desc, icon = "rain showers", "☂\uFE0E"
                 else:
-                    desc, icon = "thunderstorm", "⛈️"
+                    desc, icon = "thunderstorm", "↯"
 
                 loc_full = f"{city}, {country}" if country else city
                 self.window.evaluate_js(
@@ -1052,7 +1052,7 @@ class Api:
             try:
                 import base64
                 self.pipeline.window.evaluate_js("updateState('THINKING')")
-                self.pipeline.window.evaluate_js("addLog('SYSTEM', '👁️ Running 1-Pass AI Camera Vision on live webcam frame...')")
+                self.pipeline.window.evaluate_js("addLog('SYSTEM', '[VISION] Running 1-Pass AI Camera Vision on live webcam frame...')")
                 raw_bytes = None
                 if data_url and isinstance(data_url, str) and "," in data_url:
                     raw_bytes = base64.b64decode(data_url.split(",", 1)[1])
@@ -1087,7 +1087,7 @@ class Api:
                 fpath = os.path.join(snap_dir, fname)
                 with open(fpath, "wb") as f:
                     f.write(img_bytes)
-                safe_msg = json.dumps(f"📸 Snapshot saved to Desktop\\JARVIS_Snapshots\\{fname}")
+                safe_msg = json.dumps(f"[CAPTURE] Snapshot saved to Desktop\\JARVIS_Snapshots\\{fname}")
                 self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {safe_msg})")
                 self.pipeline.response_queue.put("Snapshot captured and saved to your desktop folder, sir.")
             except Exception as e:
@@ -1102,10 +1102,10 @@ class Api:
         act = (action or "").lower().strip()
         if act == "volume_up":
             res = volume_control("volume_up")
-            self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {json.dumps('👍 Gesture: ' + res)})")
+            self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {json.dumps('[GESTURE ▲] ' + res)})")
         elif act == "volume_down":
             res = volume_control("volume_down")
-            self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {json.dumps('👎 Gesture: ' + res)})")
+            self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {json.dumps('[GESTURE ▼] ' + res)})")
         elif act == "mute_toggle":
             self.toggle_mute()
         elif act == "switch_persona":
@@ -1118,7 +1118,7 @@ class Api:
             if getattr(self.pipeline, "is_muted", False):
                 self.toggle_mute()
             self.pipeline.window.evaluate_js("focusInput()")
-            self.pipeline.window.evaluate_js("addLog('SYSTEM', '✋ Open Palm Gesture: Audio & Command Input Ready.')")
+            self.pipeline.window.evaluate_js("addLog('SYSTEM', '[GESTURE ◈] Open Palm: Audio & Command Input Ready.')")
 
     def enter_mini(self):
         self.pipeline.enter_orb_only_mode(sleep_mode=False)
