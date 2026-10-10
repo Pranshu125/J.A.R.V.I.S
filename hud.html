@@ -257,6 +257,41 @@
         .send-btn { background: var(--theme-color); color: #000; border: none; padding: 0 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .send-btn:hover { box-shadow: 0 0 15px var(--theme-color); transform: scale(1.05); }
 
+        /* ORB-ONLY TRANSPARENT MODE (App Open / Screen Vision / PiP) */
+        html.orb-only,
+        body.orb-only {
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+        body.orb-only .top-bar,
+        body.orb-only .left-panel,
+        body.orb-only .right-panel,
+        body.orb-only .radar-ring,
+        body.orb-only .center-panel > *:not(#orb-mount) {
+            display: none !important;
+        }
+        body.orb-only .main-container {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: transparent !important;
+        }
+        body.orb-only .center-panel {
+            width: 100% !important;
+            height: 100% !important;
+            background: transparent !important;
+        }
+        body.orb-only #orb-mount {
+            -webkit-app-region: drag;
+            margin: 0 auto !important;
+            transform: scale(0.9) !important;
+            background: transparent !important;
+        }
+
     </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -653,33 +688,26 @@
             if (e.key === 'Enter') sendCommand();
         }
 
-                // Floating Mini Mode (Picture-in-Picture)
+        // Orb-Only Transparent Mode (App Open / Screen Vision / PiP)
         function toggleMiniMode(on) {
-            const els = ['.top-bar', '.left-panel', '.right-panel', '.center-title', '.state-pill', '.friday-btn', '.controls'];
-            els.forEach(selector => {
-                const el = document.querySelector(selector);
-                if(el) el.style.display = on ? 'none' : (selector === '.controls' ? 'flex' : (selector === '.top-bar' ? 'flex' : 'block'));
-            });
-            
             if (on) {
+                document.documentElement.classList.add('orb-only');
+                document.body.classList.add('orb-only');
                 document.body.style.backgroundColor = 'transparent';
-                document.querySelector('.main-container').style.display = 'block';
-                document.querySelector('.arc-reactor').style.webkitAppRegion = 'drag';
-                document.querySelector('.arc-reactor').style.margin = '0 auto';
-                document.querySelector('.arc-reactor').style.transform = 'scale(0.8)';
             } else {
+                document.documentElement.classList.remove('orb-only');
+                document.body.classList.remove('orb-only');
                 document.body.style.backgroundColor = 'var(--bg-color)';
-                document.querySelector('.main-container').style.display = 'grid';
-                document.querySelector('.arc-reactor').style.webkitAppRegion = 'no-drag';
-                document.querySelector('.arc-reactor').style.margin = '0';
-                document.querySelector('.arc-reactor').style.transform = 'scale(1)';
             }
         }
         
-        // Double click Arc Reactor to manually wake up
+        // Double click Arc Reactor / Orb to manually restore Full HUD
         document.querySelector('.arc-reactor').addEventListener('dblclick', () => {
-            if (document.body.style.backgroundColor === 'transparent') {
-                if(typeof pywebview !== 'undefined') pywebview.api.exit_mini();
+            if (document.body.classList.contains('orb-only') || document.body.style.backgroundColor === 'transparent') {
+                toggleMiniMode(false);
+                if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.exit_mini) {
+                    pywebview.api.exit_mini();
+                }
             }
         });
 
@@ -704,6 +732,7 @@
             orbCamera.position.z = 185;
 
             orbRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            orbRenderer.setClearColor(0x000000, 0);
             orbRenderer.setSize(320, 320);
             orbRenderer.setPixelRatio(window.devicePixelRatio || 1);
 
@@ -938,6 +967,13 @@
         }
 
         function quickCmd(cmdText) {
+            const lower = (cmdText || '').toLowerCase();
+            if (lower.includes('screen') || lower.includes('world news') || lower.includes('financial') || lower.includes('open ')) {
+                toggleMiniMode(true);
+                if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.enter_mini) {
+                    pywebview.api.enter_mini();
+                }
+            }
             if (typeof pywebview !== 'undefined') {
                 pywebview.api.send_command(cmdText);
             } else {

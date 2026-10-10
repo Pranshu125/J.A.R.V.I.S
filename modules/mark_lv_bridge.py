@@ -481,6 +481,18 @@ class UnifiedToolSuite:
         args = args or {}
         self.ui.write_log(f"Executing tool: {name}")
 
+        # Automatically switch to Orb-Only Transparent Mode for Screen Vision or App/Browser-opening tools
+        orb_only_tools = {
+            "screen_process", "analyze_screen", "open_app", "browser_control",
+            "youtube_video", "weather_report", "flight_finder", "code_helper",
+            "dev_agent", "video_player", "game_updater", "send_message"
+        }
+        if name in orb_only_tools or (name == "aircraft_report" and str(args.get("action", "")).lower() == "map"):
+            if hasattr(self.pipeline, "enter_orb_only_mode"):
+                self.pipeline.enter_orb_only_mode(sleep_mode=False)
+                if name in ("screen_process", "analyze_screen"):
+                    time.sleep(0.35)
+
         # 1. Check auto-discovered Mark-LV action registry first
         if self.registry and self.registry.has(name):
             ctx = {

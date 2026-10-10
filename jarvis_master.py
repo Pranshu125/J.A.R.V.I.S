@@ -349,6 +349,8 @@ class JarvisPipeline:
         self.running = True
         self.voice_mode = 'JARVIS' # Strictly 'JARVIS' or 'FRIDAY'
         self.is_sleeping = False
+        self.is_fullscreen = True
+        self.is_orb_only = False
         self.last_active = time.time()
         self.session_start = time.time()
         self.command_count = 0
@@ -366,11 +368,7 @@ class JarvisPipeline:
         if os.path.exists(mem_file):
             try:
                 with open(mem_file, "r", encoding="utf-8") as f:
-                    loaded = json.load(f)
-                    if isinstance(loaded, dict):
-                        data = loaded
-                    elif isinstance(loaded, list):
-                        data = {"legacy_history": loaded}
+                    data = json.load(f)
             except Exception:
                 data = {}
         count = int(data.get("session_count", 0)) + 1
@@ -389,6 +387,32 @@ class JarvisPipeline:
             self.window.evaluate_js(f"setSessionAndCommands({self.session_count}, {self.command_count})")
         except Exception:
             pass
+
+    def enter_orb_only_mode(self, sleep_mode: bool = False):
+        """Collapse HUD so ONLY the 3D Holographic Orb is visible on a 100% transparent background."""
+        try:
+            self.is_orb_only = True
+            self.is_sleeping = sleep_mode
+            self.window.evaluate_js("toggleMiniMode(true)")
+            if getattr(self, "is_fullscreen", False):
+                self.window.toggle_fullscreen()
+                self.is_fullscreen = False
+            self.window.resize(340, 340)
+        except Exception as e:
+            print(f"enter_orb_only_mode warning: {e}")
+
+    def exit_orb_only_mode(self):
+        """Restore the full HUD from Orb-Only Transparent Mode."""
+        try:
+            self.is_orb_only = False
+            self.is_sleeping = False
+            self.last_active = time.time()
+            self.window.evaluate_js("toggleMiniMode(false)")
+            if not getattr(self, "is_fullscreen", False):
+                self.window.toggle_fullscreen()
+                self.is_fullscreen = True
+        except Exception as e:
+            print(f"exit_orb_only_mode warning: {e}")
 
     def start_services(self):
         threading.Thread(target=self.stt_worker, daemon=True).start()
@@ -434,19 +458,16 @@ class JarvisPipeline:
             print("Hotkey binding failed: ", e)
 
     def trigger_hotkey_wake(self):
-        if getattr(self, "is_sleeping", False):
-            self.is_sleeping = False
-            self.last_active = time.time()
-            self.window.evaluate_js("toggleMiniMode(false)")
-            self.window.toggle_fullscreen()
-            self.response_queue.put("Overlay activated, sir.")
+        if getattr(self, "is_orb_only", False) or getattr(self, "is_sleeping", False):
+            self.exit_orb_only_mode()
+            self.response_queue.put("Full HUD overlay restored, sir.")
+        else:
+            self.enter_orb_only_mode(sleep_mode=False)
 
     def idle_worker(self):
         while self.running:
-            if not getattr(self, "is_sleeping", False) and time.time() - self.last_active > 90:
-                self.is_sleeping = True
-                self.window.evaluate_js("toggleMiniMode(true)")
-                self.window.resize(400, 400)
+            if not getattr(self, "is_sleeping", False) and not getattr(self, "is_orb_only", False) and time.time() - self.last_active > 90:
+                self.enter_orb_only_mode(sleep_mode=True)
             time.sleep(2)
 
     def background_monitors_worker(self):
@@ -623,13 +644,10 @@ class JarvisPipeline:
                     if text:
                         wake_triggers = ["jarvis", "friday", "wake", "uth jao", "uth ja"]
                         
-                        # Strict Wake-Word filtering in Sleep / PiP Mode
+                        # Strict Wake-Word filtering in Sleep Mode
                         if getattr(self, "is_sleeping", False):
                             if any(w in text for w in wake_triggers):
-                                self.is_sleeping = False
-                                self.last_active = time.time()
-                                self.window.evaluate_js("toggleMiniMode(false)")
-                                self.window.toggle_fullscreen()
+                                self.exit_orb_only_mode()
                                 self.response_queue.put("I am awake, boss. Standing by.")
                             continue
                             
@@ -668,6 +686,14 @@ class JarvisPipeline:
                     self.window.evaluate_js("switchMode('JARVIS')")
                     self.response_queue.put("Reverting to J.A.R.V.I.S. mode, sir. Back in blue.")
                     handled = True
+                elif any(k in cmd_lower for k in ("show hud", "open hud", "restore hud", "full screen", "fullscreen", "maximize hud", "wapas aao", "hud dikhao")):
+                    self.exit_orb_only_mode()
+                    self.response_queue.put("Restoring full HUD interface, sir.")
+                    handled = True
+                elif any(k in cmd_lower for k in ("orb mode", "mini mode", "only orb", "hide hud")):
+                    self.enter_orb_only_mode(sleep_mode=False)
+                    self.response_queue.put("Switching to transparent Orb mode, sir.")
+                    handled = True
                 elif "stop talking" in cmd_lower or "chup raho" in cmd_lower or "mute audio" in cmd_lower:
                     if pygame.mixer.get_init():
                         pygame.mixer.stop()
@@ -676,6 +702,10 @@ class JarvisPipeline:
                 if handled:
                     self.text_queue.task_done()
                     continue
+
+                # Pre-emptively enter Orb-Only Transparent Mode if command asks to open something or use Screen Vision
+                if any(k in cmd_lower for k in ("open ", "khol", "launch ", "start ", "play ", "screen", "looking at", "world news", "finance news", "financial market")):
+                    self.enter_orb_only_mode(sleep_mode=False)
 
                 # Bilingual Spoken Persona + Long-Term Memory Injection (Mark-LV + Iris)
                 lt_mem = MemoryModule.get_long_term_prompt()
@@ -722,6 +752,7 @@ class JarvisPipeline:
 
                         if t_name == "get_world_news":
                             self.window.evaluate_js("addLog('SYSTEM', 'Polling Global Feeds...')")
+                            self.enter_orb_only_mode(sleep_mode=False)
                             news_data = get_world_news_sync()
                             open_world_monitor()
                             response = f"Here is the latest from the global news wire, sir: {news_data[:220]}. I have opened the World Monitor on your display."
@@ -729,16 +760,19 @@ class JarvisPipeline:
 
                         elif t_name == "get_finance_news":
                             self.window.evaluate_js("addLog('SYSTEM', 'Polling Financial Feeds...')")
+                            self.enter_orb_only_mode(sleep_mode=False)
                             fin_data = get_finance_news_sync()
                             open_finance_monitor()
                             response = f"Here is the market briefing, sir: {fin_data[:220]}. Pulling up the finance monitor now."
                             break
 
                         elif t_name == "open_world_monitor":
+                            self.enter_orb_only_mode(sleep_mode=False)
                             response = open_world_monitor()
                             break
 
                         elif t_name == "open_finance_monitor":
+                            self.enter_orb_only_mode(sleep_mode=False)
                             response = open_finance_monitor()
                             break
 
@@ -750,11 +784,13 @@ class JarvisPipeline:
                             elif act in ("brightness_up", "brightness_down"):
                                 response = f"{ack} " + brightness_control(act)
                             elif act == "launch_app":
+                                self.enter_orb_only_mode(sleep_mode=False)
                                 response = f"{ack} " + launch_application(app)
                             break
 
                         elif t_name == "launch_application":
                             app = t_args.get("app_name", "")
+                            self.enter_orb_only_mode(sleep_mode=False)
                             response = f"{ack} " + launch_application(app)
                             break
 
@@ -771,11 +807,13 @@ class JarvisPipeline:
                         elif t_name == "split_workspace":
                             l_app = t_args.get("left_app", "")
                             r_app = t_args.get("right_app", "")
+                            self.enter_orb_only_mode(sleep_mode=False)
                             response = f"{ack} " + split_workspace(l_app, r_app)
                             break
 
                         elif t_name == "open_website":
                             url = t_args.get("url", "")
+                            self.enter_orb_only_mode(sleep_mode=False)
                             webbrowser.open(url)
                             response = f"{ack} Opening {url}."
                             break
@@ -843,7 +881,11 @@ class Api:
         self.pipeline.window.minimize()
         
     def toggle_fullscreen(self):
-        self.pipeline.window.toggle_fullscreen()
+        if getattr(self.pipeline, "is_orb_only", False):
+            self.pipeline.exit_orb_only_mode()
+        else:
+            self.pipeline.window.toggle_fullscreen()
+            self.pipeline.is_fullscreen = not getattr(self.pipeline, "is_fullscreen", True)
         
     def destroy(self):
         self.pipeline.window.destroy()
@@ -912,14 +954,10 @@ class Api:
             self.pipeline.window.evaluate_js(f"addLog('SYSTEM', 'Memory Vault error: {e}')")
 
     def enter_mini(self):
-        self.pipeline.window.resize(400, 400)
-        self.pipeline.is_sleeping = True
+        self.pipeline.enter_orb_only_mode(sleep_mode=False)
         
     def exit_mini(self):
-        self.pipeline.window.toggle_fullscreen()
-        self.pipeline.is_sleeping = False
-        self.pipeline.last_active = time.time()
-        self.pipeline.window.evaluate_js("toggleMiniMode(false)")
+        self.pipeline.exit_orb_only_mode()
 
 if __name__ == '__main__':
     html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hud.html')
@@ -927,7 +965,7 @@ if __name__ == '__main__':
         'JARVIS Master',
         html_path,
         transparent=True,
-        frameless=False,
+        frameless=True,
         fullscreen=True,
         on_top=True
     )
