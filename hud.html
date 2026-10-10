@@ -425,18 +425,29 @@
 
             <div class="widget">
                 <div class="widget-header">
-                    <span>Camera</span>
-                    <span style="cursor:pointer;" onclick="toggleCamera()" title="Toggle Live Camera">⏻</span>
+                    <span>Camera & Hand Gestures</span>
+                    <span style="display:flex; gap:8px; align-items:center;">
+                        <span id="gesture-badge" onclick="toggleHandTracking()" style="font-size:10px; padding:2px 6px; border:1px solid var(--panel-border); border-radius:4px; color:var(--text-muted); cursor:pointer;" title="Click to toggle Hand Gesture Tracking">OFF</span>
+                        <span style="cursor:pointer;" onclick="toggleCamera()" title="Toggle Live Camera & Hand Gestures">⏻</span>
+                    </span>
                 </div>
-                <select id="camera-select" style="background:rgba(0,0,0,0.5); color:var(--theme-color); border:1px solid var(--theme-color); border-radius:4px; margin-bottom:10px; display:none; width:100%; font-size:12px; padding:2px;" onchange="switchCamera()"></select>
-                <div id="cam-off" style="height: 120px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted); cursor:pointer;" onclick="toggleCamera()">
-                    <span style="font-size:24px; margin-bottom:10px; color:var(--theme-color);">📷</span>
-                    <span style="font-size:12px;">Camera Off (Click to Enable)</span>
+                <select id="camera-select" style="background:rgba(0,0,0,0.5); color:var(--theme-color); border:1px solid var(--theme-color); border-radius:4px; margin-bottom:8px; display:none; width:100%; font-size:12px; padding:3px;" onchange="switchCamera()"></select>
+                <div id="cam-off" style="height: 135px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted); cursor:pointer;" onclick="toggleCamera()">
+                    <span style="font-size:24px; margin-bottom:8px; color:var(--theme-color);">📷</span>
+                    <span style="font-size:12px;">Camera Off (Click to Enable Camera + Hand Gestures)</span>
                 </div>
-                <div id="cam-wrap" style="position:relative; display:none; width:100%; height:120px; border-radius:8px; overflow:hidden;">
-                    <video id="cam-video" autoplay playsinline muted style="width:100%; height:120px; border-radius:8px; object-fit:cover; transform:scaleX(-1);"></video>
+                <div id="cam-wrap" style="position:relative; display:none; width:100%; height:145px; border-radius:8px; overflow:hidden; border:1px solid var(--panel-border);">
+                    <video id="cam-video" autoplay playsinline muted style="width:100%; height:145px; border-radius:8px; object-fit:cover; transform:scaleX(-1); display:block;"></video>
+                    <canvas id="cam-overlay" width="290" height="145" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></canvas>
                 </div>
-                <div style="font-size:10px; text-align:center; margin-top:10px; color:var(--text-muted);">Live feed ready for visual analysis</div>
+                <div id="cam-actions" style="display:none; gap:6px; margin-top:8px;">
+                    <button onclick="triggerCameraVision()" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 6px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer;" title="Instant 1-Pass AI Camera Vision">👁️ AI Vision</button>
+                    <button onclick="takeCameraSnapshot()" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 6px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer;" title="Save High-Res Webcam Snapshot to Desktop">📸 Snap</button>
+                    <button id="gesture-toggle-btn" onclick="toggleHandTracking()" style="flex:1; background:var(--theme-color); border:1px solid var(--theme-color); color:#000; padding:5px 6px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;" title="Toggle Hand Gesture Commands">✋ ON</button>
+                </div>
+                <div id="cam-hint" style="font-size:10px; text-align:center; margin-top:8px; color:var(--text-muted); line-height:1.35;">
+                    👌 Pinch=Spin · 🤏 2-Hand=Zoom · ✌️ Peace=AI Vision · ✊ Fist=Mute · 👍/👎 Vol · 🤟 Persona
+                </div>
             </div>
             
             <div class="widget">
@@ -1091,48 +1102,129 @@
             a.click();
         }
 
-        // --- LIVE CAMERA FEED & MEDIAPIPE HAND GESTURE TRACKING (Ported from Sagar's handTracker.ts) ---
+        // --- LIVE CAMERA FEED & MULTI-FUNCTION MEDIAPIPE HAND GESTURE ENGINE ---
         let camStream = null;
         let handLandmarker = null;
+        let handLandmarkerLoading = false;
         let handTrackingActive = false;
         let handRafId = 0;
         let lastVideoTime = -1;
+        let lastDetectMs = 0;
         let handStates = new Map();
         let prevGestureMode = 'idle';
         let prevSpinGrab = null;
         let prevZoomDist = null;
+        let camCaptureCanvas = null;
+
+        // Gesture hold state & cooldown for discrete command triggers
+        let activeCommandGesture = null;
+        let gestureHoldStart = 0;
+        let lastGestureTriggerMs = 0;
+
+        const HAND_CONNECTIONS = [
+            [0,1],[1,2],[2,3],[3,4],       // Thumb
+            [0,5],[5,6],[6,7],[7,8],       // Index
+            [0,9],[9,10],[10,11],[11,12],  // Middle
+            [0,13],[13,14],[14,15],[15,16],// Ring
+            [0,17],[17,18],[18,19],[19,20],// Pinky
+            [5,9],[9,13],[13,17]           // Palm knuckle bridge
+        ];
+
+        function captureCameraFrameBase64() {
+            const vid = document.getElementById('cam-video');
+            if (!camStream || !vid || vid.readyState < 2 || !vid.videoWidth) return '';
+            if (!camCaptureCanvas) {
+                camCaptureCanvas = document.createElement('canvas');
+            }
+            camCaptureCanvas.width = vid.videoWidth || 640;
+            camCaptureCanvas.height = vid.videoHeight || 480;
+            const ctx = camCaptureCanvas.getContext('2d');
+            ctx.drawImage(vid, 0, 0, camCaptureCanvas.width, camCaptureCanvas.height);
+            return camCaptureCanvas.toDataURL('image/jpeg', 0.82);
+        }
+        window.captureCameraFrameBase64 = captureCameraFrameBase64;
+
+        async function triggerCameraVision(customPrompt) {
+            if (!camStream) {
+                await toggleCamera();
+                await new Promise(r => setTimeout(r, 350));
+            }
+            const dataUrl = captureCameraFrameBase64();
+            const promptText = customPrompt || 'Analyze what I am holding or showing to the camera and describe what you see.';
+            if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.analyze_camera_frame) {
+                pywebview.api.analyze_camera_frame(dataUrl, promptText);
+            } else {
+                addLog('SYSTEM', 'Capturing live webcam frame for AI Vision...');
+            }
+        }
+
+        async function takeCameraSnapshot() {
+            if (!camStream) {
+                await toggleCamera();
+                await new Promise(r => setTimeout(r, 350));
+            }
+            const dataUrl = captureCameraFrameBase64();
+            if (!dataUrl) {
+                addLog('SYSTEM', 'Camera stream not ready for snapshot.');
+                return;
+            }
+            if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.save_camera_snapshot) {
+                pywebview.api.save_camera_snapshot(dataUrl);
+            } else {
+                const a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = `jarvis_cam_${Date.now()}.jpg`;
+                a.click();
+                addLog('SYSTEM', '📸 Webcam snapshot downloaded.');
+            }
+        }
 
         async function toggleCamera() {
             const vid = document.getElementById('cam-video');
             const wrap = document.getElementById('cam-wrap');
             const offBox = document.getElementById('cam-off');
             const select = document.getElementById('camera-select');
+            const actionsBar = document.getElementById('cam-actions');
+            const camBtn = document.getElementById('cam-btn');
+            const badge = document.getElementById('gesture-badge');
             
             if (camStream) {
                 if (handTrackingActive) stopHandTrackingLoop();
                 camStream.getTracks().forEach(t => t.stop());
                 camStream = null;
+                vid.srcObject = null;
                 wrap.style.display = 'none';
+                if (actionsBar) actionsBar.style.display = 'none';
                 offBox.style.display = 'flex';
                 select.style.display = 'none';
+                if (camBtn) { camBtn.style.background = 'var(--panel-bg)'; camBtn.style.color = 'var(--theme-color)'; }
+                if (badge) { badge.innerText = 'OFF'; badge.style.color = 'var(--text-muted)'; badge.style.borderColor = 'var(--panel-border)'; }
             } else {
                 try {
-                    camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
+                    camStream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 }, facingMode: 'user' },
+                        audio: false
+                    });
                     const devices = await navigator.mediaDevices.enumerateDevices();
                     const videoDevices = devices.filter(d => d.kind === 'videoinput');
                     select.innerHTML = '';
-                    videoDevices.forEach(d => {
+                    videoDevices.forEach((d, idx) => {
                         const opt = document.createElement('option');
                         opt.value = d.deviceId;
-                        opt.text = d.label || 'Camera ' + (select.length + 1);
+                        opt.text = d.label || ('Camera ' + (idx + 1));
                         select.appendChild(opt);
                     });
-                    if (videoDevices.length > 1) select.style.display = 'block';
+                    if (videoDevices.length > 0) select.style.display = 'block';
                     vid.srcObject = camStream;
+                    await vid.play().catch(() => {});
                     wrap.style.display = 'block';
+                    if (actionsBar) actionsBar.style.display = 'flex';
                     offBox.style.display = 'none';
+                    if (camBtn) { camBtn.style.background = 'var(--theme-color)'; camBtn.style.color = '#000'; }
+                    // Automatically enable MediaPipe Hand Gesture Tracking when Camera turns on
+                    await startHandTracking();
                 } catch(e) {
-                    addLog('SYSTEM', 'Webcam access denied. Check Windows Privacy Settings.');
+                    addLog('SYSTEM', 'Webcam access denied or unavailable: ' + e.message);
                 }
             }
         }
@@ -1142,8 +1234,10 @@
             const select = document.getElementById('camera-select');
             const deviceId = select.value;
             try {
-                camStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } } });
-                document.getElementById('cam-video').srcObject = camStream;
+                camStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId }, width: 640, height: 480 } });
+                const vid = document.getElementById('cam-video');
+                vid.srcObject = camStream;
+                await vid.play().catch(() => {});
             } catch(e) { addLog('SYSTEM', 'Failed to switch camera.'); }
         }
 
@@ -1151,49 +1245,88 @@
             return Math.hypot(a.x - b.x, a.y - b.y);
         }
 
-        async function toggleHandTracking() {
-            const handBtn = document.getElementById('hand-btn');
+        async function ensureHandLandmarker() {
+            if (handLandmarker) return handLandmarker;
+            if (handLandmarkerLoading) return null;
+            handLandmarkerLoading = true;
             const badge = document.getElementById('gesture-badge');
-            if (handTrackingActive) {
-                stopHandTrackingLoop();
-                if (handBtn) { handBtn.style.background = 'var(--panel-bg)'; handBtn.style.color = 'var(--theme-color)'; }
-                if (badge) badge.innerText = 'IDLE';
-                addLog('SYSTEM', 'Hand gesture orb control disabled.');
-                return;
-            }
-
-            if (!camStream) {
-                await toggleCamera();
-                if (!camStream) return;
-            }
-
+            if (badge) badge.innerText = 'LOADING...';
             try {
-                addLog('SYSTEM', 'Initializing MediaPipe Hand Gesture Tracker (1-hand pinch = spin, 2-hand pinch = zoom)...');
-                if (!handLandmarker) {
-                    const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm');
-                    const fileset = await vision.FilesetResolver.forVisionTasks(
-                        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
-                    );
+                const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm');
+                const fileset = await vision.FilesetResolver.forVisionTasks(
+                    'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
+                );
+                const modelUrl = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
+                const opts = {
+                    baseOptions: { modelAssetPath: modelUrl, delegate: 'GPU' },
+                    runningMode: 'VIDEO',
+                    numHands: 2,
+                    minHandDetectionConfidence: 0.55,
+                    minHandPresenceConfidence: 0.55,
+                    minTrackingConfidence: 0.55
+                };
+                try {
+                    handLandmarker = await vision.HandLandmarker.createFromOptions(fileset, opts);
+                } catch (gpuErr) {
+                    // Fallback to CPU delegate if WebGL/GPU delegate is rejected
                     handLandmarker = await vision.HandLandmarker.createFromOptions(fileset, {
-                        baseOptions: {
-                            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
-                            delegate: 'GPU'
-                        },
-                        runningMode: 'VIDEO',
-                        numHands: 2,
-                        minHandDetectionConfidence: 0.55,
-                        minHandPresenceConfidence: 0.55,
-                        minTrackingConfidence: 0.55
+                        ...opts,
+                        baseOptions: { modelAssetPath: modelUrl, delegate: 'CPU' }
                     });
                 }
-                handTrackingActive = true;
-                if (handBtn) { handBtn.style.background = 'var(--theme-color)'; handBtn.style.color = '#000'; }
-                if (badge) badge.innerText = 'ACTIVE';
-                runHandLoop();
-                addLog('SYSTEM', 'Hand Gesture Control online! Pinch thumb + index finger to rotate or zoom the 3D Orb.');
-            } catch (e) {
-                addLog('SYSTEM', 'Hand tracker initialization warning: ' + e.message);
+            } finally {
+                handLandmarkerLoading = false;
             }
+            return handLandmarker;
+        }
+
+        async function startHandTracking() {
+            const badge = document.getElementById('gesture-badge');
+            const gBtn = document.getElementById('gesture-toggle-btn');
+            try {
+                const lm = await ensureHandLandmarker();
+                if (!lm) return;
+                handTrackingActive = true;
+                if (badge) {
+                    badge.innerText = 'ACTIVE';
+                    badge.style.color = '#00ff88';
+                    badge.style.borderColor = '#00ff88';
+                }
+                if (gBtn) {
+                    gBtn.innerText = '✋ ON';
+                    gBtn.style.background = 'var(--theme-color)';
+                    gBtn.style.color = '#000';
+                }
+                cancelAnimationFrame(handRafId);
+                runHandLoop();
+            } catch (e) {
+                if (badge) badge.innerText = 'ERR';
+                addLog('SYSTEM', 'Hand gesture init warning: ' + e.message);
+            }
+        }
+
+        async function toggleHandTracking() {
+            const badge = document.getElementById('gesture-badge');
+            const gBtn = document.getElementById('gesture-toggle-btn');
+            if (handTrackingActive) {
+                stopHandTrackingLoop();
+                if (badge) {
+                    badge.innerText = 'PAUSED';
+                    badge.style.color = 'var(--text-muted)';
+                    badge.style.borderColor = 'var(--panel-border)';
+                }
+                if (gBtn) {
+                    gBtn.innerText = '✋ OFF';
+                    gBtn.style.background = 'transparent';
+                    gBtn.style.color = 'var(--theme-color)';
+                }
+                return;
+            }
+            if (!camStream) {
+                await toggleCamera();
+                return;
+            }
+            await startHandTracking();
         }
 
         function stopHandTrackingLoop() {
@@ -1203,6 +1336,7 @@
             prevGestureMode = 'idle';
             prevSpinGrab = null;
             prevZoomDist = null;
+            activeCommandGesture = null;
             const overlay = document.getElementById('cam-overlay');
             if (overlay) {
                 const ctx = overlay.getContext('2d');
@@ -1210,16 +1344,71 @@
             }
         }
 
+        function classifySingleHandCommand(lm) {
+            const wrist = lm[0];
+            const hs = dist2d(wrist, lm[9]);
+            if (hs < 1e-5) return null;
+
+            // Finger extension test: tip distance from wrist vs PIP joint distance from wrist
+            const indexExt  = dist2d(lm[8], wrist)  > dist2d(lm[6], wrist) * 1.12;
+            const middleExt = dist2d(lm[12], wrist) > dist2d(lm[10], wrist) * 1.12;
+            const ringExt   = dist2d(lm[16], wrist) > dist2d(lm[14], wrist) * 1.10;
+            const pinkyExt  = dist2d(lm[20], wrist) > dist2d(lm[18], wrist) * 1.10;
+            const thumbOut  = dist2d(lm[4], lm[5]) / hs > 0.52;
+
+            const extCount = (indexExt ? 1 : 0) + (middleExt ? 1 : 0) + (ringExt ? 1 : 0) + (pinkyExt ? 1 : 0);
+
+            // 1. Open Palm (all 4 fingers + thumb extended) -> Wake / Ready
+            if (extCount === 4 && thumbOut) {
+                return { id: 'palm_wake', label: 'PALM ✋ READY', holdMs: 750 };
+            }
+            // 2. Peace Sign (Index + Middle extended, Ring + Pinky curled) -> Instant AI Camera Vision
+            if (indexExt && middleExt && !ringExt && !pinkyExt) {
+                return { id: 'camera_vision', label: 'PEACE ✌️ AI VISION', holdMs: 780 };
+            }
+            // 3. Three Fingers (Index + Middle + Ring extended, Pinky curled) -> Switch JARVIS / FRIDAY
+            if (indexExt && middleExt && ringExt && !pinkyExt) {
+                return { id: 'switch_persona', label: '3-FINGER 🤟 PERSONA', holdMs: 850 };
+            }
+            // 4. Thumbs Up / Thumbs Down (4 fingers curled, thumb clearly vertical)
+            if (extCount === 0 && thumbOut) {
+                const dy = lm[4].y - lm[2].y;
+                if (dy < -0.05) return { id: 'volume_up', label: 'THUMB 👍 VOL+', holdMs: 650 };
+                if (dy > 0.05)  return { id: 'volume_down', label: 'THUMB 👎 VOL-', holdMs: 650 };
+            }
+            // 5. Closed Fist (all 4 fingers curled and thumb tucked) -> Toggle Audio Mute
+            if (extCount === 0 && !thumbOut) {
+                return { id: 'mute_toggle', label: 'FIST ✊ MUTE', holdMs: 820 };
+            }
+            return null;
+        }
+
+        function executeGestureCommand(cmdId) {
+            if (cmdId === 'camera_vision') {
+                triggerCameraVision('Analyze what I am showing to the camera.');
+                return;
+            }
+            if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.gesture_action) {
+                pywebview.api.gesture_action(cmdId);
+            }
+        }
+
         function runHandLoop() {
             if (!handTrackingActive) return;
             handRafId = requestAnimationFrame(runHandLoop);
+
+            const now = performance.now();
+            // 30 FPS throttle for ultra-efficient CPU/GPU utilization
+            if (now - lastDetectMs < 33) return;
+
             const vid = document.getElementById('cam-video');
             const overlay = document.getElementById('cam-overlay');
             if (!handLandmarker || !vid || vid.readyState < 2) return;
             if (vid.currentTime === lastVideoTime) return;
             lastVideoTime = vid.currentTime;
+            lastDetectMs = now;
 
-            const result = handLandmarker.detectForVideo(vid, performance.now());
+            const result = handLandmarker.detectForVideo(vid, now);
             const landmarks = result.landmarks || [];
             const labels = (result.handedness || []).map((h, idx) => (h[0] && h[0].categoryName) ? h[0].categoryName : ('H' + idx));
 
@@ -1245,8 +1434,8 @@
                 else if (!st.pinching && pinchRatio < 0.32) st.pinching = true;
 
                 st.grab = {
-                    x: st.grab.x + (raw.x - st.grab.x) * 0.4,
-                    y: st.grab.y + (raw.y - st.grab.y) * 0.4
+                    x: st.grab.x + (raw.x - st.grab.x) * 0.42,
+                    y: st.grab.y + (raw.y - st.grab.y) * 0.42
                 };
                 if (st.pinching) pinchedGrabs.push(st.grab);
             });
@@ -1268,10 +1457,11 @@
                     const dx = grab.x - prevSpinGrab.x;
                     const dy = grab.y - prevSpinGrab.y;
                     if (Math.abs(dx) > 1e-4 || Math.abs(dy) > 1e-4) {
-                        rotateOrbBy(dx * 5.0, dy * 5.0);
+                        rotateOrbBy(dx * 5.2, dy * 5.2);
                     }
                 }
                 prevSpinGrab = grab;
+                activeCommandGesture = null;
             } else if (mode === 'zoom') {
                 const d = Math.hypot(pinchedGrabs[0].x - pinchedGrabs[1].x, pinchedGrabs[0].y - pinchedGrabs[1].y);
                 if (prevZoomDist && d > 1e-4) {
@@ -1279,28 +1469,91 @@
                     zoomOrbBy(factor);
                 }
                 prevZoomDist = d;
+                activeCommandGesture = null;
+            }
+
+            // Evaluate discrete hand gesture commands when not pinching
+            let holdProgress = 0;
+            let statusText = landmarks.length > 0 ? `HANDS: ${landmarks.length} · ${mode.toUpperCase()}` : 'ACTIVE · SCANNING';
+
+            if (mode === 'idle' && landmarks.length === 1) {
+                const cmd = classifySingleHandCommand(landmarks[0]);
+                if (cmd && (now - lastGestureTriggerMs > 1600)) {
+                    if (activeCommandGesture !== cmd.id) {
+                        activeCommandGesture = cmd.id;
+                        gestureHoldStart = now;
+                    } else {
+                        const elapsed = now - gestureHoldStart;
+                        holdProgress = Math.min(1.0, elapsed / cmd.holdMs);
+                        statusText = cmd.label;
+                        if (holdProgress >= 1.0) {
+                            lastGestureTriggerMs = now;
+                            activeCommandGesture = null;
+                            holdProgress = 0;
+                            executeGestureCommand(cmd.id);
+                        }
+                    }
+                } else {
+                    activeCommandGesture = null;
+                }
+            } else if (mode !== 'idle') {
+                statusText = mode === 'spin' ? '👌 SPIN ORB' : '🤏 ZOOM ORB';
+            } else {
+                activeCommandGesture = null;
             }
 
             const badge = document.getElementById('gesture-badge');
-            if (badge) badge.innerText = `HANDS: ${landmarks.length} · ${mode.toUpperCase()}`;
+            if (badge) badge.innerText = statusText;
 
-            // Draw pinch indicators on overlay
+            // Draw full 21-joint holographic hand skeleton + pinch vector + hold progress ring on #cam-overlay
             if (overlay) {
                 const ctx = overlay.getContext('2d');
                 ctx.clearRect(0, 0, overlay.width, overlay.height);
+                const themeHex = getComputedStyle(document.documentElement).getPropertyValue('--theme-color').trim() || '#00ffff';
+
                 for (const lm of landmarks) {
+                    // 1. Skeleton bone connections
+                    ctx.strokeStyle = 'rgba(0, 255, 255, 0.45)';
+                    ctx.lineWidth = 1.4;
+                    for (const [a, b] of HAND_CONNECTIONS) {
+                        const ax = (1 - lm[a].x) * overlay.width, ay = lm[a].y * overlay.height;
+                        const bx = (1 - lm[b].x) * overlay.width, by = lm[b].y * overlay.height;
+                        ctx.beginPath();
+                        ctx.moveTo(ax, ay);
+                        ctx.lineTo(bx, by);
+                        ctx.stroke();
+                    }
+
+                    // 2. All 21 joint nodes
+                    for (let j = 0; j < lm.length; j++) {
+                        const jx = (1 - lm[j].x) * overlay.width, jy = lm[j].y * overlay.height;
+                        ctx.fillStyle = (j === 4 || j === 8) ? '#00ff88' : themeHex;
+                        ctx.beginPath();
+                        ctx.arc(jx, jy, (j % 4 === 0) ? 3.2 : 2.0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // 3. Thumb-Index pinch vector
                     const thumb = lm[4], index = lm[8];
                     const tx = (1 - thumb.x) * overlay.width, ty = thumb.y * overlay.height;
                     const ix = (1 - index.x) * overlay.width, iy = index.y * overlay.height;
                     const hs = dist2d(lm[0], lm[9]);
                     const pinched = hs > 1e-6 && (dist2d(thumb, index) / hs < 0.32);
-                    ctx.strokeStyle = pinched ? '#00ff88' : '#00ffff';
-                    ctx.lineWidth = pinched ? 2.5 : 1.2;
-                    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(ix, iy); ctx.stroke();
-                    ctx.fillStyle = pinched ? '#00ff88' : '#00ffff';
-                    [[tx, ty], [ix, iy]].forEach(([x, y]) => {
-                        ctx.beginPath(); ctx.arc(x, y, pinched ? 5 : 3, 0, Math.PI * 2); ctx.fill();
-                    });
+                    if (pinched) {
+                        ctx.strokeStyle = '#00ff88';
+                        ctx.lineWidth = 2.8;
+                        ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(ix, iy); ctx.stroke();
+                    }
+
+                    // 4. Gesture hold progress ring around palm center (landmark 9)
+                    if (holdProgress > 0.05) {
+                        const px = (1 - lm[9].x) * overlay.width, py = lm[9].y * overlay.height;
+                        ctx.strokeStyle = '#00ff88';
+                        ctx.lineWidth = 3.5;
+                        ctx.beginPath();
+                        ctx.arc(px, py, 22, -Math.PI / 2, -Math.PI / 2 + holdProgress * Math.PI * 2);
+                        ctx.stroke();
+                    }
                 }
             }
         }

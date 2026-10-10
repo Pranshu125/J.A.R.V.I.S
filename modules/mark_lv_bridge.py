@@ -320,13 +320,33 @@ def _fast_capture_screen() -> tuple[bytes, str]:
     return buf.getvalue(), "image/jpeg"
 
 
-def run_screen_or_camera_vision(angle: str = "screen", text: str = "Analyze what is on my screen and help me with what I am looking at.") -> str:
-    """Capture screen or webcam frame in ~15ms and analyze in a single pass with Gemini Vision."""
+def run_screen_or_camera_vision(
+    angle: str = "screen",
+    text: str = "Analyze what is on my screen and help me with what I am looking at.",
+    raw_image_bytes: bytes | None = None,
+    window=None,
+) -> str:
+    """Capture screen or webcam frame in ~2-15ms and analyze in a single pass with Gemini Vision."""
     global _VISION_CLIENT
     try:
-        if (angle or "screen").lower().strip() in ("camera", "webcam", "cam", "face"):
-            from actions.screen_processor import _capture_camera
-            img_bytes, mime = _capture_camera()
+        if raw_image_bytes:
+            img_bytes, mime = raw_image_bytes, "image/jpeg"
+            source_label = "webcam" if (angle or "").lower() in ("camera", "webcam", "cam", "face") else "display"
+            src_tag = "[IMAGE SOURCE: LIVE HUD WEBCAM]" if source_label == "webcam" else "[IMAGE SOURCE: SCREEN CAPTURE]"
+        elif (angle or "screen").lower().strip() in ("camera", "webcam", "cam", "face"):
+            img_bytes, mime = None, "image/jpeg"
+            # Fast-path: grab live frame directly from HUD <video id="cam-video"> in ~2ms (avoids Windows camera lock conflict)
+            if window is not None:
+                try:
+                    import base64
+                    b64_data = window.evaluate_js("typeof captureCameraFrameBase64 === 'function' ? captureCameraFrameBase64() : ''")
+                    if b64_data and isinstance(b64_data, str) and "," in b64_data:
+                        img_bytes = base64.b64decode(b64_data.split(",", 1)[1])
+                except Exception:
+                    pass
+            if not img_bytes:
+                from actions.screen_processor import _capture_camera
+                img_bytes, mime = _capture_camera()
             source_label = "webcam"
             src_tag = "[IMAGE SOURCE: WEBCAM]"
         else:
@@ -341,7 +361,7 @@ def run_screen_or_camera_vision(angle: str = "screen", text: str = "Analyze what
     prompt = (
         f"{src_tag}\n"
         "You are JARVIS from Iron Man. Analyze this image with technical precision and intelligence. "
-        "Be specific about the exact application, text, code, error, or content visible on screen, and help the user directly. "
+        "Be specific about the exact person, object, gesture, application, text, code, or content visible, and help the user directly. "
         "Respond in maximum 2 to 3 short spoken sentences without markdown bullets or symbols. Speed and clarity are priority.\n"
         f"User request: {text}"
     )
@@ -614,7 +634,17 @@ class UnifiedToolSuite:
                 if name in ("screen_process", "analyze_screen"):
                     time.sleep(0.35)
 
-        # 1. Check auto-discovered Mark-LV action registry first
+        # 1. Fast-path Screen & Camera Vision (bypasses legacy PNG/OpenCV locks)
+        if name in ("screen_process", "analyze_screen"):
+            angle = args.get("angle", "screen")
+            query = args.get("text") or args.get("query") or "Describe what is visible."
+            return run_screen_or_camera_vision(
+                angle=angle,
+                text=query,
+                window=getattr(self.pipeline, "window", None),
+            )
+
+        # 2. Check auto-discovered Mark-LV action registry
         if self.registry and self.registry.has(name):
             ctx = {
                 "player": self.ui,
@@ -623,12 +653,6 @@ class UnifiedToolSuite:
                 "session_memory": None,
             }
             return self.registry.run(name, args, ctx)
-
-        # 2. Inline & Core tools
-        if name in ("screen_process", "analyze_screen"):
-            angle = args.get("angle", "screen")
-            query = args.get("text") or args.get("query") or "Describe what is on screen."
-            return run_screen_or_camera_vision(angle=angle, text=query)
 
         if name == "aircraft_report":
             return run_aircraft_radar(

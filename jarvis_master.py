@@ -725,7 +725,10 @@ class JarvisPipeline:
                     continue
 
                 # Single-Pass Direct Vision Fast-Path (Mark-LV / Mark-XXXIX-OR Architecture: 1 API call instead of 2)
-                is_cam_query = any(k in cmd_lower for k in ("camera", "webcam", "look at me", "who am i", "mera chehra"))
+                is_cam_query = any(k in cmd_lower for k in (
+                    "camera", "webcam", "look at me", "who am i", "mera chehra",
+                    "holding", "in my hand", "haath mein", "show you"
+                ))
                 is_screen_query = any(k in cmd_lower for k in (
                     "screen", "looking at", "what do you see", "read this", "analyze this",
                     "this error", "this code", "on my display", "screen par", "kya dikh raha"
@@ -741,7 +744,7 @@ class JarvisPipeline:
                         self.enter_orb_only_mode(sleep_mode=False, vision_mode=True)
                         if was_fullscreen:
                             time.sleep(0.22)
-                    vision_ans = run_screen_or_camera_vision(angle=angle, text=text)
+                    vision_ans = run_screen_or_camera_vision(angle=angle, text=text, window=self.window)
                     self.history.append(("USER", text))
                     self.history.append(("JARVIS", vision_ans))
                     MemoryModule.save(self.history)
@@ -1034,12 +1037,88 @@ class Api:
         def _run():
             time.sleep(0.22)
             self.pipeline.window.evaluate_js("updateState('THINKING')")
-            res = run_screen_or_camera_vision("screen", "Analyze my screen and tell me what I am looking at.")
+            res = run_screen_or_camera_vision("screen", "Analyze my screen and tell me what I am looking at.", window=self.pipeline.window)
             self.pipeline.history.append(("USER", "[Screen Vision]"))
             self.pipeline.history.append(("JARVIS", res))
             MemoryModule.save(self.pipeline.history)
             self.pipeline.response_queue.put(res)
         threading.Thread(target=_run, daemon=True).start()
+
+    def analyze_camera_frame(self, data_url: str, prompt: str = "Analyze what I am holding or showing to the camera and describe what you see."):
+        """Instant 1-pass Camera Vision using the live WebView2 webcam frame (zero OpenCV camera lock conflict)."""
+        self.pipeline.last_active = time.time()
+        self.pipeline.increment_command_count()
+        def _run():
+            try:
+                import base64
+                self.pipeline.window.evaluate_js("updateState('THINKING')")
+                self.pipeline.window.evaluate_js("addLog('SYSTEM', '👁️ Running 1-Pass AI Camera Vision on live webcam frame...')")
+                raw_bytes = None
+                if data_url and isinstance(data_url, str) and "," in data_url:
+                    raw_bytes = base64.b64decode(data_url.split(",", 1)[1])
+                res = run_screen_or_camera_vision(
+                    angle="camera",
+                    text=prompt or "Analyze what I am holding or showing to the camera.",
+                    raw_image_bytes=raw_bytes,
+                    window=self.pipeline.window,
+                )
+                self.pipeline.history.append(("USER", f"[Camera Vision] {prompt}"))
+                self.pipeline.history.append(("JARVIS", res))
+                MemoryModule.save(self.pipeline.history)
+                self.pipeline.response_queue.put(res)
+            except Exception as e:
+                safe_err = json.dumps(f"Camera vision error: {str(e).splitlines()[0][:100]}")
+                self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
+        threading.Thread(target=_run, daemon=True).start()
+
+    def save_camera_snapshot(self, data_url: str):
+        """Save a high-resolution snapshot from the live HUD webcam to Desktop/JARVIS_Snapshots."""
+        self.pipeline.last_active = time.time()
+        self.pipeline.increment_command_count()
+        def _run():
+            try:
+                import base64
+                if not data_url or "," not in data_url:
+                    return
+                img_bytes = base64.b64decode(data_url.split(",", 1)[1])
+                snap_dir = os.path.join(os.path.expanduser("~"), "Desktop", "JARVIS_Snapshots")
+                os.makedirs(snap_dir, exist_ok=True)
+                fname = f"jarvis_cam_{int(time.time())}.jpg"
+                fpath = os.path.join(snap_dir, fname)
+                with open(fpath, "wb") as f:
+                    f.write(img_bytes)
+                safe_msg = json.dumps(f"📸 Snapshot saved to Desktop\\JARVIS_Snapshots\\{fname}")
+                self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {safe_msg})")
+                self.pipeline.response_queue.put("Snapshot captured and saved to your desktop folder, sir.")
+            except Exception as e:
+                safe_err = json.dumps(f"Snapshot error: {str(e).splitlines()[0][:100]}")
+                self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
+        threading.Thread(target=_run, daemon=True).start()
+
+    def gesture_action(self, action: str):
+        """Execute real-time hand gesture commands (volume_up, volume_down, mute_toggle, switch_persona, palm_wake)."""
+        self.pipeline.last_active = time.time()
+        self.pipeline.increment_command_count()
+        act = (action or "").lower().strip()
+        if act == "volume_up":
+            res = volume_control("volume_up")
+            self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {json.dumps('👍 Gesture: ' + res)})")
+        elif act == "volume_down":
+            res = volume_control("volume_down")
+            self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {json.dumps('👎 Gesture: ' + res)})")
+        elif act == "mute_toggle":
+            self.toggle_mute()
+        elif act == "switch_persona":
+            new_mode = "FRIDAY" if self.pipeline.voice_mode == "JARVIS" else "JARVIS"
+            self.pipeline.voice_mode = new_mode
+            self.pipeline.window.evaluate_js(f"switchMode('{new_mode}')")
+            greeting = "FRIDAY online! Ready for your command, boss." if new_mode == "FRIDAY" else "JARVIS online. At your service, sir."
+            self.pipeline.response_queue.put(greeting)
+        elif act == "palm_wake":
+            if getattr(self.pipeline, "is_muted", False):
+                self.toggle_mute()
+            self.pipeline.window.evaluate_js("focusInput()")
+            self.pipeline.window.evaluate_js("addLog('SYSTEM', '✋ Open Palm Gesture: Audio & Command Input Ready.')")
 
     def enter_mini(self):
         self.pipeline.enter_orb_only_mode(sleep_mode=False)
@@ -1073,6 +1152,9 @@ if __name__ == '__main__':
         api.undo_last_action,
         api.show_memory_vault,
         api.trigger_screen_vision,
+        api.analyze_camera_frame,
+        api.save_camera_snapshot,
+        api.gesture_action,
         api.enter_mini,
         api.exit_mini
     )
