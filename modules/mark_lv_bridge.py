@@ -9,16 +9,22 @@ from __future__ import annotations
 import base64
 import io
 import json
+import logging
 import math
 import os
 import sys
 import threading
 import time
+import warnings
 import webbrowser
 from pathlib import Path
 from typing import Any, Callable
 
 import requests
+
+warnings.filterwarnings("ignore", category=FutureWarning)
+logging.getLogger("google_genai.models").setLevel(logging.ERROR)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # Ensure Windows stdout/stderr never fail on Unicode/symbol logs from Mark-LV / Mark-XXXIX modules
 for _stream in (sys.stdout, sys.stderr):
@@ -72,11 +78,11 @@ def sync_api_keys_config() -> str:
 
 GEMINI_MODEL_LADDER: tuple[str, ...] = (
     "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-lite-latest",
     "gemini-3.5-flash",
     "gemini-3.6-flash",
     "gemini-3.7-flash",
-    "gemini-3.1-flash-lite",
-    "gemini-3.8-flash",
 )
 _EXHAUSTED_MODELS: set[str] = set()
 
@@ -100,9 +106,9 @@ def patch_gemini_models() -> None:
         from core import gemini as lv_gemini
         lv_gemini._KEY_FILE = ROOT_DIR / "config" / "api_keys.json"
         lv_gemini._cached_key = None
-        lv_gemini._LADDERS[lv_gemini.FAST] = GEMINI_MODEL_LADDER
-        lv_gemini._LADDERS[lv_gemini.SMART] = GEMINI_MODEL_LADDER
-        lv_gemini._LADDERS[lv_gemini.SEARCH] = GEMINI_MODEL_LADDER
+        lv_gemini._LADDERS[lv_gemini.FAST] = (*GEMINI_MODEL_LADDER, lv_gemini.LIVE)
+        lv_gemini._LADDERS[lv_gemini.SMART] = (*GEMINI_MODEL_LADDER, lv_gemini.LIVE)
+        lv_gemini._LADDERS[lv_gemini.SEARCH] = ("gemini-3.5-flash-lite",)
     except Exception as e:
         print(f"[Bridge] core.gemini patch warning: {e}")
 

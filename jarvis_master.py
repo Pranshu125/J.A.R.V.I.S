@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import ctypes
 import json
+import logging
 import os
 import queue
 import random
@@ -10,6 +11,7 @@ import re
 import subprocess
 import threading
 import time
+import warnings
 import webbrowser
 from typing import Any, Callable
 
@@ -18,6 +20,10 @@ import pygame
 import requests
 import speech_recognition as sr
 import webview
+
+warnings.filterwarnings("ignore", category=FutureWarning)
+logging.getLogger("google_genai.models").setLevel(logging.ERROR)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # Automatically load environment variables from .env
 _ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -688,12 +694,18 @@ class JarvisPipeline:
     def stt_worker(self) -> None:
         """Bilingual Speech Recognition (English & Hindi/Hinglish) with Voice Barge-In Kill Support."""
         recognizer = sr.Recognizer()
+        recognizer.pause_threshold = 0.8
+        recognizer.non_speaking_duration = 0.5
+        recognizer.dynamic_energy_threshold = True
 
         with sr.Microphone() as source:
             recognizer.adjust_for_ambient_noise(source, duration=1.0)
+            recognizer.energy_threshold = max(recognizer.energy_threshold, 280)
             self.window.evaluate_js("updateState('ONLINE')")
 
             while self.running:
+                if recognizer.energy_threshold < 240:
+                    recognizer.energy_threshold = 240
                 was_speaking = bool(pygame.mixer.get_init() and pygame.mixer.get_busy())
                 if not was_speaking:
                     self.window.evaluate_js("updateState('LISTENING')")
@@ -731,10 +743,10 @@ class JarvisPipeline:
                                     continue
                                 cmd = rest_cmd
                             else:
-                                self.is_sleeping = False
+                                continue
 
                         self.last_active = time.time()
-                        if cmd:
+                        if cmd and len(cmd) >= 2:
                             self.window.evaluate_js(f"addLog('USER', {json.dumps(cmd)})")
                             self.text_queue.put(cmd)
                 except Exception:
