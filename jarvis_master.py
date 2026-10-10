@@ -9,7 +9,6 @@ import requests
 import subprocess
 import webbrowser
 import speech_recognition as sr
-from faster_whisper import WhisperModel
 import pygame
 import psutil
 import webview
@@ -29,14 +28,15 @@ if os.path.exists(_env_path):
     except Exception:
         pass
 
-# Global Process Patch (Mark-LV Architecture): Suppress background console flashing
+# Global Process Patch (Mark-LV Architecture): Suppress background console flashing while remaining a true Popen class
 if os.name == 'nt':
-    _orig_popen = subprocess.Popen
-    def _silent_popen(*args, **kwargs):
-        if 'creationflags' not in kwargs:
-            kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
-        return _orig_popen(*args, **kwargs)
-    subprocess.Popen = _silent_popen
+    _OrigPopen = subprocess.Popen
+    class _SilentPopen(_OrigPopen):
+        def __init__(self, *args, **kwargs):
+            if 'creationflags' not in kwargs:
+                kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+            super().__init__(*args, **kwargs)
+    subprocess.Popen = _SilentPopen
 
 # Modular capabilities ported from Sagar's Friday, Ultron, Mark-LV, Mark-XXXIX, Mark-X.1, AI-Assistant-1.1, and Zoey 3D HUD
 from modules.world_intel import (
@@ -362,7 +362,6 @@ class JarvisPipeline:
     def __init__(self, window):
         self.window = window
         self.history = MemoryModule.load()
-        self.audio_queue = queue.Queue()
         self.text_queue = queue.Queue()
         self.response_queue = queue.Queue()
         self.running = True
@@ -379,11 +378,6 @@ class JarvisPipeline:
         self.command_count = 0
         self.session_count = self._init_session_counter()
         self.tool_suite = UnifiedToolSuite(self)
-        
-        try:
-            self.stt_model = WhisperModel('base.en', device='cpu', compute_type='int8')
-        except Exception as e:
-            print(f"STT Model Load Warning: {e}")
 
     @staticmethod
     def is_kill_command(text: str, strict_barge_in: bool = False) -> bool:
@@ -1221,7 +1215,7 @@ class Api:
                 self.pipeline.window.evaluate_js(f"setAttachedFile({json.dumps(fname)})")
         except Exception as e:
             safe_err = json.dumps(f"File picker warning: {str(e).splitlines()[0][:100]}")
-            self.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
+            self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
 
     def scan_airspace(self):
         """Run immediate 200km OpenSky aircraft radar scan."""
@@ -1265,7 +1259,7 @@ class Api:
                 self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {safe})")
         except Exception as e:
             safe_err = json.dumps(f"Memory Vault error: {str(e).splitlines()[0][:100]}")
-            self.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
+            self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
 
     def trigger_screen_vision(self):
         """Instant 1-pass Screen Vision Mode: collapses HUD to corner Orb, captures screen in 15ms, and analyzes directly."""

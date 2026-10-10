@@ -13,3 +13,4 @@ config/
 memory/*.json
 memory/*.txt
 projects/
+models/

@@ -200,10 +200,19 @@ def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * r * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
+_USER_COORDS_CACHE: tuple[float, float, str, float] | None = None
+
+
 def _get_user_coords() -> tuple[float, float, str]:
+    global _USER_COORDS_CACHE
+    now = time.time()
+    if _USER_COORDS_CACHE and (now - _USER_COORDS_CACHE[3] < 900):
+        return _USER_COORDS_CACHE[0], _USER_COORDS_CACHE[1], _USER_COORDS_CACHE[2]
     try:
         loc = requests.get("http://ip-api.com/json/", timeout=4).json()
-        return float(loc.get("lat", 22.7196)), float(loc.get("lon", 75.8577)), loc.get("city", "Indore")
+        lat, lon, city = float(loc.get("lat", 22.7196)), float(loc.get("lon", 75.8577)), str(loc.get("city", "Indore"))
+        _USER_COORDS_CACHE = (lat, lon, city, now)
+        return lat, lon, city
     except Exception:
         return 22.7196, 75.8577, "Indore"
 
@@ -444,6 +453,8 @@ class UnifiedToolSuite:
         # Initialize SystemMonitor & ProactiveEngine
         self.sys_monitor = None
         self.proactive_engine = None
+        self.agent_executor = None
+        self._cached_ollama_tools: list[dict] | None = None
         try:
             from actions.system_monitor import SystemMonitor
             from actions.proactive import ProactiveEngine
@@ -457,7 +468,10 @@ class UnifiedToolSuite:
             self.pipeline.response_queue.put(str(text))
 
     def get_ollama_tools(self) -> list[dict]:
-        """Return OpenAI/Ollama-formatted tool declarations for all 29+ tools."""
+        """Return OpenAI/Ollama-formatted tool declarations for all 29+ tools (cached after first build)."""
+        if self._cached_ollama_tools is not None:
+            return self._cached_ollama_tools
+
         tools: list[dict] = []
 
         # 1. All 17 auto-discovered Mark-LV actions
@@ -599,6 +613,7 @@ class UnifiedToolSuite:
             if et["name"] not in existing_names:
                 tools.append({"type": "function", "function": et})
 
+        self._cached_ollama_tools = tools
         return tools
 
     def _normalize_schema(self, schema: dict) -> dict:
@@ -667,6 +682,7 @@ class UnifiedToolSuite:
             try:
                 from agent.executor import AgentExecutor
                 executor = AgentExecutor()
+                self.agent_executor = executor
                 threading.Thread(
                     target=lambda: executor.execute(goal=goal, speak=self.speak),
                     daemon=True,
