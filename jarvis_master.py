@@ -361,6 +361,9 @@ class IntelligenceModule:
 class JarvisPipeline:
     def __init__(self, window):
         self.window = window
+        self._orig_evaluate_js = window.evaluate_js
+        self._js_queue = queue.Queue(maxsize=300)
+        self._hwnd = None
         self.history = MemoryModule.load()
         self.text_queue = queue.Queue()
         self.response_queue = queue.Queue()
@@ -377,7 +380,98 @@ class JarvisPipeline:
         self.session_start = time.time()
         self.command_count = 0
         self.session_count = self._init_session_counter()
+        # Wrap window.evaluate_js with non-blocking async queue for UI updates so worker threads never hang
+        self.window.evaluate_js = self._safe_evaluate_js
+        threading.Thread(target=self._js_worker, daemon=True).start()
         self.tool_suite = UnifiedToolSuite(self)
+
+    def _get_hwnd(self) -> int:
+        if self._hwnd:
+            return self._hwnd
+        if os.name == 'nt':
+            try:
+                import ctypes
+                hwnd = ctypes.windll.user32.FindWindowW(None, "JARVIS Master")
+                if hwnd:
+                    self._hwnd = hwnd
+                    return hwnd
+            except Exception:
+                pass
+        return 0
+
+    def _is_window_minimized(self) -> bool:
+        if os.name == 'nt':
+            try:
+                import ctypes
+                hwnd = self._get_hwnd()
+                if hwnd and ctypes.windll.user32.IsIconic(hwnd):
+                    return True
+            except Exception:
+                pass
+        return False
+
+    def _safe_evaluate_js(self, script: str, *args, **kwargs):
+        """Non-blocking evaluate_js wrapper that prevents WebView2 semaphore deadlocks in Minimize / Orb mode."""
+        if not script or not isinstance(script, str):
+            return None
+        if self._is_window_minimized():
+            return None
+        # Synchronous path only for queries that expect a return value (e.g. captureCameraFrameBase64)
+        if "captureCameraFrameBase64" in script or kwargs or args:
+            try:
+                return self._orig_evaluate_js(script, *args, **kwargs)
+            except Exception:
+                return None
+        # Fire-and-forget path for all HUD state/log/telemetry updates
+        try:
+            if self._js_queue.full():
+                try:
+                    self._js_queue.get_nowait()
+                    self._js_queue.task_done()
+                except Exception:
+                    pass
+            self._js_queue.put_nowait(script)
+        except Exception:
+            pass
+        return None
+
+    def _js_worker(self):
+        """Dedicated background dispatcher for WebView2 JS calls so STT/LLM/TTS/API threads never block."""
+        while self.running:
+            try:
+                script = self._js_queue.get(timeout=0.5)
+                try:
+                    if not self._is_window_minimized():
+                        self._orig_evaluate_js(script)
+                except Exception:
+                    pass
+                finally:
+                    self._js_queue.task_done()
+            except queue.Empty:
+                continue
+            except Exception:
+                pass
+
+    def _set_window_rect(self, x: int, y: int, w: int, h: int):
+        """Move and resize the window asynchronously via Win32 SetWindowPos (SWP_ASYNCWINDOWPOS) without recreating .NET handles."""
+        if os.name == 'nt':
+            try:
+                import ctypes
+                user32 = ctypes.windll.user32
+                hwnd = self._get_hwnd()
+                if hwnd:
+                    if user32.IsIconic(hwnd):
+                        user32.ShowWindowAsync(hwnd, 9)  # SW_RESTORE
+                    # HWND_TOPMOST = -1, SWP_SHOWWINDOW = 0x0040, SWP_ASYNCWINDOWPOS = 0x4000, SWP_NOACTIVATE = 0x0010
+                    user32.SetWindowPos(hwnd, -1, int(x), int(y), int(w), int(h), 0x0040 | 0x4000 | 0x0010)
+                    return
+            except Exception as e:
+                print(f"Win32 SetWindowPos warning: {e}")
+        try:
+            self.window.resize(int(w), int(h))
+            self.window.move(int(x), int(y))
+        except Exception:
+            pass
 
     @staticmethod
     def is_kill_command(text: str, strict_barge_in: bool = False) -> bool:
@@ -520,20 +614,19 @@ class JarvisPipeline:
         try:
             self.is_orb_only = True
             self.is_sleeping = sleep_mode
+            self.is_fullscreen = False
             if vision_mode:
                 self.screen_vision_mode = True
             self.window.evaluate_js("toggleMiniMode(true)")
-            if getattr(self, "is_fullscreen", False):
-                self.window.toggle_fullscreen()
-                self.is_fullscreen = False
-            self.window.resize(320, 320)
-            try:
-                import ctypes
-                sw = ctypes.windll.user32.GetSystemMetrics(0)
-                sh = ctypes.windll.user32.GetSystemMetrics(1)
-                self.window.move(max(20, sw - 340), max(20, sh - 380))
-            except Exception:
-                pass
+            sw, sh = 1920, 1080
+            if os.name == 'nt':
+                try:
+                    import ctypes
+                    sw = ctypes.windll.user32.GetSystemMetrics(0)
+                    sh = ctypes.windll.user32.GetSystemMetrics(1)
+                except Exception:
+                    pass
+            self._set_window_rect(max(20, sw - 340), max(20, sh - 380), 320, 320)
         except Exception as e:
             print(f"enter_orb_only_mode warning: {e}")
 
@@ -543,11 +636,18 @@ class JarvisPipeline:
             self.is_orb_only = False
             self.is_sleeping = False
             self.screen_vision_mode = False
+            self.is_fullscreen = True
             self.last_active = time.time()
+            sw, sh = 1920, 1080
+            if os.name == 'nt':
+                try:
+                    import ctypes
+                    sw = ctypes.windll.user32.GetSystemMetrics(0)
+                    sh = ctypes.windll.user32.GetSystemMetrics(1)
+                except Exception:
+                    pass
+            self._set_window_rect(0, 0, sw, sh)
             self.window.evaluate_js("toggleMiniMode(false)")
-            if not getattr(self, "is_fullscreen", False):
-                self.window.toggle_fullscreen()
-                self.is_fullscreen = True
         except Exception as e:
             print(f"exit_orb_only_mode warning: {e}")
 
@@ -605,7 +705,7 @@ class JarvisPipeline:
     def idle_worker(self):
         while self.running:
             if not getattr(self, "is_sleeping", False) and not getattr(self, "is_orb_only", False) and time.time() - self.last_active > 90:
-                self.enter_orb_only_mode(sleep_mode=True)
+                self.enter_orb_only_mode(sleep_mode=False)
             time.sleep(2)
 
     def background_monitors_worker(self):
@@ -801,12 +901,20 @@ class JarvisPipeline:
 
                         wake_triggers = ["jarvis", "friday", "wake", "uth jao", "uth ja"]
                         
-                        # Strict Wake-Word filtering in Sleep Mode
+                        # Wake-Word handling in Sleep Mode without dropping follow-up commands
                         if getattr(self, "is_sleeping", False):
                             if any(w in text for w in wake_triggers):
-                                self.exit_orb_only_mode()
-                                self.response_queue.put("I am awake, boss. Standing by.")
-                            continue
+                                self.is_sleeping = False
+                                rest_cmd = cmd
+                                for wt in ("wake up", "wake", "uth jao", "uth ja"):
+                                    rest_cmd = rest_cmd.replace(wt, "").strip()
+                                if not rest_cmd:
+                                    self.exit_orb_only_mode()
+                                    self.response_queue.put("I am awake, boss. Standing by.")
+                                    continue
+                                cmd = rest_cmd
+                            else:
+                                self.is_sleeping = False
                             
                         self.last_active = time.time()
                         if cmd:
@@ -1172,14 +1280,17 @@ class Api:
         self.pipeline.abort_current_command(spoken_text="stop")
         
     def minimize(self):
-        self.pipeline.window.minimize()
-        
-    def toggle_fullscreen(self):
+        """Collapse HUD to the floating corner Orb without suspending WebView2."""
         if getattr(self.pipeline, "is_orb_only", False):
             self.pipeline.exit_orb_only_mode()
         else:
-            self.pipeline.window.toggle_fullscreen()
-            self.pipeline.is_fullscreen = not getattr(self.pipeline, "is_fullscreen", True)
+            self.pipeline.enter_orb_only_mode(sleep_mode=False)
+        
+    def toggle_fullscreen(self):
+        if getattr(self.pipeline, "is_orb_only", False) or not getattr(self.pipeline, "is_fullscreen", True):
+            self.pipeline.exit_orb_only_mode()
+        else:
+            self.pipeline.enter_orb_only_mode(sleep_mode=False)
         
     def destroy(self):
         self.pipeline.window.destroy()
@@ -1378,12 +1489,24 @@ class Api:
 
 if __name__ == '__main__':
     html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hud.html')
+    sw, sh = 1920, 1080
+    if os.name == 'nt':
+        try:
+            import ctypes
+            sw = ctypes.windll.user32.GetSystemMetrics(0)
+            sh = ctypes.windll.user32.GetSystemMetrics(1)
+        except Exception:
+            pass
     window = webview.create_window(
         'JARVIS Master',
         html_path,
+        x=0,
+        y=0,
+        width=sw,
+        height=sh,
         transparent=True,
         frameless=True,
-        fullscreen=True,
+        fullscreen=False,
         on_top=True
     )
     pipeline = JarvisPipeline(window)

@@ -343,10 +343,43 @@
             background: transparent !important;
         }
         body.orb-only #orb-mount {
-            -webkit-app-region: drag;
+            -webkit-app-region: no-drag !important;
+            position: relative !important;
             margin: 0 auto !important;
             transform: scale(0.9) !important;
             background: transparent !important;
+            cursor: pointer !important;
+        }
+        #mini-orb-controls {
+            display: none;
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            gap: 8px;
+            z-index: 9999;
+            -webkit-app-region: no-drag;
+        }
+        body.orb-only #mini-orb-controls {
+            display: flex !important;
+        }
+        .mini-orb-btn {
+            background: rgba(5, 8, 17, 0.88);
+            border: 1px solid var(--theme-color);
+            color: var(--theme-color);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            padding: 5px 12px;
+            border-radius: 16px;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(0, 255, 255, 0.25);
+            transition: 0.2s;
+            -webkit-app-region: no-drag;
+        }
+        .mini-orb-btn:hover {
+            background: var(--theme-color);
+            color: #000;
         }
 
     </style>
@@ -480,9 +513,13 @@
 
         <!-- CENTER PANEL -->
         <div class="center-panel">
-            <div class="arc-reactor" id="orb-mount" title="Drag to rotate · Scroll to zoom · Double-click in Mini Mode to restore">
+            <div class="arc-reactor" id="orb-mount" title="Drag to rotate · Scroll to zoom · Double-click or click ⤢ HUD in Mini Mode to restore">
                 <canvas id="orb-canvas" width="320" height="320"></canvas>
                 <div class="radar-ring"></div>
+                <div id="mini-orb-controls">
+                    <button class="mini-orb-btn" onclick="event.stopPropagation(); restoreFullHud();" title="Restore Full HUD Interface (Alt+Space)">⤢ HUD</button>
+                    <button class="mini-orb-btn" style="border-color:#ff3355; color:#ff3355;" onclick="event.stopPropagation(); triggerKillCommand();" title="Stop / Kill Active Command (Esc)">⊘</button>
+                </div>
             </div>
 
             <div class="center-title title-text">J.A.R.V.I.S</div>
@@ -779,14 +816,18 @@
                 document.body.style.backgroundColor = 'var(--bg-color)';
             }
         }
+
+        function restoreFullHud() {
+            toggleMiniMode(false);
+            if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.exit_mini) {
+                pywebview.api.exit_mini();
+            }
+        }
         
         // Double click Arc Reactor / Orb to manually restore Full HUD
         document.querySelector('.arc-reactor').addEventListener('dblclick', () => {
             if (document.body.classList.contains('orb-only') || document.body.style.backgroundColor === 'transparent') {
-                toggleMiniMode(false);
-                if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.exit_mini) {
-                    pywebview.api.exit_mini();
-                }
+                restoreFullHud();
             }
         });
 
