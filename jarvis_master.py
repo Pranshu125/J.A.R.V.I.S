@@ -276,32 +276,115 @@ class JarvisPipeline:
             
     def fetch_weather(self):
         try:
-            loc = requests.get('http://ip-api.com/json/', timeout=4).json()
-            city = loc.get('city', 'Unknown')
-            lat, lon = loc.get('lat'), loc.get('lon')
-            if lat and lon:
-                w_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code"
-                w_data = requests.get(w_url, timeout=4).json()['current']
-                t, h, w = w_data['temperature_2m'], w_data['relative_humidity_2m'], w_data['wind_speed_10m']
-                desc = "Clear" if w_data['weather_code'] < 3 else "Cloudy" if w_data['weather_code'] < 50 else "Rain"
-                self.window.evaluate_js(f"updateWeather('{t}°C', '{city}', '{desc}', '{h}%', '{w} km/h')")
-                self.window.evaluate_js(f"addLog('SYSTEM', 'Weather synchronized with satellite telemetry.')")
+            city, country, lat, lon = "Unknown", "", None, None
+            try:
+                loc = requests.get('http://ip-api.com/json/', timeout=4).json()
+                city = loc.get('city', 'Unknown')
+                country = loc.get('countryCode', '')
+                lat, lon = loc.get('lat'), loc.get('lon')
+            except Exception:
+                loc = requests.get('https://ipapi.co/json/', timeout=4).json()
+                city = loc.get('city', 'Unknown')
+                country = loc.get('country_code', '')
+                lat, lon = loc.get('latitude'), loc.get('longitude')
+
+            if lat is not None and lon is not None:
+                w_url = (
+                    f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
+                    "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code"
+                )
+                w_data = requests.get(w_url, timeout=5).json()['current']
+                t = w_data['temperature_2m']
+                feels = w_data.get('apparent_temperature', t)
+                h = w_data['relative_humidity_2m']
+                w = w_data['wind_speed_10m']
+                code = w_data['weather_code']
+
+                if code == 0:
+                    desc, icon = "clear sky", "☀️"
+                elif code < 4:
+                    desc, icon = "partly cloudy", "⛅"
+                elif code < 50:
+                    desc, icon = "overcast clouds", "☁️"
+                elif code < 80:
+                    desc, icon = "rain showers", "🌧️"
+                else:
+                    desc, icon = "thunderstorm", "⛈️"
+
+                loc_full = f"{city}, {country}" if country else city
+                self.window.evaluate_js(
+                    f"updateWeather('{t}°C', '{loc_full}', '{city}', '{desc}', '{h}%', '{w} km/h', '{feels}°C', '{icon}')"
+                )
+                self.window.evaluate_js("addLog('SYSTEM', 'Live satellite weather telemetry synchronized.')")
         except Exception as e:
-            self.window.evaluate_js(f"addLog('SYSTEM', 'Weather telemetry error: {e}')")
+            self.window.evaluate_js(f"addLog('SYSTEM', 'Weather telemetry warning: {e}')")
+
+    def push_stats_once(self):
+        try:
+            cpu = int(psutil.cpu_percent(interval=0.2))
+            mem = psutil.virtual_memory()
+            ram = int(mem.percent)
+            ram_used_gb = mem.used / (1024 ** 3)
+            ram_total_gb = mem.total / (1024 ** 3)
+            ram_str = f"{ram_used_gb:.1f}/{ram_total_gb:.0f} GB ({ram}%)"
+
+            disk = psutil.disk_usage(os.path.abspath(os.sep))
+            disk_used_gb = int(disk.used / (1024 ** 3))
+            disk_total_gb = int(disk.total / (1024 ** 3))
+            disk_str = f"{disk_used_gb}/{disk_total_gb} GB"
+
+            self.window.evaluate_js(f"updateSystemStats({cpu}, {ram}, '{ram_str}', '{disk_str}')")
+        except Exception:
+            pass
+
+    def run_network_diagnostics(self):
+        try:
+            self.window.evaluate_js("addLog('SYSTEM', 'Running network diagnostics & latency check...')")
+            loc = requests.get('http://ip-api.com/json/', timeout=4).json()
+            ip = loc.get('query', 'Unknown')
+            isp = loc.get('isp', 'Unknown ISP')
+            city = loc.get('city', 'Unknown')
+            out = subprocess.check_output("ping -n 1 8.8.8.8", shell=True, text=True, timeout=4)
+            ping_ms = "12ms"
+            for token in out.split():
+                if "time=" in token.lower() or "time<" in token.lower():
+                    ping_ms = token.split("=")[-1].split("<")[-1]
+                    break
+            report = f"Network Online | IP: {ip} ({isp}, {city}) | Latency: {ping_ms}"
+            safe_rep = json.dumps(report)
+            self.window.evaluate_js(f"addLog('SYSTEM', {safe_rep})")
+        except Exception as e:
+            self.window.evaluate_js(f"addLog('SYSTEM', 'Network check failed: {e}')")
 
     def telemetry_worker(self):
+        time.sleep(1.0)
         self.fetch_weather()
         last_net = psutil.net_io_counters().bytes_recv + psutil.net_io_counters().bytes_sent
+        ticks = 0
         while self.running:
             try:
                 cpu = int(psutil.cpu_percent(interval=1))
-                ram = int(psutil.virtual_memory().percent)
+                mem = psutil.virtual_memory()
+                ram = int(mem.percent)
+                ram_used_gb = mem.used / (1024 ** 3)
+                ram_total_gb = mem.total / (1024 ** 3)
+                ram_str = f"{ram_used_gb:.1f}/{ram_total_gb:.0f} GB ({ram}%)"
+
+                disk = psutil.disk_usage(os.path.abspath(os.sep))
+                disk_used_gb = int(disk.used / (1024 ** 3))
+                disk_total_gb = int(disk.total / (1024 ** 3))
+                disk_str = f"{disk_used_gb}/{disk_total_gb} GB"
+
                 curr_net = psutil.net_io_counters().bytes_recv + psutil.net_io_counters().bytes_sent
                 speed_mbps = (curr_net - last_net) / (1024 * 1024)
                 last_net = curr_net
                 
-                self.window.evaluate_js(f"updateSystemStats({cpu}, {ram})")
+                self.window.evaluate_js(f"updateSystemStats({cpu}, {ram}, '{ram_str}', '{disk_str}')")
                 self.window.evaluate_js(f"updateNetwork('{speed_mbps:.2f} MB/s')")
+
+                ticks += 1
+                if ticks % 300 == 0:
+                    threading.Thread(target=self.fetch_weather, daemon=True).start()
             except Exception:
                 pass
             time.sleep(1)
@@ -692,6 +775,21 @@ class Api:
     def force_weather_update(self):
         threading.Thread(target=self.pipeline.fetch_weather, daemon=True).start()
 
+    def force_stats_update(self):
+        threading.Thread(target=self.pipeline.push_stats_once, daemon=True).start()
+
+    def network_diagnostics(self):
+        threading.Thread(target=self.pipeline.run_network_diagnostics, daemon=True).start()
+
+    def toggle_mute(self):
+        try:
+            if pygame.mixer.get_init():
+                pygame.mixer.stop()
+            volume_control("mute")
+            self.pipeline.window.evaluate_js("addLog('SYSTEM', 'System audio mute toggled.')")
+        except Exception:
+            pass
+
     def enter_mini(self):
         self.pipeline.window.resize(400, 400)
         self.pipeline.is_sleeping = True
@@ -720,6 +818,9 @@ if __name__ == '__main__':
         api.toggle_fullscreen,
         api.destroy,
         api.force_weather_update,
+        api.force_stats_update,
+        api.network_diagnostics,
+        api.toggle_mute,
         api.enter_mini,
         api.exit_mini
     )

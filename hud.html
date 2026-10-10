@@ -269,16 +269,18 @@
             <div class="status-badge"><div class="dot"></div> Online</div>
         </div>
         <div class="top-center">
-            <div class="top-center-box">
-                <span id="net-speed">0.00 MB/s</span> | 📶 🔊
+            <div class="top-center-box" style="-webkit-app-region: no-drag;">
+                <span id="net-speed" title="Live Network Throughput">0.00 MB/s</span> |
+                <span id="net-btn" onclick="triggerNetworkDiag()" title="Run Network Diagnostics & Ping" style="cursor:pointer; padding:2px 6px; border-radius:4px; transition:0.2s;" onmouseover="this.style.background='rgba(0,255,255,0.15)'" onmouseout="this.style.background='transparent'">📶</span>
+                <span id="vol-btn" onclick="triggerVolumeToggle()" title="Toggle System Audio Mute" style="cursor:pointer; padding:2px 6px; border-radius:4px; transition:0.2s;" onmouseover="this.style.background='rgba(0,255,255,0.15)'" onmouseout="this.style.background='transparent'">🔊</span>
             </div>
             <div class="top-center-box">
                 <div class="clock" id="clock">00:00:00</div> | <div id="date">JAN 01 2026</div>
             </div>
         </div>
         <div class="top-right">
-            <div class="top-center-box" style="gap:5px;">
-                <span>25.2°C</span> <span style="font-size:11px; color:var(--text-muted)">Quezon City</span>
+            <div class="top-center-box" style="gap:5px; cursor:pointer; -webkit-app-region: no-drag;" onclick="if(typeof pywebview !== 'undefined') pywebview.api.force_weather_update()" title="Click to synchronize live weather">
+                <span id="top-temp">--°C</span> <span id="top-loc" style="font-size:11px; color:var(--text-muted)">Syncing...</span>
             </div>
             <div class="window-controls" style="-webkit-app-region: no-drag;">
                 <button onclick="pywebview.api.minimize()" title="Minimize">—</button>
@@ -294,63 +296,63 @@
         <!-- LEFT PANEL -->
         <div class="left-panel">
             <div class="widget">
-                <div class="widget-header"><span>System Stats</span> ⟳</div>
+                <div class="widget-header"><span>System Stats</span> <span style="cursor:pointer;" onclick="if(typeof pywebview !== 'undefined') pywebview.api.force_stats_update()" title="Refresh Hardware Telemetry">⟳</span></div>
                 
                 <div class="stat-row">
                     <div class="stat-labels"><span>CPU Usage</span><span id="cpu-val">0%</span></div>
                     <div class="stat-bar-bg"><div class="stat-bar-fill" id="cpu-bar"></div></div>
                 </div>
                 <div class="stat-row">
-                    <div class="stat-labels"><span>RAM Usage</span><span id="ram-val">0 GB</span></div>
+                    <div class="stat-labels"><span>RAM Usage</span><span id="ram-val">0%</span></div>
                     <div class="stat-bar-bg"><div class="stat-bar-fill" id="ram-bar"></div></div>
                 </div>
 
                 <div class="stat-grid">
-                    <div><span>CPU</span><strong id="cpu-sm">8%</strong></div>
-                    <div><span>Memory</span><strong id="ram-sm">44%</strong></div>
-                    <div><span>Disk</span><strong>439/475 GB</strong></div>
+                    <div><span>CPU</span><strong id="cpu-sm">0%</strong></div>
+                    <div><span>Memory</span><strong id="ram-sm">0%</strong></div>
+                    <div><span>Disk</span><strong id="disk-sm">--/-- GB</strong></div>
                 </div>
             </div>
 
             <div class="widget">
-                <div class="widget-header"><span>Weather</span> <span style="cursor:pointer;" onclick="pywebview.api.force_weather_update()">⟳</span></div>
+                <div class="widget-header"><span>Weather</span> <span style="cursor:pointer;" onclick="if(typeof pywebview !== 'undefined') pywebview.api.force_weather_update()" title="Refresh Weather">⟳</span></div>
                 <div class="weather-main">
                     <div>
-                        <div class="temp">25.2°C</div>
-                        <div class="weather-loc">Quezon City, PH</div>
-                        <div class="weather-desc">overcast clouds</div>
+                        <div class="temp" id="w-temp">--°C</div>
+                        <div class="weather-loc" id="w-loc">Locating...</div>
+                        <div class="weather-desc" id="w-desc">synchronizing satellite...</div>
                     </div>
-                    <div style="font-size:40px;">☁️</div>
+                    <div id="w-icon" style="font-size:40px;">☀️</div>
                 </div>
                 <div class="stat-grid" style="margin-top:15px; border-top:1px solid var(--panel-border); padding-top:10px;">
-                    <div><span>Humidity</span><strong>94%</strong></div>
-                    <div><span>Wind</span><strong>5.8 m/s</strong></div>
-                    <div><span>Feels Like</span><strong>26.3°C</strong></div>
+                    <div><span>Humidity</span><strong id="w-hum">--%</strong></div>
+                    <div><span>Wind</span><strong id="w-wind">-- km/h</strong></div>
+                    <div><span>Feels Like</span><strong id="w-feels">--°C</strong></div>
                 </div>
             </div>
 
             <div class="widget">
-                <div class="widget-header"><span>Camera</span> <span style="cursor:pointer;" onclick="toggleCamera()">⏻</span></div>
+                <div class="widget-header"><span>Camera</span> <span style="cursor:pointer;" onclick="toggleCamera()" title="Toggle Live Camera">⏻</span></div>
                 <select id="camera-select" style="background:rgba(0,0,0,0.5); color:var(--theme-color); border:1px solid var(--theme-color); border-radius:4px; margin-bottom:10px; display:none; width:100%; font-size:12px; padding:2px;" onchange="switchCamera()"></select>
-                <div id="cam-off" style="height: 120px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted);">
+                <div id="cam-off" style="height: 120px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted); cursor:pointer;" onclick="toggleCamera()">
                     <span style="font-size:24px; margin-bottom:10px; color:var(--theme-color);">📷</span>
-                    <span style="font-size:12px;">Camera Off</span>
+                    <span style="font-size:12px;">Camera Off (Click to Enable)</span>
                 </div>
                 <video id="cam-video" autoplay playsinline style="display:none; width:100%; height:120px; border-radius:8px; object-fit:cover;"></video>
                 <div style="font-size:10px; text-align:center; margin-top:10px; color:var(--text-muted);">Click the power icon to toggle live feed.</div>
             </div>
             
             <div class="widget">
-                <div class="widget-header"><span>System Uptime</span> <span>00:07:19</span></div>
-                <div class="stat-labels" style="margin-bottom:15px;"><span>System Running For:</span><span style="color:var(--text-main); font-weight:bold;">00:07:19</span></div>
-                <div class="stat-grid" style="margin-top:0; margin-bottom:15px;">
-                    <div><span>Session</span><strong>1</strong></div>
-                    <div><span>Commands</span><strong>0</strong></div>
+                <div class="widget-header"><span>System Uptime</span> <span id="uptime-top">00:00:00</span></div>
+                <div class="stat-labels" style="margin-bottom:15px;"><span>System Running For:</span><span id="uptime-val" style="color:var(--text-main); font-weight:bold;">00:00:00</span></div>
+                <div class="stat-grid" style="margin-top:0; margin-bottom:15px; grid-template-columns: 1fr 1fr;">
+                    <div><span>Session</span><strong id="session-count">1</strong></div>
+                    <div><span>Commands</span><strong id="cmd-count">0</strong></div>
                 </div>
                 <div class="stat-row" style="margin-bottom:0;">
                     <div class="stat-labels"><span>System Load</span></div>
-                    <div class="stat-bar-bg"><div class="stat-bar-fill" style="width:26%; background:orange; box-shadow:none;"></div></div>
-                    <div class="stat-labels" style="margin-top:4px;"><span style="color:orange;">Moderate</span><span>26%</span></div>
+                    <div class="stat-bar-bg"><div class="stat-bar-fill" id="load-bar" style="width:10%; background:#00ff88; box-shadow:none;"></div></div>
+                    <div class="stat-labels" style="margin-top:4px;"><span id="load-status" style="color:#00ff88;">Optimal</span><span id="load-val">10%</span></div>
                 </div>
             </div>
         </div>
@@ -406,22 +408,65 @@
     </div>
 
     <script>
-        // Real-time Clock
+        let startTime = Date.now();
+        let commandCounter = 0;
+        let isMuted = false;
+
+        // Real-time Clock & Uptime Counter
         setInterval(() => {
             const now = new Date();
             document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', {hour12: true});
             document.getElementById('date').innerText = now.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}).toUpperCase();
+
+            // Live Uptime calculation
+            const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
+            const hrs = String(Math.floor(elapsedSec / 3600)).padStart(2, '0');
+            const mins = String(Math.floor((elapsedSec % 3600) / 60)).padStart(2, '0');
+            const secs = String(elapsedSec % 60).padStart(2, '0');
+            const uptimeStr = `${hrs}:${mins}:${secs}`;
+            const upTop = document.getElementById('uptime-top');
+            const upVal = document.getElementById('uptime-val');
+            if (upTop) upTop.innerText = uptimeStr;
+            if (upVal) upVal.innerText = uptimeStr;
         }, 1000);
 
         // System Stats Updates from Python
-        function updateSystemStats(cpu, ram) {
+        function updateSystemStats(cpu, ram, ramText, diskText) {
             document.getElementById('cpu-bar').style.width = cpu + '%';
             document.getElementById('cpu-val').innerText = cpu + '%';
             document.getElementById('cpu-sm').innerText = cpu + '%';
             
             document.getElementById('ram-bar').style.width = ram + '%';
-            document.getElementById('ram-val').innerText = ram + '%';
+            document.getElementById('ram-val').innerText = ramText || (ram + '%');
             document.getElementById('ram-sm').innerText = ram + '%';
+
+            if (diskText) {
+                const diskEl = document.getElementById('disk-sm');
+                if (diskEl) diskEl.innerText = diskText;
+            }
+
+            // Dynamic System Load Bar
+            const avgLoad = Math.round((cpu + ram) / 2);
+            const loadBar = document.getElementById('load-bar');
+            const loadStatus = document.getElementById('load-status');
+            const loadVal = document.getElementById('load-val');
+            if (loadBar && loadStatus && loadVal) {
+                loadBar.style.width = avgLoad + '%';
+                loadVal.innerText = avgLoad + '%';
+                if (avgLoad < 45) {
+                    loadBar.style.background = '#00ff88';
+                    loadStatus.style.color = '#00ff88';
+                    loadStatus.innerText = 'Optimal';
+                } else if (avgLoad < 75) {
+                    loadBar.style.background = 'orange';
+                    loadStatus.style.color = 'orange';
+                    loadStatus.innerText = 'Moderate';
+                } else {
+                    loadBar.style.background = '#ff0033';
+                    loadStatus.style.color = '#ff0033';
+                    loadStatus.innerText = 'Heavy Load';
+                }
+            }
         }
 
         // State Manager
@@ -473,6 +518,9 @@
             if (sender === 'USER') {
                 div.className = 'msg user';
                 div.innerHTML = `${message} <span class="time-stamp">${time}</span>`;
+                commandCounter++;
+                const cmdEl = document.getElementById('cmd-count');
+                if (cmdEl) cmdEl.innerText = commandCounter;
             } else if (sender === 'SYSTEM') {
                 div.className = 'msg system';
                 div.innerText = `— ${message} —`;
@@ -794,17 +842,89 @@
             } catch(e) { console.log("Mic vis error:", e); }
         }
 
-        // Network Speed & Weather (Called from Python)
+        // Network Speed, Diagnostics, Audio Mute & Weather (Called from Python & UI)
         function updateNetwork(speed) {
             document.getElementById('net-speed').innerText = speed;
         }
-        function updateWeather(temp, loc, desc, hum, wind) {
-            document.querySelector('.temp').innerText = temp;
-            document.querySelector('.weather-loc').innerText = loc;
-            document.querySelector('.weather-desc').innerText = desc;
-            document.querySelector('.stat-grid div:nth-child(1) strong').innerText = hum;
-            document.querySelector('.stat-grid div:nth-child(2) strong').innerText = wind;
+
+        function updateWeather(temp, loc, cityShort, desc, hum, wind, feels, icon) {
+            const wTemp = document.getElementById('w-temp');
+            const wLoc = document.getElementById('w-loc');
+            const wDesc = document.getElementById('w-desc');
+            const wHum = document.getElementById('w-hum');
+            const wWind = document.getElementById('w-wind');
+            const wFeels = document.getElementById('w-feels');
+            const wIcon = document.getElementById('w-icon');
+
+            if (wTemp) wTemp.innerText = temp;
+            if (wLoc) wLoc.innerText = loc;
+            if (wDesc) wDesc.innerText = desc;
+            if (wHum) wHum.innerText = hum;
+            if (wWind) wWind.innerText = wind;
+            if (wFeels) wFeels.innerText = feels || temp;
+            if (wIcon && icon) wIcon.innerText = icon;
+
+            // Top Bar Weather Pill
+            const topTemp = document.getElementById('top-temp');
+            const topLoc = document.getElementById('top-loc');
+            if (topTemp) topTemp.innerText = temp;
+            if (topLoc) topLoc.innerText = cityShort || loc;
         }
+
+        function triggerNetworkDiag() {
+            if (typeof pywebview !== 'undefined') {
+                pywebview.api.network_diagnostics();
+            } else {
+                addLog('SYSTEM', 'Network interface active.');
+            }
+        }
+
+        function triggerVolumeToggle() {
+            isMuted = !isMuted;
+            const volBtn = document.getElementById('vol-btn');
+            if (volBtn) volBtn.innerText = isMuted ? '🔇' : '🔊';
+            if (typeof pywebview !== 'undefined') {
+                pywebview.api.toggle_mute();
+            }
+        }
+
+        async function fetchClientWeather() {
+            try {
+                const locRes = await fetch('http://ip-api.com/json/');
+                const loc = await locRes.json();
+                const city = loc.city || 'Indore';
+                const country = loc.countryCode || 'IN';
+                const lat = loc.lat || 22.717;
+                const lon = loc.lon || 75.8337;
+                const wUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code`;
+                const wRes = await fetch(wUrl);
+                const wData = (await wRes.json()).current;
+                const code = wData.weather_code;
+                const desc = code === 0 ? 'clear sky' : code < 4 ? 'partly cloudy' : code < 50 ? 'overcast clouds' : code < 80 ? 'rain showers' : 'thunderstorm';
+                const icon = code === 0 ? '☀️' : code < 4 ? '⛅' : code < 50 ? '☁️' : code < 80 ? '🌧️' : '⛈️';
+                updateWeather(
+                    `${wData.temperature_2m}°C`,
+                    `${city}, ${country}`,
+                    city,
+                    desc,
+                    `${wData.relative_humidity_2m}%`,
+                    `${wData.wind_speed_10m} km/h`,
+                    `${wData.apparent_temperature}°C`,
+                    icon
+                );
+            } catch (e) {
+                console.log('Client weather sync fallback to Python backend.');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', fetchClientWeather);
+
+        window.addEventListener('pywebviewready', () => {
+            if (typeof pywebview !== 'undefined') {
+                pywebview.api.force_weather_update();
+                pywebview.api.force_stats_update();
+            }
+        });
     </script>
 </body>
 </html>
