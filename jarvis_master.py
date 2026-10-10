@@ -431,7 +431,7 @@ class JarvisPipeline:
         mode_name = getattr(self, "voice_mode", "JARVIS")
         if hour < 12:
             g = [
-                "Good morning, sir. All 35 Mark-LV and Mark-XXXIX subsystems are online.",
+                "Good morning, sir. All systems are online and ready.",
                 f"Good morning, boss. {mode_name} is operational.",
                 "Namaste sir! Good morning. Sabhi systems online aur ready hain."
             ]

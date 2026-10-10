@@ -368,11 +368,8 @@
 
             <div class="widget">
                 <div class="widget-header">
-                    <span>Camera & Hand Gestures</span>
-                    <span style="display:flex; gap:8px; align-items:center;">
-                        <span id="gesture-badge" style="font-size:10px; color:var(--text-muted); padding:1px 6px; border:1px solid var(--panel-border); border-radius:4px;">IDLE</span>
-                        <span style="cursor:pointer;" onclick="toggleCamera()" title="Toggle Live Camera">⏻</span>
-                    </span>
+                    <span>Camera</span>
+                    <span style="cursor:pointer;" onclick="toggleCamera()" title="Toggle Live Camera">⏻</span>
                 </div>
                 <select id="camera-select" style="background:rgba(0,0,0,0.5); color:var(--theme-color); border:1px solid var(--theme-color); border-radius:4px; margin-bottom:10px; display:none; width:100%; font-size:12px; padding:2px;" onchange="switchCamera()"></select>
                 <div id="cam-off" style="height: 120px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted); cursor:pointer;" onclick="toggleCamera()">
@@ -381,9 +378,8 @@
                 </div>
                 <div id="cam-wrap" style="position:relative; display:none; width:100%; height:120px; border-radius:8px; overflow:hidden;">
                     <video id="cam-video" autoplay playsinline muted style="width:100%; height:120px; border-radius:8px; object-fit:cover; transform:scaleX(-1);"></video>
-                    <canvas id="cam-overlay" width="320" height="180" style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none;"></canvas>
                 </div>
-                <div style="font-size:10px; text-align:center; margin-top:10px; color:var(--text-muted);">Click ✋ below to control the 3D Orb with pinch gestures (1 hand = spin, 2 hands = zoom).</div>
+                <div style="font-size:10px; text-align:center; margin-top:10px; color:var(--text-muted);">Live feed ready for visual analysis</div>
             </div>
             
             <div class="widget">
@@ -435,20 +431,8 @@
             <div class="controls">
                 <button class="icon-btn" id="cam-btn" onclick="toggleCamera()" title="Toggle Live Camera">📷</button>
                 <button class="icon-btn" id="mic-btn" onclick="startMicVisualizer()" title="Connect Audio Visualizer">🎙️</button>
-                <button class="icon-btn" id="hand-btn" onclick="toggleHandTracking()" title="Toggle MediaPipe Hand Gesture Orb Control (1-Hand Pinch Spin / 2-Hand Pinch Zoom)">✋</button>
-                <button class="icon-btn" onclick="triggerAirspaceRadar()" title="Scan 200km OpenSky Airspace Radar">✈️</button>
-                <button class="icon-btn" onclick="triggerMemoryVault()" title="Inspect Long-Term Memory Vault">🧠</button>
-                <button class="icon-btn" onclick="triggerUndo()" title="Undo Last System/File Action">↩️</button>
+                <button class="icon-btn" onclick="quickCmd('Analyze my screen and tell me what I am looking at')" title="Screen Vision (Analyze Screen)">🖥️</button>
                 <button class="icon-btn" onclick="focusInput()" title="Focus Command Input">⌨️</button>
-            </div>
-
-            <!-- Tactical Quick-Command Pills (Mark-LV, Mark-XXXIX & Friday Capabilities) -->
-            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:14px; max-width:440px;">
-                <button onclick="quickCmd('Scan nearby aircraft radar')" style="background:rgba(0,255,255,0.06); border:1px solid var(--panel-border); color:var(--text-main); padding:4px 10px; border-radius:14px; font-size:11px; cursor:pointer;">✈️ Airspace Radar</button>
-                <button onclick="quickCmd('Analyze my screen and tell me what I am looking at')" style="background:rgba(0,255,255,0.06); border:1px solid var(--panel-border); color:var(--text-main); padding:4px 10px; border-radius:14px; font-size:11px; cursor:pointer;">🖥️ Screen Vision</button>
-                <button onclick="quickCmd('Give me breaking world news')" style="background:rgba(0,255,255,0.06); border:1px solid var(--panel-border); color:var(--text-main); padding:4px 10px; border-radius:14px; font-size:11px; cursor:pointer;">🌍 World Intel</button>
-                <button onclick="quickCmd('Give me financial market news')" style="background:rgba(0,255,255,0.06); border:1px solid var(--panel-border); color:var(--text-main); padding:4px 10px; border-radius:14px; font-size:11px; cursor:pointer;">📈 Finance Intel</button>
-                <button onclick="quickCmd('Give me a full system status report')" style="background:rgba(0,255,255,0.06); border:1px solid var(--panel-border); color:var(--text-main); padding:4px 10px; border-radius:14px; font-size:11px; cursor:pointer;">⚡ System Status</button>
             </div>
         </div>
 
@@ -464,7 +448,7 @@
             
             <div class="chat-box" id="chat-box">
                 <div class="msg jarvis">
-                    Hello, I am JARVIS. All 35 Mark-LV, Mark-XXXIX, and Airspace Radar subsystems are online. How can I assist you today, sir?
+                    Hello, I am JARVIS. All systems are online and ready. How can I assist you today, sir?
                     <span class="time-stamp">Now</span>
                 </div>
             </div>
