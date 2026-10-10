@@ -388,16 +388,46 @@ class JarvisPipeline:
     def _get_hwnd(self) -> int:
         if self._hwnd:
             return self._hwnd
+        try:
+            native_form = getattr(self.window, "native", None)
+            if native_form is not None and hasattr(native_form, "Handle"):
+                h = int(native_form.Handle.ToInt64())
+                if h:
+                    self._hwnd = h
+                    return h
+        except Exception:
+            pass
         if os.name == 'nt':
             try:
                 import ctypes
                 hwnd = ctypes.windll.user32.FindWindowW(None, "JARVIS Master")
                 if hwnd:
-                    self._hwnd = hwnd
-                    return hwnd
+                    self._hwnd = int(hwnd)
+                    return self._hwnd
             except Exception:
                 pass
         return 0
+
+    def _configure_native_transparency(self):
+        """Ensure the underlying WinForms Form uses a chroma TransparencyKey instead of painting #F0F0F0 light gray behind WebView2."""
+        if getattr(self, "_transparency_configured", False):
+            return
+        try:
+            native_form = getattr(self.window, "native", None)
+            if native_form is not None:
+                from System.Drawing import Color
+                from System import Action
+                def _apply():
+                    key_col = Color.FromArgb(255, 1, 2, 3)
+                    native_form.BackColor = key_col
+                    native_form.TransparencyKey = key_col
+                if native_form.InvokeRequired:
+                    native_form.BeginInvoke(Action(_apply))
+                else:
+                    _apply()
+                self._transparency_configured = True
+        except Exception as e:
+            print(f"Native transparency config warning: {e}")
 
     def _is_window_minimized(self) -> bool:
         if os.name == 'nt':
@@ -453,7 +483,8 @@ class JarvisPipeline:
                 pass
 
     def _set_window_rect(self, x: int, y: int, w: int, h: int):
-        """Move and resize the window asynchronously via Win32 SetWindowPos (SWP_ASYNCWINDOWPOS) without recreating .NET handles."""
+        """Move and resize the window cleanly on 64-bit Windows via Win32 SetWindowPos without recreating .NET handles."""
+        self._configure_native_transparency()
         if os.name == 'nt':
             try:
                 import ctypes
@@ -462,9 +493,11 @@ class JarvisPipeline:
                 if hwnd:
                     if user32.IsIconic(hwnd):
                         user32.ShowWindowAsync(hwnd, 9)  # SW_RESTORE
-                    # HWND_TOPMOST = -1, SWP_SHOWWINDOW = 0x0040, SWP_ASYNCWINDOWPOS = 0x4000, SWP_NOACTIVATE = 0x0010
-                    user32.SetWindowPos(hwnd, -1, int(x), int(y), int(w), int(h), 0x0040 | 0x4000 | 0x0010)
-                    return
+                    # Pass 0 (NULL) for hWndInsertAfter with SWP_NOZORDER (0x0004) | SWP_SHOWWINDOW (0x0040) | SWP_NOACTIVATE (0x0010)
+                    # Avoids 64-bit ctypes c_int(-1) marshaling failure on HWND_TOPMOST
+                    ok = user32.SetWindowPos(hwnd, 0, int(x), int(y), int(w), int(h), 0x0004 | 0x0040 | 0x0010)
+                    if ok:
+                        return
             except Exception as e:
                 print(f"Win32 SetWindowPos warning: {e}")
         try:
@@ -652,6 +685,7 @@ class JarvisPipeline:
             print(f"exit_orb_only_mode warning: {e}")
 
     def start_services(self):
+        self._configure_native_transparency()
         threading.Thread(target=self.stt_worker, daemon=True).start()
         threading.Thread(target=self.llm_worker, daemon=True).start()
         threading.Thread(target=self.tts_worker, daemon=True).start()
@@ -974,6 +1008,20 @@ class JarvisPipeline:
                 elif any(k in cmd_lower for k in ("dock camera", "minimize camera", "camera to side", "orb to center", "center orb", "restore orb", "camera side mein")):
                     self.window.evaluate_js("toggleCenterCameraMode(false)")
                     self.response_queue.put("Docking camera to the side panel and restoring the holographic orb to center stage, sir.")
+                    handled = True
+                elif any(k in cmd_lower for k in ("live item recognition", "recognize items", "what items do you see", "what objects do you see", "announce items", "list detected items", "kya kya dikh raha hai")):
+                    self.exit_orb_only_mode()
+                    self.window.evaluate_js("announceDetectedItems()")
+                    handled = True
+                elif any(k in cmd_lower for k in ("sentry mode on", "enable sentry", "start sentry", "intruder watch", "security watch", "sentry mode")):
+                    self.exit_orb_only_mode()
+                    off = any(w in cmd_lower for w in ("off", "disable", "stop", "band"))
+                    self.window.evaluate_js(f"toggleSentryMode({'false' if off else 'true'})")
+                    self.response_queue.put("Optical sentry watch deactivated, sir." if off else "Optical sentry watch armed and monitoring camera sector, sir.")
+                    handled = True
+                elif any(k in cmd_lower for k in ("read text on camera", "ocr camera", "scan text on camera", "read label on camera", "camera ocr")):
+                    self.exit_orb_only_mode()
+                    self.window.evaluate_js("triggerCameraOCR()")
                     handled = True
 
                 if handled:
@@ -1490,6 +1538,13 @@ class Api:
             self.pipeline.window.evaluate_js("focusInput()")
             self.pipeline.window.evaluate_js("addLog('SYSTEM', '[GESTURE ◈] Open Palm: Audio & Command Input Ready.')")
 
+    def announce_camera_items(self, summary: str):
+        """Speak live detected camera items, QR/barcode payloads, or sentry alerts aloud."""
+        self.pipeline.last_active = time.time()
+        self.pipeline.increment_command_count()
+        if summary and isinstance(summary, str):
+            self.pipeline.response_queue.put(summary.strip())
+
     def enter_mini(self):
         self.pipeline.enter_orb_only_mode(sleep_mode=False)
         
@@ -1538,6 +1593,7 @@ if __name__ == '__main__':
         api.analyze_camera_frame,
         api.save_camera_snapshot,
         api.gesture_action,
+        api.announce_camera_items,
         api.enter_mini,
         api.exit_mini
     )

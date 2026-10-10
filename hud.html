@@ -525,16 +525,29 @@
                         <div id="cam-wrap" ondblclick="toggleCenterCameraMode()" title="Double-click to toggle Center Camera Stage" style="position:relative; display:none; width:100%; height:145px; border-radius:8px; overflow:hidden; border:1px solid var(--panel-border); cursor:pointer;">
                             <video id="cam-video" autoplay playsinline muted style="width:100%; height:145px; border-radius:8px; object-fit:cover; transform:scaleX(-1); display:block;"></video>
                             <canvas id="cam-overlay" width="290" height="145" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></canvas>
-                            <button id="cam-expand-overlay-btn" onclick="event.stopPropagation(); toggleCenterCameraMode();" title="Bring Camera Mode to Center Stage / Dock to Left Panel" style="position:absolute; top:8px; right:8px; background:rgba(5,8,17,0.85); border:1px solid var(--theme-color); color:var(--theme-color); padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; cursor:pointer; z-index:20; letter-spacing:0.8px;">⤢ CENTER</button>
+                            <div id="cam-hud-telemetry" style="position:absolute; top:6px; left:8px; font-size:9px; font-weight:700; color:var(--theme-color); background:rgba(5,8,17,0.78); padding:2px 6px; border-radius:4px; border:1px solid var(--panel-border); letter-spacing:0.6px; pointer-events:none; z-index:18;">OPTICAL HUD · LIVE</div>
+                            <button id="cam-expand-overlay-btn" onclick="event.stopPropagation(); toggleCenterCameraMode();" title="Bring Camera Mode to Center Stage / Dock to Left Panel" style="position:absolute; top:6px; right:8px; background:rgba(5,8,17,0.85); border:1px solid var(--theme-color); color:var(--theme-color); padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; cursor:pointer; z-index:20; letter-spacing:0.8px;">⤢ CENTER</button>
                         </div>
-                        <div id="cam-actions" style="display:none; gap:6px; margin-top:8px;">
-                            <button onclick="triggerCameraVision()" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 6px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; letter-spacing:0.5px;" title="Instant 1-Pass AI Camera Vision">◈ AI Vision</button>
-                            <button onclick="takeCameraSnapshot()" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 6px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; letter-spacing:0.5px;" title="Save High-Res Webcam Snapshot to Desktop">◎ Capture</button>
-                            <button id="gesture-toggle-btn" onclick="toggleHandTracking()" style="flex:1; background:var(--theme-color); border:1px solid var(--theme-color); color:#000; padding:5px 6px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; letter-spacing:0.5px;" title="Toggle Hand Gesture Commands">◈ GESTURES: ON</button>
-                            <button id="cam-center-action-btn" onclick="toggleCenterCameraMode()" style="background:rgba(0,255,255,0.12); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 8px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;" title="Toggle Center Camera Stage">⤢</button>
+                        <div id="live-items-bar" style="display:none; align-items:center; justify-content:space-between; gap:6px; margin-top:6px; padding:5px 8px; background:rgba(0,255,255,0.05); border:1px solid var(--panel-border); border-radius:6px; min-height:26px;">
+                            <div id="live-items-list" style="display:flex; flex-wrap:wrap; gap:4px; align-items:center; font-size:10px; color:var(--text-main); flex:1;">
+                                <span style="color:var(--text-muted);">◈ Scanning live items...</span>
+                            </div>
+                            <button onclick="announceDetectedItems()" style="background:rgba(0,255,255,0.14); border:1px solid var(--theme-color); color:var(--theme-color); padding:2px 7px; border-radius:4px; font-size:9px; font-weight:700; cursor:pointer; flex-shrink:0;" title="Speak Live Detected Items Aloud">◉ SPEAK</button>
                         </div>
-                        <div id="cam-hint" style="font-size:10px; text-align:center; margin-top:8px; color:var(--text-muted); line-height:1.4; letter-spacing:0.3px;">
-                            ◈ Pinch: Spin · ◎ 2-Hand: Zoom · ◇ V-Sign: Vision · ⊘ Fist: Mute · ▲/▼ Thumb: Vol · ⌬ 3-Finger: Mode
+                        <div id="cam-actions" style="display:none; gap:5px; margin-top:7px;">
+                            <button id="item-toggle-btn" onclick="toggleItemRecognition()" style="flex:1; background:var(--theme-color); border:1px solid var(--theme-color); color:#000; padding:5px 4px; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer; letter-spacing:0.4px;" title="Toggle Real-Time Live Item / Object Recognition (80+ Classes)">◈ ITEMS: ON</button>
+                            <button id="gesture-toggle-btn" onclick="toggleHandTracking()" style="flex:1; background:var(--theme-color); border:1px solid var(--theme-color); color:#000; padding:5px 4px; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer; letter-spacing:0.4px;" title="Toggle 21-Joint Hand Gesture Control">◈ HANDS: ON</button>
+                            <button id="face-toggle-btn" onclick="toggleFaceLock()" style="flex:1; background:var(--theme-color); border:1px solid var(--theme-color); color:#000; padding:5px 4px; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer; letter-spacing:0.4px;" title="Toggle Biometric Face Reticle Lock">◈ FACE: ON</button>
+                            <button id="sentry-toggle-btn" onclick="toggleSentryMode()" style="background:rgba(0,255,255,0.08); border:1px solid var(--panel-border); color:var(--text-muted); padding:5px 6px; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer;" title="Toggle Optical Sentry Watch (Alerts when a person or new item enters frame)">◈ SENTRY</button>
+                            <button id="cam-center-action-btn" onclick="toggleCenterCameraMode()" style="background:rgba(0,255,255,0.12); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 8px; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer;" title="Toggle Center Camera Stage">⤢</button>
+                        </div>
+                        <div id="cam-subactions" style="display:none; gap:5px; margin-top:5px;">
+                            <button onclick="triggerCameraVision()" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 6px; border-radius:6px; font-size:10px; font-weight:600; cursor:pointer; letter-spacing:0.4px;" title="Deep 1-Pass AI Camera Vision Analysis">◈ AI Vision</button>
+                            <button onclick="triggerCameraOCR()" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 6px; border-radius:6px; font-size:10px; font-weight:600; cursor:pointer; letter-spacing:0.4px;" title="Read Text, Labels, Books, Notes, or Code from Camera">◈ OCR Read</button>
+                            <button onclick="takeCameraSnapshot()" style="flex:1; background:rgba(0,255,255,0.1); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 6px; border-radius:6px; font-size:10px; font-weight:600; cursor:pointer; letter-spacing:0.4px;" title="Save High-Res HUD Annotated Snapshot to Desktop">◎ Capture</button>
+                        </div>
+                        <div id="cam-hint" style="font-size:10px; text-align:center; margin-top:7px; color:var(--text-muted); line-height:1.4; letter-spacing:0.3px;">
+                            ◈ Live 80-Item Recognition · Click any detected item pill to inspect · Pinch: Spin · V-Sign: Vision
                         </div>
                     </div>
                 </div>
@@ -1300,11 +1313,37 @@
             a.click();
         }
 
-        // --- LIVE CAMERA FEED & MULTI-FUNCTION MEDIAPIPE HAND GESTURE ENGINE ---
+        // --- LIVE CAMERA FEED, REAL-TIME 80-CLASS ITEM RECOGNITION, BIOMETRIC FACE LOCK & HAND GESTURE ENGINE ---
         let camStream = null;
+        let visionModule = null;
+        let visionFileset = null;
+
         let handLandmarker = null;
         let handLandmarkerLoading = false;
         let handTrackingActive = false;
+
+        let objectDetector = null;
+        let objectDetectorLoading = false;
+        let itemRecognitionActive = true;
+        let latestDetectedObjects = [];
+        let lastObjectDetectMs = 0;
+        let lastItemsDomSignature = '';
+        let lastItemsDomUpdateMs = 0;
+
+        let faceDetector = null;
+        let faceDetectorLoading = false;
+        let faceLockActive = true;
+        let latestDetectedFaces = [];
+        let lastFaceDetectMs = 0;
+
+        let barcodeDetector = null;
+        let lastBarcodeDetectMs = 0;
+        let lastDecodedBarcode = '';
+
+        let sentryModeActive = false;
+        let lastSentryAlertMs = 0;
+        let baselineItemSet = new Set();
+
         let handRafId = 0;
         let lastVideoTime = -1;
         let lastDetectMs = 0;
@@ -1328,27 +1367,63 @@
             [5,9],[9,13],[13,17]           // Palm knuckle bridge
         ];
 
-        function captureCameraFrameBase64() {
+        function getLiveDetectedItemsSummary() {
+            if (!latestDetectedObjects || latestDetectedObjects.length === 0) return '';
+            const counts = {};
+            const bestScore = {};
+            for (const det of latestDetectedObjects) {
+                const cat = (det.categories && det.categories[0]) ? det.categories[0] : null;
+                if (!cat || !cat.categoryName) continue;
+                const name = cat.categoryName.toLowerCase();
+                counts[name] = (counts[name] || 0) + 1;
+                const sc = Math.round((cat.score || 0) * 100);
+                if (!bestScore[name] || sc > bestScore[name]) bestScore[name] = sc;
+            }
+            return Object.keys(counts).map(k => {
+                const c = counts[k];
+                return `${c > 1 ? c + 'x ' : ''}${k} (${bestScore[k]}%)`;
+            }).join(', ');
+        }
+        window.getLiveDetectedItemsSummary = getLiveDetectedItemsSummary;
+
+        function captureCameraFrameBase64(includeHudOverlay = false) {
             const vid = document.getElementById('cam-video');
+            const overlay = document.getElementById('cam-overlay');
             if (!camStream || !vid || vid.readyState < 2 || !vid.videoWidth) return '';
             if (!camCaptureCanvas) {
                 camCaptureCanvas = document.createElement('canvas');
             }
-            camCaptureCanvas.width = vid.videoWidth || 640;
-            camCaptureCanvas.height = vid.videoHeight || 480;
+            const w = vid.videoWidth || 640;
+            const h = vid.videoHeight || 480;
+            camCaptureCanvas.width = w;
+            camCaptureCanvas.height = h;
             const ctx = camCaptureCanvas.getContext('2d');
-            ctx.drawImage(vid, 0, 0, camCaptureCanvas.width, camCaptureCanvas.height);
-            return camCaptureCanvas.toDataURL('image/jpeg', 0.82);
+            if (includeHudOverlay) {
+                // Mirror video to match HUD display and composite the holographic overlay on top
+                ctx.save();
+                ctx.translate(w, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(vid, 0, 0, w, h);
+                ctx.restore();
+                if (overlay) {
+                    ctx.drawImage(overlay, 0, 0, w, h);
+                }
+            } else {
+                ctx.drawImage(vid, 0, 0, w, h);
+            }
+            return camCaptureCanvas.toDataURL('image/jpeg', 0.85);
         }
         window.captureCameraFrameBase64 = captureCameraFrameBase64;
 
         async function triggerCameraVision(customPrompt) {
             if (!camStream) {
                 await toggleCamera();
-                await new Promise(r => setTimeout(r, 350));
+                await new Promise(r => setTimeout(r, 380));
             }
-            const dataUrl = captureCameraFrameBase64();
-            const promptText = customPrompt || 'Analyze what I am holding or showing to the camera and describe what you see.';
+            const dataUrl = captureCameraFrameBase64(false);
+            const liveSummary = getLiveDetectedItemsSummary();
+            const livePrefix = liveSummary ? `[Real-Time Local Object Detector sees: ${liveSummary}] ` : '';
+            const promptText = livePrefix + (customPrompt || 'Identify the exact item, object, or scene I am showing to the camera and describe its details concisely.');
             if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.analyze_camera_frame) {
                 pywebview.api.analyze_camera_frame(dataUrl, promptText);
             } else {
@@ -1356,12 +1431,38 @@
             }
         }
 
+        async function triggerCameraOCR() {
+            await triggerCameraVision('OCR & Document Scan Mode: Read and transcribe all visible text, labels, brand names, numbers, or code shown to the camera and explain what it is.');
+        }
+
+        function inspectDetectedItem(itemName) {
+            triggerCameraVision(`Focus specifically on the "${itemName}" visible in the camera frame. Tell me its brand, type, condition, and what it is used for.`);
+        }
+
+        async function announceDetectedItems() {
+            if (!camStream) {
+                await toggleCamera();
+                await new Promise(r => setTimeout(r, 450));
+            }
+            const summary = getLiveDetectedItemsSummary();
+            if (summary) {
+                addLog('SYSTEM', `[LIVE ITEM RECOGNITION] Detected: ${summary}`);
+                if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.announce_camera_items) {
+                    pywebview.api.announce_camera_items(summary);
+                }
+            } else {
+                // Fallback to 1-pass Gemini Vision if no COCO class is above threshold
+                await triggerCameraVision('Tell me what items or objects are currently visible in front of the camera.');
+            }
+        }
+        window.announceDetectedItems = announceDetectedItems;
+
         async function takeCameraSnapshot() {
             if (!camStream) {
                 await toggleCamera();
-                await new Promise(r => setTimeout(r, 350));
+                await new Promise(r => setTimeout(r, 380));
             }
-            const dataUrl = captureCameraFrameBase64();
+            const dataUrl = captureCameraFrameBase64(true);
             if (!dataUrl) {
                 addLog('SYSTEM', 'Camera stream not ready for snapshot.');
                 return;
@@ -1373,7 +1474,7 @@
                 a.href = dataUrl;
                 a.download = `jarvis_cam_${Date.now()}.jpg`;
                 a.click();
-                addLog('SYSTEM', '[CAPTURE] Webcam snapshot downloaded.');
+                addLog('SYSTEM', '[CAPTURE] Annotated HUD snapshot downloaded.');
             }
         }
 
@@ -1383,16 +1484,20 @@
             const offBox = document.getElementById('cam-off');
             const select = document.getElementById('camera-select');
             const actionsBar = document.getElementById('cam-actions');
+            const subActionsBar = document.getElementById('cam-subactions');
+            const liveItemsBar = document.getElementById('live-items-bar');
             const camBtn = document.getElementById('cam-btn');
             const badge = document.getElementById('gesture-badge');
             
             if (camStream) {
-                if (handTrackingActive) stopHandTrackingLoop();
+                stopHandTrackingLoop();
                 camStream.getTracks().forEach(t => t.stop());
                 camStream = null;
                 vid.srcObject = null;
                 wrap.style.display = 'none';
                 if (actionsBar) actionsBar.style.display = 'none';
+                if (subActionsBar) subActionsBar.style.display = 'none';
+                if (liveItemsBar) liveItemsBar.style.display = 'none';
                 offBox.style.display = 'flex';
                 select.style.display = 'none';
                 if (camBtn) { camBtn.style.background = 'var(--panel-bg)'; camBtn.style.color = 'var(--theme-color)'; }
@@ -1417,10 +1522,18 @@
                     await vid.play().catch(() => {});
                     wrap.style.display = 'block';
                     if (actionsBar) actionsBar.style.display = 'flex';
+                    if (subActionsBar) subActionsBar.style.display = 'flex';
+                    if (liveItemsBar) liveItemsBar.style.display = 'flex';
                     offBox.style.display = 'none';
                     if (camBtn) { camBtn.style.background = 'var(--theme-color)'; camBtn.style.color = '#000'; }
-                    // Automatically enable MediaPipe Hand Gesture Tracking when Camera turns on
+                    // Initialize native QR/Barcode detector if supported by WebView2
+                    if (!barcodeDetector && 'BarcodeDetector' in window) {
+                        try { barcodeDetector = new window.BarcodeDetector(); } catch (e) {}
+                    }
+                    // Start unified Optical Vision loop (Hand Gestures + Live 80-Item Recognition + Biometric Face Lock)
                     await startHandTracking();
+                    ensureObjectDetector();
+                    ensureFaceDetector();
                 } catch(e) {
                     addLog('SYSTEM', 'Webcam access denied or unavailable: ' + e.message);
                 }
@@ -1443,6 +1556,15 @@
             return Math.hypot(a.x - b.x, a.y - b.y);
         }
 
+        async function ensureVisionFileset() {
+            if (visionModule && visionFileset) return { vision: visionModule, fileset: visionFileset };
+            visionModule = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm');
+            visionFileset = await visionModule.FilesetResolver.forVisionTasks(
+                'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
+            );
+            return { vision: visionModule, fileset: visionFileset };
+        }
+
         async function ensureHandLandmarker() {
             if (handLandmarker) return handLandmarker;
             if (handLandmarkerLoading) return null;
@@ -1450,10 +1572,7 @@
             const badge = document.getElementById('gesture-badge');
             if (badge) badge.innerText = 'LOADING...';
             try {
-                const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm');
-                const fileset = await vision.FilesetResolver.forVisionTasks(
-                    'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
-                );
+                const { vision, fileset } = await ensureVisionFileset();
                 const modelUrl = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
                 const opts = {
                     baseOptions: { modelAssetPath: modelUrl, delegate: 'GPU' },
@@ -1466,7 +1585,6 @@
                 try {
                     handLandmarker = await vision.HandLandmarker.createFromOptions(fileset, opts);
                 } catch (gpuErr) {
-                    // Fallback to CPU delegate if WebGL/GPU delegate is rejected
                     handLandmarker = await vision.HandLandmarker.createFromOptions(fileset, {
                         ...opts,
                         baseOptions: { modelAssetPath: modelUrl, delegate: 'CPU' }
@@ -1477,6 +1595,129 @@
             }
             return handLandmarker;
         }
+
+        async function ensureObjectDetector() {
+            if (objectDetector) return objectDetector;
+            if (objectDetectorLoading) return null;
+            objectDetectorLoading = true;
+            try {
+                const { vision, fileset } = await ensureVisionFileset();
+                const modelUrl = 'https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/1/efficientdet_lite0.tflite';
+                const opts = {
+                    baseOptions: { modelAssetPath: modelUrl, delegate: 'GPU' },
+                    runningMode: 'VIDEO',
+                    scoreThreshold: 0.36,
+                    maxResults: 8
+                };
+                try {
+                    objectDetector = await vision.ObjectDetector.createFromOptions(fileset, opts);
+                } catch (gpuErr) {
+                    objectDetector = await vision.ObjectDetector.createFromOptions(fileset, {
+                        ...opts,
+                        baseOptions: { modelAssetPath: modelUrl, delegate: 'CPU' }
+                    });
+                }
+            } catch (e) {
+                console.log('ObjectDetector init warning:', e);
+            } finally {
+                objectDetectorLoading = false;
+            }
+            return objectDetector;
+        }
+
+        async function ensureFaceDetector() {
+            if (faceDetector) return faceDetector;
+            if (faceDetectorLoading) return null;
+            faceDetectorLoading = true;
+            try {
+                const { vision, fileset } = await ensureVisionFileset();
+                const modelUrl = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
+                const opts = {
+                    baseOptions: { modelAssetPath: modelUrl, delegate: 'GPU' },
+                    runningMode: 'VIDEO',
+                    minDetectionConfidence: 0.52
+                };
+                try {
+                    faceDetector = await vision.FaceDetector.createFromOptions(fileset, opts);
+                } catch (gpuErr) {
+                    faceDetector = await vision.FaceDetector.createFromOptions(fileset, {
+                        ...opts,
+                        baseOptions: { modelAssetPath: modelUrl, delegate: 'CPU' }
+                    });
+                }
+            } catch (e) {
+                console.log('FaceDetector init warning:', e);
+            } finally {
+                faceDetectorLoading = false;
+            }
+            return faceDetector;
+        }
+
+        async function toggleItemRecognition(forceState) {
+            itemRecognitionActive = (typeof forceState === 'boolean') ? forceState : !itemRecognitionActive;
+            const iBtn = document.getElementById('item-toggle-btn');
+            const liveBar = document.getElementById('live-items-bar');
+            if (iBtn) {
+                iBtn.innerText = itemRecognitionActive ? '◈ ITEMS: ON' : '◈ ITEMS: OFF';
+                iBtn.style.background = itemRecognitionActive ? 'var(--theme-color)' : 'transparent';
+                iBtn.style.color = itemRecognitionActive ? '#000' : 'var(--theme-color)';
+            }
+            if (!itemRecognitionActive) {
+                latestDetectedObjects = [];
+                if (liveBar) liveBar.style.display = 'none';
+            } else {
+                if (!camStream) await toggleCamera();
+                if (liveBar && camStream) liveBar.style.display = 'flex';
+                await ensureObjectDetector();
+                if (!handRafId && camStream) runHandLoop();
+            }
+        }
+        window.toggleItemRecognition = toggleItemRecognition;
+
+        async function toggleFaceLock(forceState) {
+            faceLockActive = (typeof forceState === 'boolean') ? forceState : !faceLockActive;
+            const fBtn = document.getElementById('face-toggle-btn');
+            if (fBtn) {
+                fBtn.innerText = faceLockActive ? '◈ FACE: ON' : '◈ FACE: OFF';
+                fBtn.style.background = faceLockActive ? 'var(--theme-color)' : 'transparent';
+                fBtn.style.color = faceLockActive ? '#000' : 'var(--theme-color)';
+            }
+            if (!faceLockActive) {
+                latestDetectedFaces = [];
+            } else {
+                if (!camStream) await toggleCamera();
+                await ensureFaceDetector();
+                if (!handRafId && camStream) runHandLoop();
+            }
+        }
+        window.toggleFaceLock = toggleFaceLock;
+
+        async function toggleSentryMode(forceState) {
+            sentryModeActive = (typeof forceState === 'boolean') ? forceState : !sentryModeActive;
+            const sBtn = document.getElementById('sentry-toggle-btn');
+            if (sentryModeActive && !camStream) {
+                await toggleCamera();
+            }
+            if (sentryModeActive && !itemRecognitionActive) {
+                await toggleItemRecognition(true);
+            }
+            // Snapshot current items as baseline so alerts trigger on changes/new arrivals
+            baselineItemSet = new Set(
+                (latestDetectedObjects || [])
+                    .map(d => d.categories && d.categories[0] ? d.categories[0].categoryName : '')
+                    .filter(Boolean)
+            );
+            if (sBtn) {
+                sBtn.innerText = sentryModeActive ? '◈ SENTRY: ON' : '◈ SENTRY';
+                sBtn.style.background = sentryModeActive ? '#ff3355' : 'rgba(0,255,255,0.08)';
+                sBtn.style.borderColor = sentryModeActive ? '#ff3355' : 'var(--panel-border)';
+                sBtn.style.color = sentryModeActive ? '#fff' : 'var(--text-muted)';
+            }
+            addLog('SYSTEM', sentryModeActive
+                ? '[SENTRY ◈] Optical Sentry Watch armed. Monitoring live camera for intruder or item movement.'
+                : '[SENTRY ◈] Optical Sentry Watch disarmed.');
+        }
+        window.toggleSentryMode = toggleSentryMode;
 
         async function startHandTracking() {
             const badge = document.getElementById('gesture-badge');
@@ -1491,7 +1732,7 @@
                     badge.style.borderColor = '#00ff88';
                 }
                 if (gBtn) {
-                    gBtn.innerText = '◈ GESTURES: ON';
+                    gBtn.innerText = '◈ HANDS: ON';
                     gBtn.style.background = 'var(--theme-color)';
                     gBtn.style.color = '#000';
                 }
@@ -1507,14 +1748,19 @@
             const badge = document.getElementById('gesture-badge');
             const gBtn = document.getElementById('gesture-toggle-btn');
             if (handTrackingActive) {
-                stopHandTrackingLoop();
+                handTrackingActive = false;
+                handStates.clear();
+                prevGestureMode = 'idle';
+                prevSpinGrab = null;
+                prevZoomDist = null;
+                activeCommandGesture = null;
                 if (badge) {
                     badge.innerText = 'PAUSED';
                     badge.style.color = 'var(--text-muted)';
                     badge.style.borderColor = 'var(--panel-border)';
                 }
                 if (gBtn) {
-                    gBtn.innerText = '◈ GESTURES: OFF';
+                    gBtn.innerText = '◈ HANDS: OFF';
                     gBtn.style.background = 'transparent';
                     gBtn.style.color = 'var(--theme-color)';
                 }
@@ -1530,7 +1776,10 @@
         function stopHandTrackingLoop() {
             handTrackingActive = false;
             cancelAnimationFrame(handRafId);
+            handRafId = 0;
             handStates.clear();
+            latestDetectedObjects = [];
+            latestDetectedFaces = [];
             prevGestureMode = 'idle';
             prevSpinGrab = null;
             prevZoomDist = null;
@@ -1547,7 +1796,6 @@
             const hs = dist2d(wrist, lm[9]);
             if (hs < 1e-5) return null;
 
-            // Finger extension test: tip distance from wrist vs PIP joint distance from wrist
             const indexExt  = dist2d(lm[8], wrist)  > dist2d(lm[6], wrist) * 1.12;
             const middleExt = dist2d(lm[12], wrist) > dist2d(lm[10], wrist) * 1.12;
             const ringExt   = dist2d(lm[16], wrist) > dist2d(lm[14], wrist) * 1.10;
@@ -1591,25 +1839,176 @@
             }
         }
 
+        function updateLiveItemsDom(detections, now) {
+            if (now - lastItemsDomUpdateMs < 320) return;
+            lastItemsDomUpdateMs = now;
+            const listEl = document.getElementById('live-items-list');
+            if (!listEl) return;
+
+            if (!detections || detections.length === 0) {
+                if (lastItemsDomSignature !== 'EMPTY') {
+                    lastItemsDomSignature = 'EMPTY';
+                    listEl.innerHTML = '<span style="color:var(--text-muted);">◈ Scanning live items in view...</span>';
+                }
+                return;
+            }
+
+            const grouped = new Map();
+            for (const det of detections) {
+                const cat = (det.categories && det.categories[0]) ? det.categories[0] : null;
+                if (!cat || !cat.categoryName) continue;
+                const name = cat.categoryName.toUpperCase();
+                const score = Math.round((cat.score || 0) * 100);
+                const prev = grouped.get(name);
+                if (!prev) {
+                    grouped.set(name, { count: 1, maxScore: score });
+                } else {
+                    prev.count += 1;
+                    if (score > prev.maxScore) prev.maxScore = score;
+                }
+            }
+
+            const sig = Array.from(grouped.entries()).map(([k, v]) => `${k}:${v.count}:${Math.floor(v.maxScore / 5)}`).join('|');
+            if (sig === lastItemsDomSignature) return;
+            lastItemsDomSignature = sig;
+
+            let html = '';
+            for (const [name, info] of grouped.entries()) {
+                const safeName = name.replace(/'/g, '');
+                const label = `${info.count > 1 ? info.count + '× ' : ''}${name} · ${info.maxScore}%`;
+                html += `<span onclick="inspectDetectedItem('${safeName}')" title="Click for Deep AI Inspection of ${safeName}" style="background:rgba(0,255,255,0.14); border:1px solid var(--theme-color); color:var(--theme-color); padding:2px 6px; border-radius:4px; font-weight:700; cursor:pointer; letter-spacing:0.4px;">◈ ${label}</span>`;
+            }
+            listEl.innerHTML = html;
+        }
+
+        function drawHudBracketBox(ctx, x, y, w, h, color, labelText, subText) {
+            const cLen = Math.max(8, Math.min(18, Math.min(w, h) * 0.22));
+            ctx.save();
+            // Subtle inner fill & dashed frame
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.04)';
+            ctx.fillRect(x, y, w, h);
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.25)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x, y, w, h);
+
+            // Corner HUD targeting brackets
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            // Top-left
+            ctx.moveTo(x, y + cLen); ctx.lineTo(x, y); ctx.lineTo(x + cLen, y);
+            // Top-right
+            ctx.moveTo(x + w - cLen, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + cLen);
+            // Bottom-left
+            ctx.moveTo(x, y + h - cLen); ctx.lineTo(x, y + h); ctx.lineTo(x + cLen, y + h);
+            // Bottom-right
+            ctx.moveTo(x + w - cLen, y + h); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w, y + h - cLen);
+            ctx.stroke();
+
+            // Center target crosshair
+            const cx = x + w / 2, cy = y + h / 2;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(cx - 5, cy); ctx.lineTo(cx + 5, cy);
+            ctx.moveTo(cx, cy - 5); ctx.lineTo(cx, cy + 5);
+            ctx.stroke();
+
+            // Label pill
+            if (labelText) {
+                ctx.font = 'bold 10px "Segoe UI", monospace';
+                const fullText = subText ? `${labelText} · ${subText}` : labelText;
+                const tw = ctx.measureText(fullText).width + 10;
+                const ly = Math.max(14, y - 4);
+                ctx.fillStyle = 'rgba(5, 8, 17, 0.86)';
+                ctx.fillRect(x, ly - 13, tw, 15);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, ly - 13, tw, 15);
+                ctx.fillStyle = color;
+                ctx.fillText(fullText, x + 5, ly - 2);
+            }
+            ctx.restore();
+        }
+
         function runHandLoop() {
-            if (!handTrackingActive) return;
+            if (!camStream) {
+                handRafId = 0;
+                return;
+            }
             handRafId = requestAnimationFrame(runHandLoop);
 
             const now = performance.now();
-            // 30 FPS throttle for ultra-efficient CPU/GPU utilization
             if (now - lastDetectMs < 33) return;
 
             const vid = document.getElementById('cam-video');
             const overlay = document.getElementById('cam-overlay');
-            if (!handLandmarker || !vid || vid.readyState < 2) return;
+            if (!vid || vid.readyState < 2) return;
             if (vid.currentTime === lastVideoTime) return;
             lastVideoTime = vid.currentTime;
             lastDetectMs = now;
 
-            const result = handLandmarker.detectForVideo(vid, now);
-            const landmarks = result.landmarks || [];
-            const labels = (result.handedness || []).map((h, idx) => (h[0] && h[0].categoryName) ? h[0].categoryName : ('H' + idx));
+            // 1. Real-Time Hand Landmark Detection (30 FPS)
+            let landmarks = [];
+            let labels = [];
+            if (handTrackingActive && handLandmarker) {
+                try {
+                    const result = handLandmarker.detectForVideo(vid, now);
+                    landmarks = result.landmarks || [];
+                    labels = (result.handedness || []).map((h, idx) => (h[0] && h[0].categoryName) ? h[0].categoryName : ('H' + idx));
+                } catch (e) {}
+            }
 
+            // 2. Real-Time 80-Class Item / Object Recognition (~7 FPS interleaved)
+            if (itemRecognitionActive && objectDetector && (now - lastObjectDetectMs > 135)) {
+                lastObjectDetectMs = now;
+                try {
+                    const objRes = objectDetector.detectForVideo(vid, now);
+                    latestDetectedObjects = (objRes && objRes.detections) ? objRes.detections : [];
+                    updateLiveItemsDom(latestDetectedObjects, now);
+
+                    // Sentry Watch Mode check
+                    if (sentryModeActive && (now - lastSentryAlertMs > 9000)) {
+                        for (const det of latestDetectedObjects) {
+                            const cat = det.categories && det.categories[0] ? det.categories[0] : null;
+                            if (cat && cat.score >= 0.52 && !baselineItemSet.has(cat.categoryName)) {
+                                lastSentryAlertMs = now;
+                                const alertItem = cat.categoryName.toUpperCase();
+                                addLog('SYSTEM', `[SENTRY ALERT ◈] New ${alertItem} (${Math.round(cat.score * 100)}%) detected in optical sector!`);
+                                if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.announce_camera_items) {
+                                    pywebview.api.announce_camera_items(`Sentry alert: ${cat.categoryName} detected on camera`);
+                                }
+                                break;
+                            }
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            // 3. Real-Time Biometric Face Reticle Lock (~6 FPS interleaved)
+            if (faceLockActive && faceDetector && (now - lastFaceDetectMs > 155)) {
+                lastFaceDetectMs = now;
+                try {
+                    const faceRes = faceDetector.detectForVideo(vid, now);
+                    latestDetectedFaces = (faceRes && faceRes.detections) ? faceRes.detections : [];
+                } catch (e) {}
+            }
+
+            // 4. Native QR Code & Barcode Scanner (~2 FPS background check)
+            if (barcodeDetector && (now - lastBarcodeDetectMs > 600)) {
+                lastBarcodeDetectMs = now;
+                barcodeDetector.detect(vid).then(codes => {
+                    if (codes && codes.length > 0 && codes[0].rawValue && codes[0].rawValue !== lastDecodedBarcode) {
+                        lastDecodedBarcode = codes[0].rawValue;
+                        addLog('SYSTEM', `[BARCODE / QR LOCKED ◈] ${lastDecodedBarcode}`);
+                        if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.announce_camera_items) {
+                            pywebview.api.announce_camera_items(`QR or barcode scanned: ${lastDecodedBarcode}`);
+                        }
+                    }
+                }).catch(() => {});
+            }
+
+            // 5. Evaluate Hand Pinch Spin/Zoom & Discrete Gestures
             const pinchedGrabs = [];
             const seen = new Set();
 
@@ -1670,9 +2069,8 @@
                 activeCommandGesture = null;
             }
 
-            // Evaluate discrete hand gesture commands when not pinching
             let holdProgress = 0;
-            let statusText = landmarks.length > 0 ? `HANDS: ${landmarks.length} · ${mode.toUpperCase()}` : 'ACTIVE · SCANNING';
+            let statusText = landmarks.length > 0 ? `HANDS: ${landmarks.length} · ${mode.toUpperCase()}` : `ITEMS: ${latestDetectedObjects.length} · SCAN`;
 
             if (mode === 'idle' && landmarks.length === 1) {
                 const cmd = classifySingleHandCommand(landmarks[0]);
@@ -1701,16 +2099,72 @@
             }
 
             const badge = document.getElementById('gesture-badge');
-            if (badge) badge.innerText = statusText;
+            if (badge && handTrackingActive) badge.innerText = statusText;
 
-            // Draw full 21-joint holographic hand skeleton + pinch vector + hold progress ring on #cam-overlay
+            const hudTelem = document.getElementById('cam-hud-telemetry');
+            if (hudTelem) {
+                hudTelem.innerText = `ITEMS: ${latestDetectedObjects.length} · HANDS: ${landmarks.length} · FACES: ${latestDetectedFaces.length}${sentryModeActive ? ' · SENTRY ARMED' : ''}`;
+            }
+
+            // 6. Render Unified Holographic HUD Overlay (Live Items + Biometric Face Lock + 21-Joint Hand Skeleton)
             if (overlay) {
                 const ctx = overlay.getContext('2d');
                 ctx.clearRect(0, 0, overlay.width, overlay.height);
                 const themeHex = getComputedStyle(document.documentElement).getPropertyValue('--theme-color').trim() || '#00ffff';
+                const vw = vid.videoWidth || 640;
+                const vh = vid.videoHeight || 480;
+                const sx = overlay.width / vw;
+                const sy = overlay.height / vh;
 
+                // A. Draw Real-Time Item / Object Recognition Bounding Boxes
+                if (itemRecognitionActive && latestDetectedObjects.length > 0) {
+                    for (const det of latestDetectedObjects) {
+                        const bb = det.boundingBox;
+                        const cat = (det.categories && det.categories[0]) ? det.categories[0] : null;
+                        if (!bb || !cat) continue;
+                        const name = (cat.categoryName || 'OBJECT').toUpperCase();
+                        // Skip redundant full-frame 'person' box if Biometric Face Lock is already drawing the operator reticle
+                        if (name === 'PERSON' && faceLockActive && latestDetectedFaces.length > 0 && latestDetectedObjects.length > 1) {
+                            continue;
+                        }
+                        const bw = bb.width * sx;
+                        const bh = bb.height * sy;
+                        const bx = overlay.width - (bb.originX * sx) - bw; // mirrored X
+                        const by = bb.originY * sy;
+                        const scorePct = Math.round((cat.score || 0) * 100) + '%';
+                        const boxColor = name === 'PERSON' ? '#00ff88' : themeHex;
+                        drawHudBracketBox(ctx, bx, by, bw, bh, boxColor, `◈ ${name}`, scorePct);
+                    }
+                }
+
+                // B. Draw Real-Time Biometric Operator Face Lock Reticles
+                if (faceLockActive && latestDetectedFaces.length > 0) {
+                    for (const fDet of latestDetectedFaces) {
+                        const bb = fDet.boundingBox;
+                        if (!bb) continue;
+                        const fw = bb.width * sx;
+                        const fh = bb.height * sy;
+                        const fx = overlay.width - (bb.originX * sx) - fw;
+                        const fy = bb.originY * sy;
+                        const conf = (fDet.categories && fDet.categories[0]) ? Math.round(fDet.categories[0].score * 100) : 98;
+                        drawHudBracketBox(ctx, fx, fy, fw, fh, '#00ff88', '◎ BIOMETRIC LOCK', `${conf}%`);
+
+                        // Draw facial keypoints (eyes, nose, mouth)
+                        if (fDet.keypoints) {
+                            ctx.fillStyle = '#00ff88';
+                            for (const kp of fDet.keypoints) {
+                                const kx = (1 - kp.x) * overlay.width;
+                                const ky = kp.y * overlay.height;
+                                ctx.beginPath();
+                                ctx.arc(kx, ky, 2.2, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                        }
+                    }
+                }
+
+                // C. Draw 21-Joint Holographic Hand Skeleton + Pinch Vector + Hold Progress Ring
                 for (const lm of landmarks) {
-                    // 1. Skeleton bone connections
                     ctx.strokeStyle = 'rgba(0, 255, 255, 0.45)';
                     ctx.lineWidth = 1.4;
                     for (const [a, b] of HAND_CONNECTIONS) {
@@ -1722,7 +2176,6 @@
                         ctx.stroke();
                     }
 
-                    // 2. All 21 joint nodes
                     for (let j = 0; j < lm.length; j++) {
                         const jx = (1 - lm[j].x) * overlay.width, jy = lm[j].y * overlay.height;
                         ctx.fillStyle = (j === 4 || j === 8) ? '#00ff88' : themeHex;
@@ -1731,7 +2184,6 @@
                         ctx.fill();
                     }
 
-                    // 3. Thumb-Index pinch vector
                     const thumb = lm[4], index = lm[8];
                     const tx = (1 - thumb.x) * overlay.width, ty = thumb.y * overlay.height;
                     const ix = (1 - index.x) * overlay.width, iy = index.y * overlay.height;
@@ -1743,7 +2195,6 @@
                         ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(ix, iy); ctx.stroke();
                     }
 
-                    // 4. Gesture hold progress ring around palm center (landmark 9)
                     if (holdProgress > 0.05) {
                         const px = (1 - lm[9].x) * overlay.width, py = lm[9].y * overlay.height;
                         ctx.strokeStyle = '#00ff88';
