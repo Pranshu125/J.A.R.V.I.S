@@ -164,3 +164,28 @@ def launch_application(app_name: str) -> str:
         return f"Executing {app_name}."
     except Exception as e:
         return f"Unable to launch {app_name}, sir: {e}"
+
+def split_workspace(left_app: str, right_app: str) -> str:
+    """Split screen between two applications (Iris signature workflow)."""
+    if not _HAS_PYAUTOGUI:
+        return "pyautogui module required for window management."
+    
+    try:
+        # Launch and snap left application
+        launch_application(left_app)
+        time.sleep(1.2)
+        pyautogui.hotkey("win", "left")
+        time.sleep(0.4)
+        pyautogui.press("esc")  # Dismiss Windows Snap Assist thumbnail overlay
+        
+        # Launch and snap right application
+        launch_application(right_app)
+        time.sleep(1.2)
+        pyautogui.hotkey("win", "right")
+        time.sleep(0.4)
+        pyautogui.press("esc")
+        
+        return f"Workspace configured: {left_app} tiled left, {right_app} tiled right."
+    except Exception as e:
+        return f"Failed to arrange split workspace: {e}"
+

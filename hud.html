@@ -368,16 +368,15 @@
                 <div class="dot"></div> <span id="state-text">Listening for wake word...</span>
             </div>
 
-                        <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+            <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
                 <button class="friday-btn" style="background:#00334a; border-color:#00ffff; color:#00ffff; box-shadow:0 0 15px rgba(0,255,255,0.2);" onclick="triggerJarvis()">J.A.R.V.I.S.</button>
                 <button class="friday-btn" onclick="triggerFriday()">F.R.I.D.A.Y.</button>
-                <button class="friday-btn" style="background:#4a2c00; border-color:#ff7700; color:#ff7700; box-shadow:0 0 15px rgba(255,119,0,0.2);" onclick="triggerZoey()">Z.O.E.Y.</button>
             </div>
 
             <div class="controls">
                 <button class="icon-btn" onclick="toggleCamera()" title="Toggle Camera">📷</button>
                 <button class="icon-btn" onclick="startMicVisualizer()" title="Connect Audio Visualizer">🎙️</button>
-                <button class="icon-btn">⌨️</button>
+                <button class="icon-btn" onclick="focusInput()" title="Focus Command Input">⌨️</button>
             </div>
         </div>
 
@@ -387,7 +386,7 @@
                 Conversation
                 <div class="chat-actions">
                     <button onclick="document.getElementById('chat-box').innerHTML=''">🗑️ Clear</button>
-                    <button>⬇️ Extract</button>
+                    <button onclick="exportChatLog()" title="Download Session Transcript">⬇️ Extract</button>
                 </div>
             </div>
             
@@ -661,11 +660,6 @@
             if (orbMaterial) orbMaterial.color.setHex(hex);
         }
 
-        function triggerZoey() {
-            if (typeof pywebview !== 'undefined') pywebview.api.send_command("switch to zoey");
-            else switchMode('ZOEY');
-        }
-
         function switchMode(mode) {
             const titles = document.querySelectorAll('.title-text');
             const root = document.documentElement;
@@ -675,11 +669,6 @@
                 root.style.setProperty('--panel-border', 'rgba(255, 0, 51, 0.2)');
                 titles.forEach(t => t.innerText = 'F.R.I.D.A.Y');
                 setOrbColor(0xff0033);
-            } else if (mode === 'ZOEY') {
-                root.style.setProperty('--theme-color', '#ff7700');
-                root.style.setProperty('--panel-border', 'rgba(255, 119, 0, 0.2)');
-                titles.forEach(t => t.innerText = 'Z.O.E.Y');
-                setOrbColor(0xff7700);
             } else {
                 root.style.setProperty('--theme-color', '#00ffff');
                 root.style.setProperty('--panel-border', 'rgba(0, 255, 255, 0.15)');
@@ -695,11 +684,32 @@
                 switchMode('FRIDAY'); // local test fallback
             }
         }
-            // --- NEW HARDWARE CONNECTIONS ---
         
         function triggerJarvis() {
             if (typeof pywebview !== 'undefined') pywebview.api.send_command("switch to jarvis");
             else switchMode('JARVIS');
+        }
+
+        function focusInput() {
+            const input = document.getElementById('cmd-input');
+            if (input) input.focus();
+        }
+
+        function exportChatLog() {
+            const box = document.getElementById('chat-box');
+            const messages = box.querySelectorAll('.msg');
+            let log = '# JARVIS / FRIDAY SESSION LOG\\n\\nExported: ' + new Date().toLocaleString() + '\\n\\n---\\n\\n';
+            messages.forEach(m => {
+                let text = m.innerText.trim();
+                if (m.classList.contains('user')) log += '**USER:** ' + text + '\\n\\n';
+                else if (m.classList.contains('system')) log += '*SYSTEM:* ' + text + '\\n\\n';
+                else log += '**ASSISTANT:** ' + text + '\\n\\n';
+            });
+            const blob = new Blob([log], { type: 'text/markdown;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `jarvis_transcript_${Date.now()}.md`;
+            a.click();
         }
 
         // Live Camera Feed
@@ -767,11 +777,16 @@
                     if(document.getElementById('state-text').innerText === 'Transmitting audio...') return; // Let TTS override
                     
                     analyser.getByteFrequencyData(dataArray);
+                    let sum = 0;
                     for(let i=0; i<bars.length; i++) {
-                        let h = (dataArray[i] / 255) * 100;
+                        let val = dataArray[i] || 0;
+                        sum += val;
+                        let h = (val / 255) * 100;
                         if(h < 10) h = 10;
                         bars[i].style.height = h + '%';
                     }
+                    let avg = sum / (bars.length || 1);
+                    orbPulse = 1.0 + (avg / 255.0) * 3.5;
                 }
                 renderFrame();
                 document.querySelector('.icon-btn:nth-child(2)').style.background = 'var(--theme-color)';

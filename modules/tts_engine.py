@@ -1,6 +1,6 @@
 """
 tts_engine.py - High-Performance Dual-Language Neural Speech Synthesis
-Supports English & Hindi/Hinglish (J.A.R.V.I.S., F.R.I.D.A.Y., & Z.O.E.Y.)
+Supports English & Hindi/Hinglish (J.A.R.V.I.S. & F.R.I.D.A.Y.)
 Uses edge-tts with zero disk-locking in-memory Pygame playback,
 with seamless offline fallback to Piper TTS.
 """
@@ -20,11 +20,6 @@ VOICE_MAP = {
     },
     "FRIDAY": {
         "en": "en-GB-SoniaNeural",
-        "hi": "hi-IN-SwaraNeural",
-        "piper": "models/en_GB-jenny_dioco-medium.onnx"
-    },
-    "ZOEY": {
-        "en": "en-US-JennyNeural",
         "hi": "hi-IN-SwaraNeural",
         "piper": "models/en_GB-jenny_dioco-medium.onnx"
     }

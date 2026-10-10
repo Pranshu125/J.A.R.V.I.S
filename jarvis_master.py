@@ -14,7 +14,16 @@ import pygame
 import psutil
 import webview
 
-# Import our battle-tested modules ported from Sagar's Friday, Mark-XXXIX, and Zoey OS
+# Global Process Patch (Mark-LV Architecture): Suppress background console flashing
+if os.name == 'nt':
+    _orig_popen = subprocess.Popen
+    def _silent_popen(*args, **kwargs):
+        if 'creationflags' not in kwargs:
+            kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+        return _orig_popen(*args, **kwargs)
+    subprocess.Popen = _silent_popen
+
+# Modular capabilities ported from Sagar's Friday, Mark-LV, Mark-XXXIX, and Zoey 3D HUD
 from modules.world_intel import (
     get_world_news_sync,
     get_finance_news_sync,
@@ -25,12 +34,13 @@ from modules.system_control import (
     volume_control,
     brightness_control,
     window_action,
-    launch_application
+    launch_application,
+    split_workspace
 )
 from modules.tts_engine import speak_text
 
 # ========================================================
-# J.A.R.V.I.S., F.R.I.D.A.Y., & Z.O.E.Y. UNIFIED COGNITIVE OS
+# J.A.R.V.I.S. & F.R.I.D.A.Y. UNIFIED COGNITIVE OS
 # Real-Time Voice Assistant with 3D Holographic Orb,
 # Deep Windows OS Control, World Intel & Bilingual Intelligence
 # ========================================================
@@ -103,7 +113,7 @@ class JarvisPipeline:
         self.text_queue = queue.Queue()
         self.response_queue = queue.Queue()
         self.running = True
-        self.voice_mode = 'JARVIS' # 'JARVIS' | 'FRIDAY' | 'ZOEY'
+        self.voice_mode = 'JARVIS' # Strictly 'JARVIS' or 'FRIDAY'
         self.is_sleeping = False
         self.last_active = time.time()
         
@@ -220,7 +230,7 @@ class JarvisPipeline:
                     
                     if text:
                         mode_name = getattr(self, "voice_mode", "JARVIS").lower()
-                        wake_triggers = ["jarvis", "friday", "zoey", "iris", "wake", "uth jao", "uth ja"]
+                        wake_triggers = ["jarvis", "friday", "wake", "uth jao", "uth ja"]
                         
                         # Strict Wake-Word filtering in Sleep / PiP Mode
                         if getattr(self, "is_sleeping", False):
@@ -234,7 +244,7 @@ class JarvisPipeline:
                             
                         self.last_active = time.time()
                         cmd = text
-                        for w in ["jarvis", "friday", "zoey", "iris", "system"]:
+                        for w in ["jarvis", "friday", "system"]:
                             cmd = cmd.replace(w, "")
                         cmd = cmd.strip()
                         
@@ -254,16 +264,11 @@ class JarvisPipeline:
                 cmd_lower = text.lower()
                 handled = False
                 
-                # Mode Switches
+                # Strict Persona Mode Switches (JARVIS & FRIDAY only)
                 if "switch to friday" in cmd_lower or "friday mode" in cmd_lower:
                     self.voice_mode = 'FRIDAY'
                     self.window.evaluate_js("switchMode('FRIDAY')")
                     self.response_queue.put("Switching to F.R.I.D.A.Y. mode, boss. All systems red.")
-                    handled = True
-                elif "switch to zoey" in cmd_lower or "zoey mode" in cmd_lower:
-                    self.voice_mode = 'ZOEY'
-                    self.window.evaluate_js("switchMode('ZOEY')")
-                    self.response_queue.put("Zoey OS intelligence online. Living 3D workspace active.")
                     handled = True
                 elif "switch to jarvis" in cmd_lower or "jarvis mode" in cmd_lower:
                     self.voice_mode = 'JARVIS'
@@ -279,9 +284,9 @@ class JarvisPipeline:
                     self.text_queue.task_done()
                     continue
 
-                # Bilingual Spoken Persona (Ported from Iris, Zoey & Mark-LV)
+                # Bilingual Spoken Persona (Ported from Iris & Mark-LV)
                 system_prompt = (
-                    "You are JARVIS / F.R.I.D.A.Y. / Z.O.E.Y., an advanced, loyal, and sharp personal AI assistant. "
+                    f"You are {self.voice_mode}, an advanced, loyal, and sharp personal AI assistant. "
                     "LANGUAGE INSTRUCTION: "
                     "You are 100% fluent in both English and Hindi / Hinglish. "
                     "Always reply in the exact language the user speaks: "
@@ -359,6 +364,21 @@ class JarvisPipeline:
                                     "action": {"type": "string", "enum": ["minimize", "maximize", "snap_left", "snap_right", "show_desktop", "lock_screen", "screenshot", "task_manager"]}
                                 },
                                 "required": ["action"]
+                            }
+                        }
+                    },
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "split_workspace",
+                            "description": "Split screen between two applications: snaps the first application to the left tile and the second application to the right tile (e.g. WhatsApp left, Chrome right).",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "left_app": {"type": "string", "description": "Application name to snap on the left side (e.g. whatsapp, code, spotify)."},
+                                    "right_app": {"type": "string", "description": "Application name to snap on the right side (e.g. chrome, edge, terminal)."}
+                                },
+                                "required": ["left_app", "right_app"]
                             }
                         }
                     },
@@ -460,6 +480,12 @@ class JarvisPipeline:
                         elif t_name == "window_management":
                             act = t_args.get("action", "")
                             response = f"{ack} " + window_action(act)
+                            break
+
+                        elif t_name == "split_workspace":
+                            l_app = t_args.get("left_app", "")
+                            r_app = t_args.get("right_app", "")
+                            response = f"{ack} " + split_workspace(l_app, r_app)
                             break
 
                         elif t_name == "open_website":

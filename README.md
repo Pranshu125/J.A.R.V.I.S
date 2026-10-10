@@ -1,147 +1,194 @@
 # J.A.R.V.I.S. (Just A Rather Very Intelligent System)
 
-### Autonomous Desktop AI Assistant with 3D Holographic Interface, OS Automation & Bilingual Voice Processing
+### Autonomous Desktop AI Assistant with 3D Holographic Interface, OS Automation, World Intelligence & Bilingual Speech Processing
 
-J.A.R.V.I.S. is an advanced desktop-level artificial intelligence assistant built in Python. Designed to bridge the gap between conversational large language models and native operating system execution, J.A.R.V.I.S. combines a WebGL-based 3D holographic interface, system-level automation, real-time satellite intelligence feeds, and bilingual voice communication across English and Hindi.
-
----
-
-## Architectural Highlights
-
-### 1. 3D Holographic Particle Interface (Zoey & Iris Architecture)
-* **WebGL Particle Mesh:** Powered by Three.js, rendering a 1,200-node dynamic particle sphere using Fibonacci distribution that rotates and undulates organically in real time.
-* **Audio-Reactive Deformation:** The particle field responds directly to microphone amplitude and speech synthesis frequencies, rippling dynamically during conversation.
-* **Autonomous Personas:**
-  * **J.A.R.V.I.S.:** Cyan illumination (`#00ffff`), calm British neural voice (`en-GB-RyanNeural` / `hi-IN-MadhurNeural`).
-  * **F.R.I.D.A.Y.:** Ruby Crimson illumination (`#ff0033`), assertive female neural voice (`en-GB-SoniaNeural` / `hi-IN-SwaraNeural`).
-  * **Z.O.E.Y.:** Amber Orange illumination (`#ff7700`), dynamic companion profile (`en-US-JennyNeural`).
-* **Picture-in-Picture (PiP) Mini-Mode:** When idle (45 seconds) or executing desktop tasks, the interface condenses into a transparent, draggable desktop widget that sleeps until summoned by wake words (`"JARVIS"`, `"FRIDAY"`, `"ZOEY"`, `"IRIS"`).
-* **Global Summon Shortcut:** Press `Alt + Space` anywhere in Windows to instantly bring the assistant to full focus.
-
-### 2. Bilingual Voice & Speech Engine (English & Hindi/Hinglish)
-* **Multi-Dialect Recognition:** Tuned speech recognition pipeline capturing standard English, Indian English, and conversational Hindi/Hinglish phrasing without accent degradation.
-* **Zero-Lock In-Memory Neural Synthesis:** High-fidelity speech generated via Microsoft Edge Neural TTS loaded directly into system memory, eliminating file-locking bottlenecks on Windows.
-* **Offline Fallback:** Automatic fallback to local Piper TTS ONNX models when network connectivity is lost.
-
-### 3. Deep Operating System & Hardware Automation (Mark-XXXIX Engine)
-* **Application Launcher:** Normalized launcher supporting 29+ desktop applications including VS Code, Google Chrome, Spotify, Discord, WhatsApp, Steam, Notepad, Calculator, and Windows Terminal.
-* **Window Management:** Voice-directed window manipulation including snapping (left/right split), maximizing, minimizing, cycling workspaces (`Alt + Tab`), and showing the desktop.
-* **Hardware Controls:** Direct control of master system volume, mute toggle, and display brightness via Windows Management Instrumentation (WMI).
-* **Workstation Security:** Instant workstation lock (`Win + L`) and snipping tool triggers.
-
-### 4. Real-Time Global Intel & Financial Radar (FastMCP Architecture)
-* **Parallel Asynchronous Scraping:** Built-in `httpx` async workers polling live RSS wire feeds from BBC World, CNBC, The New York Times, Al Jazeera, Bloomberg, and Reuters in under two seconds.
-* **Visual Radar Integration:** Automated browser summoning of interactive live satellite dashboards:
-  * Global Events Radar: `https://worldmonitor.app/`
-  * Global Financial Markets: `https://finance.worldmonitor.app/`
-
-### 5. Hybrid Cognitive Brain (Cloud Acceleration + Local Fallback)
-* **Cloud Turbo Mode:** Seamless integration with Google Gemini 2.5 Flash via `GEMINI_API_KEY`, delivering ~300ms sub-second response times with zero laptop CPU overhead.
-* **Local Offline Engine:** Native integration with Ollama running quantized `llama3.2` locally on CPU/GPU with bounded context windows to prevent system thermal throttling.
-* **Vision Inspection:** Screen analysis engine using `moondream` capable of silently inspecting the user's active display.
+J.A.R.V.I.S. is an enterprise-grade desktop artificial intelligence assistant designed for Windows operating systems. By combining a 3D WebGL holographic particle interface, low-latency asynchronous system automation, parallel real-time news telemetry, and a bilingual voice pipeline across English and Hindi/Hinglish, J.A.R.V.I.S. delivers a responsive, hands-free personal operating environment.
 
 ---
 
-## System Architecture
+## Technical Architecture Overview
+
+The system architecture is structured into five core subsystems:
 
 ```text
-Microphone Input ───────► Bilingual STT (Google Speech / Whisper)
-                                   │
-                                   ▼
-                            Cognitive Engine
-                     ┌─────────────┴─────────────┐
-                     ▼                           ▼
-            Cloud Gemini Flash            Local Ollama 3.2
-            (Zero CPU, ~300ms)          (100% Offline Core)
-                     │                           │
-                     └─────────────┬─────────────┘
-                                   │
-             ┌─────────────────────┼─────────────────────┐
-             ▼                     ▼                     ▼
-     Deep OS Automation    Live World Intel      Bilingual Neural TTS
-    - Application Launch   - Parallel RSS Feeds  - hi-IN-MadhurNeural
-    - Window Snapping      - World Monitor Radar - hi-IN-SwaraNeural
-    - Volume & Brightness  - Market Briefings    - en-GB-RyanNeural
-             │                     │                     │
-             └─────────────────────┼─────────────────────┘
-                                   │
-                                   ▼
-             3D Holographic Particle Interface (Three.js WebGL)
-             - Floating Draggable Mini-Mode (PiP)
-             - Global Quick-Summon Overlay (Alt + Space)
++-----------------------------------------------------------------------------------+
+|                                  USER INTERFACE                                   |
+|   Three.js WebGL 3D Holographic Core Orb (1,200 Dynamic Fibonacci Nodes)          |
+|   Real-Time Telemetry Panels (CPU, RAM, Network Throughput, Weather Radar)        |
+|   Picture-in-Picture (PiP) Transparent Floating Mode with Alt+Space Quick-Summon  |
++------------------------------------------+----------------------------------------+
+                                           |
+                                           v
++-----------------------------------------------------------------------------------+
+|                             SPEECH PROCESSING PIPELINE                            |
+|   Input:  Dual-Language Speech Recognition (Google Speech API / Faster-Whisper)   |
+|   Output: In-Memory Edge Neural TTS (en-GB-RyanNeural, hi-IN-MadhurNeural,        |
+|           en-GB-SoniaNeural, hi-IN-SwaraNeural) + Offline Piper TTS Fallback      |
++------------------------------------------+----------------------------------------+
+                                           |
+                                           v
++-----------------------------------------------------------------------------------+
+|                             HYBRID COGNITIVE ENGINE                               |
+|   Cloud Accelerated Tier: Google Gemini 2.5 Flash (~300ms latency, zero host CPU) |
+|   Local Autonomous Tier:  Ollama LLaMA-3.2 (Quantized local inference engine)    |
+|   Vision Inspection Tier: Moondream 2 Local VLM for Screen Analysis               |
++------------------------------------------+----------------------------------------+
+                                           |
+                                           v
++-----------------------------------------------------------------------------------+
+|                             EXECUTION & TOOL ROUTING                              |
+|   System Control: WMI Brightness, PyAutoGUI Snapping, App Aliases (29+ Apps)      |
+|   Iris Workspace: Dual-Window Workspace Tiling (Split Screen Left/Right)          |
+|   World Intel:    Parallel Asynchronous RSS Parsers + Satellite Radar Dashboards  |
+|   Security:       CREATE_NO_WINDOW Silent Process Sandboxing                      |
++-----------------------------------------------------------------------------------+
 ```
 
 ---
 
-## Installation & Setup
+## Core Capabilities
+
+### 1. 3D Holographic Core Interface (WebGL Particle System)
+* **Fibonacci Sphere Distribution:** Renders 1,200 particle nodes distributed organically across a spherical manifold using Three.js, simulating a futuristic arc reactor core.
+* **Audio-Reactive Harmonic Deformation:** The particle geometry dynamically reacts to microphone frequency amplitudes and speech synthesis state changes, undulating on a mathematical wave function:
+  $$\Delta r = \sin(4\phi + 3t) \cdot \cos(3\theta + 2t) \cdot (3.5 \cdot \text{Pulse})$$
+* **Strict Persona Illumination:**
+  * **J.A.R.V.I.S.:** Cyan illumination (`#00ffff`), British neural voice profile (`en-GB-RyanNeural` for English, `hi-IN-MadhurNeural` for Hindi).
+  * **F.R.I.D.A.Y.:** Ruby Crimson illumination (`#ff0033`), tactical female voice profile (`en-GB-SoniaNeural` for English, `hi-IN-SwaraNeural` for Hindi).
+* **Picture-in-Picture (PiP) Floating HUD:** When idle for 45 seconds or when executing external desktop tasks, the interface contracts into a minimal, draggable desktop orb.
+* **Global Summon Hotkey:** Press `Alt + Space` globally across any Windows program to wake the assistant and restore full focus.
+
+### 2. Seamless Bilingual Voice Engine (English & Hindi/Hinglish)
+* **Bilingual Speech Recognition:** Speech-to-Text configured with multi-dialect support (`en-IN`), seamlessly parsing pure English, Indian English, and conversational Hindi/Hinglish phrasing.
+* **Zero-Lock In-Memory Audio Playback:** Resolves the Windows `pygame.mixer.music` file-locking limitation by loading raw synthesized audio buffers directly into RAM via `pygame.mixer.Sound`, executing immediate disk cleanup without locking audio threads.
+* **Contextual Spoken Acknowledgments:** Dispatches immediate acknowledgments ("Right away, sir", "Ji boss", "Bilkul sir") prior to tool execution to achieve near-zero perceived latency.
+* **Offline Fallback Architecture:** Automatically routes to locally hosted ONNX Piper models (`en_GB-alan-medium.onnx`, `en_GB-jenny_dioco-medium.onnx`) if network connectivity drops.
+
+### 3. Deep Operating System & Hardware Control
+* **Dual-Window Workspace Tiling:** Automates side-by-side application organization with one voice command (e.g., launching WhatsApp on the left half and Google Chrome on the right half).
+* **Normalized Application Launcher:** Direct alias resolution for over 29 desktop applications, including VS Code, Google Chrome, Spotify, Discord, WhatsApp, Windows Terminal, Steam, Notepad, Calculator, and Task Manager.
+* **Display & Volume Automation:** Interacts with Windows Management Instrumentation (WMI) to adjust monitor brightness in real time and adjusts master audio volume levels via PyAutoGUI.
+* **Silent Process Execution:** Enforces `CREATE_NO_WINDOW` across all background command executions, preventing disruptive black command prompt windows from interrupting the user.
+
+### 4. Live Global Intelligence & Financial Telemetry
+* **Parallel Asynchronous Scraping:** Built-in `httpx` async workers polling live RSS wire feeds from BBC World, CNBC, The New York Times, Al Jazeera, Bloomberg, and Reuters in under two seconds.
+* **Live Radar Dashboards:** Direct summoning of satellite dashboards:
+  * Global Conflict & Event Radar: `https://worldmonitor.app/`
+  * Global Market Radar: `https://finance.worldmonitor.app/`
+
+---
+
+## Installation & Environment Configuration
 
 ### Prerequisites
-* Operating System: Windows 10 or Windows 11
-* Python: Version 3.10, 3.11, or 3.12
-* Optional: [Ollama](https://ollama.com/) (for offline local execution)
+* Windows 10 or Windows 11 (64-bit)
+* Python 3.10, 3.11, or 3.12
+* Optional: [Ollama](https://ollama.com/) (for 100% offline local inference)
 
-### 1. Clone the Repository
-```bash
+### Step 1: Clone the Repository
+```powershell
 git clone https://github.com/Pranshu125/J.A.R.V.I.S.git
 cd J.A.R.V.I.S
 ```
 
-### 2. Configure Virtual Environment & Dependencies
+### Step 2: Set Up Virtual Environment
 ```powershell
 python -m venv venv
 .\venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Optional Environment Configuration
-For sub-second cloud acceleration (recommended for zero CPU usage), set your free Gemini API key:
+### Step 3: Configure Environment Variables
+To enable sub-second cloud inference with zero host CPU usage, set your free Google Gemini API key:
 ```powershell
-# In PowerShell:
 $env:GEMINI_API_KEY="your-gemini-api-key-here"
-
-# Or create a .env file in the root directory:
+```
+Or create a `.env` file in the project root:
+```ini
 GEMINI_API_KEY=your-gemini-api-key-here
 ```
-If no API key is specified, the system automatically uses local Ollama (`llama3.2`).
+If no API key is detected, the engine defaults automatically to local Ollama (`llama3.2`).
 
-### 4. Launch J.A.R.V.I.S.
-Run the startup batch script or launch directly via Python:
+### Step 4: Launch J.A.R.V.I.S.
+Execute the one-click startup batch script:
+```powershell
+.\START_JARVIS.bat
+```
+Or run directly via Python:
 ```powershell
 python jarvis_master.py
 ```
 
 ---
 
-## Command Reference
+## Voice & Interaction Reference
 
-### System & Window Automation
-* `"Open VS Code"` / `"Launch Spotify"` / `"Open WhatsApp"`
-* `"Snap this window to the left"` / `"Snap right"`
-* `"Maximize window"` / `"Minimize window"` / `"Show desktop"`
-* `"Volume up"` / `"Volume down"` / `"Mute audio"`
-* `"Brightness up"` / `"Brightness down"`
-* `"Lock workstation"` / `"Take a screenshot"`
+### Workspace & Window Management
+* "Split screen between WhatsApp and Chrome"
+* "Left side pe WhatsApp set kar aur right side pe Chrome"
+* "Snap this window to the left"
+* "Maximize window"
+* "Minimize window"
+* "Show desktop"
+* "Lock workstation"
+* "Take a screenshot"
 
-### Bilingual Hindi & Hinglish Interactions
-* `"WhatsApp khol do"` (Launches WhatsApp)
-* `"YouTube pe Starboy chala do"` (Searches and plays music on YouTube)
-* `"System ka volume badha do"` (Increases master volume)
-* `"Left side pe WhatsApp set kar aur right side pe Chrome"` (Window tiling)
-* `"Aaj ka mausam kaisa hai?"` (Reports localized satellite weather)
-* `"Kaisa chal raha hai boss?"` (Conversational status check)
+### Hardware & Volume Controls
+* "Increase volume by 10 percent"
+* "System ka volume badha do"
+* "Mute system audio"
+* "Chup raho" / "Stop talking"
+* "Increase screen brightness"
+* "Brightness kam karo"
 
-### World Intel & Financial Intelligence
-* `"What's happening in the world?"` / `"Give me a world news brief"`
-* `"What's the financial update?"` / `"Market news"`
-* `"Open the world monitor"` (Launches interactive world radar)
-* `"Open the finance monitor"` (Launches market visualizer)
+### World Intelligence & Financial Radar
+* "What is happening in the world today?"
+* "Give me a global news brief"
+* "Market news update"
+* "Open the world monitor"
+* "Open the finance monitor"
 
-### Persona Switching
-* `"Switch to Friday"` (Switches to F.R.I.D.A.Y. mode, crimson HUD, female voice)
-* `"Switch to Zoey"` (Switches to Z.O.E.Y. mode, amber HUD)
-* `"Switch to Jarvis"` (Switches back to J.A.R.V.I.S. mode, cyan HUD, male voice)
+### Strict Persona Switching
+* "Switch to Friday" (Activates F.R.I.D.A.Y. mode, crimson HUD, female neural voice)
+* "Switch to Jarvis" (Activates J.A.R.V.I.S. mode, cyan HUD, male neural voice)
+
+---
+
+## Repository Structure
+
+```text
+D:\JARVIS
+├── modules/
+│   ├── system_control.py      # WMI hardware control, 29+ app launcher aliases, split-screen tiling
+│   ├── tts_engine.py          # Zero-lock in-memory neural speech synthesis (Edge-TTS + Piper)
+│   └── world_intel.py         # Parallel async RSS news scraping & satellite radar launchers
+├── models/                    # Offline Piper ONNX neural voice models
+├── hud.html                   # Three.js 3D WebGL holographic particle orb & real-time telemetry HUD
+├── jarvis_master.py           # Core orchestrator: pipeline threads, tool dispatch, hybrid LLM routing
+├── jarvis_state.md            # Rolling conversational memory vault
+├── requirements.txt           # Python package dependencies
+├── START_JARVIS.bat           # Production startup batch launcher
+└── README.md                  # System documentation
+```
+
+---
+
+## Technical Specifications
+
+| Parameter | Specification |
+| :--- | :--- |
+| Interface Framework | PyWebView with HTML5, CSS3, Three.js WebGL |
+| 3D Geometry | 1,200 particle nodes, Fibonacci spherical distribution |
+| Speech-to-Text | Dual-Language Google Speech API (`en-IN`) / Faster-Whisper |
+| Text-to-Speech | Edge-TTS (`hi-IN-MadhurNeural`, `hi-IN-SwaraNeural`, `en-GB-RyanNeural`, `en-GB-SoniaNeural`) |
+| Offline TTS Fallback | Piper ONNX (`en_GB-alan-medium`, `en_GB-jenny_dioco-medium`) |
+| Cognitive Processing | Google Gemini 2.5 Flash (Cloud) / Ollama LLaMA-3.2 (Local) |
+| Vision Processing | Moondream 2 Local VLM |
+| Hardware Abstraction | Windows Management Instrumentation (WMI), PyAutoGUI, PSUtil |
+| Process Management | `subprocess.CREATE_NO_WINDOW` background isolation |
 
 ---
 
 ## License
-This project is open-source and licensed under the MIT License.
+
+This project is licensed under the MIT License.
