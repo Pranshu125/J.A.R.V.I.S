@@ -69,36 +69,82 @@ def sync_api_keys_config() -> str:
     return api_key
 
 
+GEMINI_MODEL_LADDER = (
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.6-flash",
+    "gemini-3.7-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-3.8-flash",
+)
+_EXHAUSTED_MODELS: set[str] = set()
+
+
+def get_active_gemini_ladder() -> list[str]:
+    active = [m for m in GEMINI_MODEL_LADDER if m not in _EXHAUSTED_MODELS]
+    return active if active else list(GEMINI_MODEL_LADDER)
+
+
+def mark_model_exhausted(model_name: str) -> None:
+    _EXHAUSTED_MODELS.add(model_name)
+
+
 def patch_gemini_models() -> None:
     """
     Patch Mark-LV core.gemini ladders and google.generativeai GenerativeModel
-    so any legacy 'gemini-2.5-flash' or 'live' one-shot calls use 'gemini-3.8-flash'.
+    so any legacy 'gemini-2.5-flash' or rate-limited model automatically rotates
+    across GEMINI_MODEL_LADDER without 429 crashes.
     """
     try:
         from core import gemini as lv_gemini
         lv_gemini._KEY_FILE = ROOT_DIR / "config" / "api_keys.json"
         lv_gemini._cached_key = None
-        fast_ladder = (
-            "gemini-3.8-flash",
-            "gemini-flash-latest",
-            "gemini-3.5-flash",
-            "gemini-3.5-flash-lite",
-        )
-        lv_gemini._LADDERS[lv_gemini.FAST] = fast_ladder
-        lv_gemini._LADDERS[lv_gemini.SMART] = fast_ladder
-        lv_gemini._LADDERS[lv_gemini.SEARCH] = fast_ladder
+        lv_gemini._LADDERS[lv_gemini.FAST] = GEMINI_MODEL_LADDER
+        lv_gemini._LADDERS[lv_gemini.SMART] = GEMINI_MODEL_LADDER
+        lv_gemini._LADDERS[lv_gemini.SEARCH] = GEMINI_MODEL_LADDER
     except Exception as e:
         print(f"[Bridge] core.gemini patch warning: {e}")
 
     try:
         import google.generativeai as genai
+        from google.api_core import retry as g_retry
         _OrigGenModel = genai.GenerativeModel
+        _NO_RETRY = g_retry.Retry(predicate=lambda exc: False)
 
         class _PatchedGenModel(_OrigGenModel):
-            def __init__(self, model_name="gemini-3.8-flash", *args, **kwargs):
-                if isinstance(model_name, str) and ("2.5-flash" in model_name or "1.5-flash" in model_name):
-                    model_name = "gemini-3.8-flash"
+            def __init__(self, model_name="gemini-3.5-flash-lite", *args, **kwargs):
+                self._init_args = args
+                self._init_kwargs = kwargs
+                ladder = get_active_gemini_ladder()
+                if isinstance(model_name, str) and (
+                    "2.5-flash" in model_name
+                    or "1.5-flash" in model_name
+                    or model_name in _EXHAUSTED_MODELS
+                ):
+                    model_name = ladder[0]
+                self._current_model_name = model_name
                 super().__init__(model_name, *args, **kwargs)
+
+            def generate_content(self, contents, *args, **kwargs):
+                kwargs.setdefault("request_options", {"retry": _NO_RETRY})
+                try:
+                    return super().generate_content(contents, *args, **kwargs)
+                except Exception as first_err:
+                    err_str = str(first_err)
+                    if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "Quota exceeded" in err_str or "404" in err_str:
+                        mark_model_exhausted(self._current_model_name)
+                        for fallback_name in get_active_gemini_ladder():
+                            if fallback_name == self._current_model_name:
+                                continue
+                            try:
+                                alt = _OrigGenModel(fallback_name, *self._init_args, **self._init_kwargs)
+                                return alt.generate_content(contents, *args, **kwargs)
+                            except Exception as sub_err:
+                                s_str = str(sub_err)
+                                if "429" in s_str or "RESOURCE_EXHAUSTED" in s_str or "404" in s_str:
+                                    mark_model_exhausted(fallback_name)
+                                continue
+                    raise first_err
 
         genai.GenerativeModel = _PatchedGenModel
     except Exception as e:
@@ -244,6 +290,10 @@ def run_screen_or_camera_vision(angle: str = "screen", text: str = "Describe wha
         return f"Visual sensor capture failed: {e}"
 
     api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    prompt = (
+        f"You are analyzing the user's {source_label}. "
+        f"Answer directly in 2-3 spoken sentences without markdown bullets: {text}"
+    )
     if api_key:
         try:
             from google import genai
@@ -251,18 +301,37 @@ def run_screen_or_camera_vision(angle: str = "screen", text: str = "Describe wha
 
             client = genai.Client(api_key=api_key)
             part = gtypes.Part.from_bytes(data=img_bytes, mime_type=mime)
-            prompt = (
-                f"You are analyzing the user's {source_label}. "
-                f"Answer directly in 2-3 spoken sentences without markdown bullets: {text}"
-            )
-            resp = client.models.generate_content(
-                model="gemini-3.8-flash",
-                contents=[part, prompt],
-            )
-            if resp and getattr(resp, "text", None):
-                return resp.text.strip()
+            for model_name in get_active_gemini_ladder():
+                try:
+                    resp = client.models.generate_content(
+                        model=model_name,
+                        contents=[part, prompt],
+                    )
+                    if resp and getattr(resp, "text", None):
+                        return resp.text.strip()
+                except Exception as m_err:
+                    err_s = str(m_err)
+                    if "429" in err_s or "RESOURCE_EXHAUSTED" in err_s or "404" in err_s:
+                        mark_model_exhausted(model_name)
+                    continue
         except Exception as e:
             print(f"[Vision] Gemini vision error: {e}")
+
+    # Offline / Local Vision Fallback via Ollama moondream:latest
+    try:
+        import base64
+        b64_img = base64.b64encode(img_bytes).decode("utf-8")
+        r = requests.post(
+            "http://localhost:11434/api/generate",
+            json={"model": "moondream:latest", "prompt": prompt, "images": [b64_img], "stream": False},
+            timeout=35,
+        )
+        if r.status_code == 200:
+            ans = (r.json().get("response") or "").strip()
+            if ans:
+                return ans
+    except Exception as e:
+        print(f"[Vision] Local moondream fallback warning: {e}")
 
     return f"Captured {source_label} frame ({len(img_bytes)} bytes), sir, but vision model did not return a description."
 

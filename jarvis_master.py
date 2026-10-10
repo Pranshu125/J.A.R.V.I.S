@@ -53,7 +53,7 @@ from modules.system_control import (
     split_workspace
 )
 from modules.tts_engine import speak_text
-from modules.mark_lv_bridge import UnifiedToolSuite
+from modules.mark_lv_bridge import UnifiedToolSuite, get_active_gemini_ladder, mark_model_exhausted
 
 # ========================================================
 # J.A.R.V.I.S. & F.R.I.D.A.Y. UNIFIED COGNITIVE OS
@@ -284,37 +284,40 @@ class IntelligenceModule:
                 sys_inst = messages[0]["content"] if messages and messages[0]["role"] == "system" else "You are JARVIS."
                 user_prompt = messages[-1]["content"] if messages else "Hello"
 
-                model = None
-                for m_name in ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.5-flash']:
+                for m_name in get_active_gemini_ladder():
                     try:
                         model = genai.GenerativeModel(m_name, tools=gemini_tools, system_instruction=sys_inst)
-                        break
-                    except Exception:
+                        res = model.generate_content(user_prompt)
+                        if res.candidates and res.candidates[0].content.parts:
+                            parts = res.candidates[0].content.parts
+                            tool_calls = []
+                            for p in parts:
+                                if p.function_call:
+                                    fn = p.function_call
+                                    tool_calls.append({
+                                        "function": {
+                                            "name": fn.name,
+                                            "arguments": dict(fn.args)
+                                        }
+                                    })
+                            if tool_calls:
+                                return {"role": "assistant", "content": "", "tool_calls": tool_calls}
+
+                            text_parts = [p.text for p in parts if p.text]
+                            if text_parts:
+                                return {"role": "assistant", "content": "".join(text_parts).strip()}
+                        return {"role": "assistant", "content": res.text.strip()}
+                    except Exception as m_err:
+                        err_s = str(m_err)
+                        if "429" in err_s or "RESOURCE_EXHAUSTED" in err_s or "Quota exceeded" in err_s or "404" in err_s:
+                            mark_model_exhausted(m_name)
                         continue
-
-                if model:
-                    res = model.generate_content(user_prompt)
-                    if res.candidates and res.candidates[0].content.parts:
-                        parts = res.candidates[0].content.parts
-                        tool_calls = []
-                        for p in parts:
-                            if p.function_call:
-                                fn = p.function_call
-                                tool_calls.append({
-                                    "function": {
-                                        "name": fn.name,
-                                        "arguments": dict(fn.args)
-                                    }
-                                })
-                        if tool_calls:
-                            return {"role": "assistant", "content": "", "tool_calls": tool_calls}
-
-                        text_parts = [p.text for p in parts if p.text]
-                        if text_parts:
-                            return {"role": "assistant", "content": "".join(text_parts).strip()}
-                    return {"role": "assistant", "content": res.text.strip()}
             except Exception as e:
-                window.evaluate_js(f"addLog('SYSTEM', 'Gemini fallback to Ollama: {e}')")
+                safe_err = json.dumps(f"Gemini fallback to Ollama: {str(e).splitlines()[0][:120]}")
+                try:
+                    window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
+                except Exception:
+                    pass
 
         # 2. Local Ollama Mode with low-latency configuration
         payload = {
@@ -535,7 +538,8 @@ class JarvisPipeline:
                 )
                 self.window.evaluate_js("addLog('SYSTEM', 'Live satellite weather telemetry synchronized.')")
         except Exception as e:
-            self.window.evaluate_js(f"addLog('SYSTEM', 'Weather telemetry warning: {e}')")
+            safe_err = json.dumps(f"Weather telemetry warning: {str(e).splitlines()[0][:100]}")
+            self.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
 
     def _get_uptime_strings(self):
         os_sec = max(0, int(time.time() - psutil.boot_time()))
@@ -583,7 +587,8 @@ class JarvisPipeline:
             safe_rep = json.dumps(report)
             self.window.evaluate_js(f"addLog('SYSTEM', {safe_rep})")
         except Exception as e:
-            self.window.evaluate_js(f"addLog('SYSTEM', 'Network check failed: {e}')")
+            safe_err = json.dumps(f"Network check failed: {str(e).splitlines()[0][:100]}")
+            self.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
 
     def telemetry_worker(self):
         time.sleep(1.0)
@@ -845,7 +850,11 @@ class JarvisPipeline:
 
                 self.text_queue.task_done()
             except Exception as e:
-                self.window.evaluate_js(f"addLog('SYSTEM', 'Cognitive processing warning: {e}')")
+                safe_err = json.dumps(f"Cognitive processing warning: {str(e).splitlines()[0][:120]}")
+                try:
+                    self.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
+                except Exception:
+                    pass
 
     def tts_worker(self):
         """Zero-Lock In-Memory Bilingual Neural TTS Engine"""
@@ -862,7 +871,11 @@ class JarvisPipeline:
                 
                 self.window.evaluate_js("updateState('ONLINE')")
             except Exception as e:
-                self.window.evaluate_js(f"addLog('SYSTEM', 'Voice Engine Warning: {e}')")
+                safe_err = json.dumps(f"Voice Engine Warning: {str(e).splitlines()[0][:100]}")
+                try:
+                    self.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
+                except Exception:
+                    pass
             finally:
                 if hasattr(self, 'response_queue'):
                     self.response_queue.task_done()
@@ -920,7 +933,8 @@ class Api:
                 self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {safe_msg})")
                 self.pipeline.window.evaluate_js(f"setAttachedFile({json.dumps(fname)})")
         except Exception as e:
-            self.pipeline.window.evaluate_js(f"addLog('SYSTEM', 'File picker warning: {e}')")
+            safe_err = json.dumps(f"File picker warning: {str(e).splitlines()[0][:100]}")
+            self.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
 
     def scan_airspace(self):
         """Run immediate 200km OpenSky aircraft radar scan."""
@@ -951,7 +965,8 @@ class Api:
                 safe = json.dumps(f"Memory Vault ({len(entries)} entries): {summary}")
                 self.pipeline.window.evaluate_js(f"addLog('SYSTEM', {safe})")
         except Exception as e:
-            self.pipeline.window.evaluate_js(f"addLog('SYSTEM', 'Memory Vault error: {e}')")
+            safe_err = json.dumps(f"Memory Vault error: {str(e).splitlines()[0][:100]}")
+            self.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
 
     def enter_mini(self):
         self.pipeline.enter_orb_only_mode(sleep_mode=False)
