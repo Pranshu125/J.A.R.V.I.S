@@ -274,41 +274,93 @@ def run_aircraft_radar(action: str = "report", radius_km: float = 200.0) -> str:
 
 
 # ==============================================================================
-# SCREEN & WEBCAM GEMINI VISION (Ported from Mark-LV screen_processor.py)
+# SCREEN & WEBCAM GEMINI VISION (Ported from Mark-LV & Mark-XXXIX-OR)
 # ==============================================================================
-def run_screen_or_camera_vision(angle: str = "screen", text: str = "Describe what you see clearly and concisely.") -> str:
-    """Capture screen or webcam frame and analyze with Gemini 3.8 Flash Vision."""
+_VISION_CLIENT = None
+
+
+def _get_active_window_title() -> str:
+    """Return the title of the currently focused Windows application."""
     try:
-        from actions.screen_processor import _capture_screen, _capture_camera
+        import ctypes
+        user32 = ctypes.windll.user32
+        hwnd = user32.GetForegroundWindow()
+        length = user32.GetWindowTextLengthW(hwnd)
+        if length > 0:
+            buf = ctypes.create_unicode_buffer(length + 1)
+            user32.GetWindowTextW(hwnd, buf, length + 1)
+            return buf.value.strip()
+    except Exception:
+        pass
+    return "Desktop"
+
+
+def _fast_capture_screen() -> tuple[bytes, str]:
+    """Ultra-fast (~15ms) direct RGB-to-JPEG screen capture with 3-stage Windows GDI fallback."""
+    import PIL.Image
+    img = None
+    try:
+        import mss
+        with mss.mss() as sct:
+            monitors = sct.monitors
+            target = monitors[1] if len(monitors) > 1 else monitors[0]
+            shot = sct.grab(target)
+            img = PIL.Image.frombytes("RGB", shot.size, shot.rgb)
+    except Exception:
+        try:
+            import PIL.ImageGrab
+            img = PIL.ImageGrab.grab(include_layered_windows=False).convert("RGB")
+        except Exception:
+            import pyautogui
+            img = pyautogui.screenshot().convert("RGB")
+
+    img.thumbnail((1152, 648), PIL.Image.BILINEAR)
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=76, optimize=False)
+    return buf.getvalue(), "image/jpeg"
+
+
+def run_screen_or_camera_vision(angle: str = "screen", text: str = "Analyze what is on my screen and help me with what I am looking at.") -> str:
+    """Capture screen or webcam frame in ~15ms and analyze in a single pass with Gemini Vision."""
+    global _VISION_CLIENT
+    try:
         if (angle or "screen").lower().strip() in ("camera", "webcam", "cam", "face"):
+            from actions.screen_processor import _capture_camera
             img_bytes, mime = _capture_camera()
             source_label = "webcam"
+            src_tag = "[IMAGE SOURCE: WEBCAM]"
         else:
-            img_bytes, mime = _capture_screen()
+            img_bytes, mime = _fast_capture_screen()
             source_label = "display"
+            win_title = _get_active_window_title()
+            src_tag = f"[IMAGE SOURCE: SCREEN CAPTURE | ACTIVE WINDOW: {win_title}]"
     except Exception as e:
         return f"Visual sensor capture failed: {e}"
 
     api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     prompt = (
-        f"You are analyzing the user's {source_label}. "
-        f"Answer directly in 2-3 spoken sentences without markdown bullets: {text}"
+        f"{src_tag}\n"
+        "You are JARVIS from Iron Man. Analyze this image with technical precision and intelligence. "
+        "Be specific about the exact application, text, code, error, or content visible on screen, and help the user directly. "
+        "Respond in maximum 2 to 3 short spoken sentences without markdown bullets or symbols. Speed and clarity are priority.\n"
+        f"User request: {text}"
     )
     if api_key:
         try:
             from google import genai
             from google.genai import types as gtypes
 
-            client = genai.Client(api_key=api_key)
+            if _VISION_CLIENT is None:
+                _VISION_CLIENT = genai.Client(api_key=api_key)
             part = gtypes.Part.from_bytes(data=img_bytes, mime_type=mime)
             for model_name in get_active_gemini_ladder():
                 try:
-                    resp = client.models.generate_content(
+                    resp = _VISION_CLIENT.models.generate_content(
                         model=model_name,
                         contents=[part, prompt],
                     )
                     if resp and getattr(resp, "text", None):
-                        return resp.text.strip()
+                        return resp.text.strip().replace("*", "")
                 except Exception as m_err:
                     err_s = str(m_err)
                     if "429" in err_s or "RESOURCE_EXHAUSTED" in err_s or "404" in err_s:

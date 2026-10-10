@@ -431,7 +431,7 @@
             <div class="controls">
                 <button class="icon-btn" id="cam-btn" onclick="toggleCamera()" title="Toggle Live Camera">📷</button>
                 <button class="icon-btn" id="mic-btn" onclick="startMicVisualizer()" title="Connect Audio Visualizer">🎙️</button>
-                <button class="icon-btn" onclick="quickCmd('Analyze my screen and tell me what I am looking at')" title="Screen Vision (Analyze Screen)">🖥️</button>
+                <button class="icon-btn" id="vision-btn" onclick="triggerScreenVision()" title="Screen Vision Mode (Instant 1-Pass Screen Analysis)">🖥️</button>
                 <button class="icon-btn" onclick="focusInput()" title="Focus Command Input">⌨️</button>
             </div>
         </div>
@@ -962,6 +962,15 @@
                 pywebview.api.send_command(cmdText);
             } else {
                 addLog('USER', cmdText);
+            }
+        }
+
+        function triggerScreenVision() {
+            toggleMiniMode(true);
+            if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.trigger_screen_vision) {
+                pywebview.api.trigger_screen_vision();
+            } else {
+                quickCmd('Analyze my screen and tell me what I am looking at');
             }
         }
 

@@ -53,7 +53,12 @@ from modules.system_control import (
     split_workspace
 )
 from modules.tts_engine import speak_text
-from modules.mark_lv_bridge import UnifiedToolSuite, get_active_gemini_ladder, mark_model_exhausted
+from modules.mark_lv_bridge import (
+    UnifiedToolSuite,
+    get_active_gemini_ladder,
+    mark_model_exhausted,
+    run_screen_or_camera_vision,
+)
 
 # ========================================================
 # J.A.R.V.I.S. & F.R.I.D.A.Y. UNIFIED COGNITIVE OS
@@ -354,6 +359,7 @@ class JarvisPipeline:
         self.is_sleeping = False
         self.is_fullscreen = True
         self.is_orb_only = False
+        self.screen_vision_mode = False
         self.last_active = time.time()
         self.session_start = time.time()
         self.command_count = 0
@@ -391,16 +397,25 @@ class JarvisPipeline:
         except Exception:
             pass
 
-    def enter_orb_only_mode(self, sleep_mode: bool = False):
-        """Collapse HUD so ONLY the 3D Holographic Orb is visible on a 100% transparent background."""
+    def enter_orb_only_mode(self, sleep_mode: bool = False, vision_mode: bool = False):
+        """Collapse HUD so ONLY the 3D Holographic Orb floats on a 100% transparent background."""
         try:
             self.is_orb_only = True
             self.is_sleeping = sleep_mode
+            if vision_mode:
+                self.screen_vision_mode = True
             self.window.evaluate_js("toggleMiniMode(true)")
             if getattr(self, "is_fullscreen", False):
                 self.window.toggle_fullscreen()
                 self.is_fullscreen = False
-            self.window.resize(340, 340)
+            self.window.resize(320, 320)
+            try:
+                import ctypes
+                sw = ctypes.windll.user32.GetSystemMetrics(0)
+                sh = ctypes.windll.user32.GetSystemMetrics(1)
+                self.window.move(max(20, sw - 340), max(20, sh - 380))
+            except Exception:
+                pass
         except Exception as e:
             print(f"enter_orb_only_mode warning: {e}")
 
@@ -409,6 +424,7 @@ class JarvisPipeline:
         try:
             self.is_orb_only = False
             self.is_sleeping = False
+            self.screen_vision_mode = False
             self.last_active = time.time()
             self.window.evaluate_js("toggleMiniMode(false)")
             if not getattr(self, "is_fullscreen", False):
@@ -708,8 +724,33 @@ class JarvisPipeline:
                     self.text_queue.task_done()
                     continue
 
-                # Pre-emptively enter Orb-Only Transparent Mode if command asks to open something or use Screen Vision
-                if any(k in cmd_lower for k in ("open ", "khol", "launch ", "start ", "play ", "screen", "looking at", "world news", "finance news", "financial market")):
+                # Single-Pass Direct Vision Fast-Path (Mark-LV / Mark-XXXIX-OR Architecture: 1 API call instead of 2)
+                is_cam_query = any(k in cmd_lower for k in ("camera", "webcam", "look at me", "who am i", "mera chehra"))
+                is_screen_query = any(k in cmd_lower for k in (
+                    "screen", "looking at", "what do you see", "read this", "analyze this",
+                    "this error", "this code", "on my display", "screen par", "kya dikh raha"
+                ))
+                is_action_cmd = any(k in cmd_lower for k in (
+                    "open ", "khol", "launch ", "start ", "play ", "volume", "brightness",
+                    "mute", "weather", "news", "remind", "search "
+                ))
+                if is_cam_query or is_screen_query or (getattr(self, "screen_vision_mode", False) and not is_action_cmd):
+                    angle = "camera" if is_cam_query else "screen"
+                    was_fullscreen = getattr(self, "is_fullscreen", False)
+                    if angle == "screen":
+                        self.enter_orb_only_mode(sleep_mode=False, vision_mode=True)
+                        if was_fullscreen:
+                            time.sleep(0.22)
+                    vision_ans = run_screen_or_camera_vision(angle=angle, text=text)
+                    self.history.append(("USER", text))
+                    self.history.append(("JARVIS", vision_ans))
+                    MemoryModule.save(self.history)
+                    self.response_queue.put(vision_ans)
+                    self.text_queue.task_done()
+                    continue
+
+                # Pre-emptively enter Orb-Only Transparent Mode if command asks to open something
+                if any(k in cmd_lower for k in ("open ", "khol", "launch ", "start ", "play ", "world news", "finance news", "financial market")):
                     self.enter_orb_only_mode(sleep_mode=False)
 
                 # Bilingual Spoken Persona + Long-Term Memory Injection (Mark-LV + Iris)
@@ -968,6 +1009,21 @@ class Api:
             safe_err = json.dumps(f"Memory Vault error: {str(e).splitlines()[0][:100]}")
             self.window.evaluate_js(f"addLog('SYSTEM', {safe_err})")
 
+    def trigger_screen_vision(self):
+        """Instant 1-pass Screen Vision Mode: collapses HUD to corner Orb, captures screen in 15ms, and analyzes directly."""
+        self.pipeline.last_active = time.time()
+        self.pipeline.increment_command_count()
+        self.pipeline.enter_orb_only_mode(sleep_mode=False, vision_mode=True)
+        def _run():
+            time.sleep(0.22)
+            self.pipeline.window.evaluate_js("updateState('THINKING')")
+            res = run_screen_or_camera_vision("screen", "Analyze my screen and tell me what I am looking at.")
+            self.pipeline.history.append(("USER", "[Screen Vision]"))
+            self.pipeline.history.append(("JARVIS", res))
+            MemoryModule.save(self.pipeline.history)
+            self.pipeline.response_queue.put(res)
+        threading.Thread(target=_run, daemon=True).start()
+
     def enter_mini(self):
         self.pipeline.enter_orb_only_mode(sleep_mode=False)
         
@@ -999,6 +1055,7 @@ if __name__ == '__main__':
         api.scan_airspace,
         api.undo_last_action,
         api.show_memory_vault,
+        api.trigger_screen_vision,
         api.enter_mini,
         api.exit_mini
     )
