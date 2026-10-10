@@ -17,9 +17,9 @@ if exist ".env" (
 )
 
 if defined GEMINI_API_KEY (
-    echo [JARVIS] Cloud Acceleration: Active (Google Gemini 3.8 Flash - 35 Tools)
+    echo [JARVIS] Cloud Acceleration: Active - Google Gemini 3.8 Flash [35 Tools]
 ) else (
-    echo [JARVIS] Local Autonomous Mode: Active (Ollama)
+    echo [JARVIS] Local Autonomous Mode: Active - Ollama
 )
 
 start /B ollama serve >nul 2>&1

@@ -366,7 +366,11 @@ class JarvisPipeline:
         if os.path.exists(mem_file):
             try:
                 with open(mem_file, "r", encoding="utf-8") as f:
-                    data = json.load(f)
+                    loaded = json.load(f)
+                    if isinstance(loaded, dict):
+                        data = loaded
+                    elif isinstance(loaded, list):
+                        data = {"legacy_history": loaded}
             except Exception:
                 data = {}
         count = int(data.get("session_count", 0)) + 1
