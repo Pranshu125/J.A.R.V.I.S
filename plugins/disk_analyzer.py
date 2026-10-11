@@ -32,7 +32,7 @@ def _scan_drive_treemap(drive_root: str = "D:\\") -> dict:
                 if entry.is_file(follow_symlinks=False):
                     size_bytes = entry.stat(follow_symlinks=False).st_size
                 elif entry.is_dir(follow_symlinks=False):
-                    for sub in os.scandir(entry.path):
+                    for _, sub in zip(range(250), os.scandir(entry.path)):
                         if sub.is_file(follow_symlinks=False):
                             size_bytes += sub.stat(follow_symlinks=False).st_size
             except Exception:
@@ -68,10 +68,11 @@ def _scan_drive_treemap(drive_root: str = "D:\\") -> dict:
 
 def disk_analyzer(parameters: dict, player=None, window=None) -> str:
     params = parameters or {}
-    drive = str(params.get("drive") or "C:\\").strip()
+    drive = str(params.get("drive") or params.get("path") or "C:\\").strip()
     data = _scan_drive_treemap(drive)
     win = window or (getattr(getattr(player, "pipeline", None), "window", None) if player else None)
     if win:
+        win.evaluate_js("if(typeof exitOrbOnlyFromJS==='function') exitOrbOnlyFromJS();")
         win.evaluate_js(f"showHudCard('disk_map', {json.dumps(data)})")
     return (
         f"A live map showing the space on drive {data['drive']} is now on your screen, sir. "

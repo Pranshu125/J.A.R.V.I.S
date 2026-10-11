@@ -11,15 +11,15 @@ from modules.mark_lv_bridge import get_user_location
 
 def earth_globe(parameters: dict, player=None, window=None) -> str:
     params = parameters or {}
-    mode = str(params.get("mode") or "vector").lower().strip()
-    show_quakes = bool(params.get("earthquakes", False) or "quake" in mode)
+    mode = str(params.get("mode") or params.get("focus") or "vector").lower().strip()
+    show_quakes = bool(params.get("earthquakes", True) or "quake" in mode or "seismic" in mode)
 
     loc = get_user_location()
     quakes = []
     if show_quakes:
         try:
             url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson"
-            r = requests.get(url, timeout=5).json()
+            r = requests.get(url, timeout=3).json()
             for feat in (r.get("features") or [])[:12]:
                 props = feat.get("properties") or {}
                 coords = (feat.get("geometry") or {}).get("coordinates") or [0, 0]
@@ -42,6 +42,7 @@ def earth_globe(parameters: dict, player=None, window=None) -> str:
     }
     win = window or (getattr(getattr(player, "pipeline", None), "window", None) if player else None)
     if win:
+        win.evaluate_js("if(typeof exitOrbOnlyFromJS==='function') exitOrbOnlyFromJS();")
         win.evaluate_js(f"showHudCard('earth_globe', {json.dumps(payload)})")
 
     if show_quakes:

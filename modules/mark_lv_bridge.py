@@ -273,7 +273,7 @@ class JarvisUIAdapter:
         snippet = str(content or "")[:600]
         self.write_log(f"[{title}] {snippet}")
         try:
-            self.pipeline.window.evaluate_js("glanceAvatarDown && glanceAvatarDown()")
+            self.pipeline.window.evaluate_js("if(typeof glanceAvatarDown==='function') glanceAvatarDown();")
         except Exception:
             pass
 
@@ -321,7 +321,7 @@ class JarvisUIAdapter:
         self._video_muted = True
         self.pipeline.video_sound_active = False
         try:
-            self.pipeline.window.evaluate_js("stopHudVideo && stopHudVideo()")
+            self.pipeline.window.evaluate_js("if(typeof stopHudVideo==='function') stopHudVideo();")
         except Exception:
             pass
 
@@ -334,7 +334,7 @@ class JarvisUIAdapter:
         else:
             self.write_log("Video audio muted: Microphone restored.")
         try:
-            self.pipeline.window.evaluate_js(f"setHudVideoMuted && setHudVideoMuted({'true' if muted else 'false'})")
+            self.pipeline.window.evaluate_js(f"if(typeof setHudVideoMuted==='function') setHudVideoMuted({'true' if muted else 'false'});")
         except Exception:
             pass
 

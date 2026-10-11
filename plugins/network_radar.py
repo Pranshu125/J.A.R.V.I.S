@@ -91,7 +91,7 @@ def network_radar(parameters: dict, player=None, window=None) -> str:
     data = _scan_lan_devices()
     win = window or (getattr(getattr(player, "pipeline", None), "window", None) if player else None)
     if win:
-        win.evaluate_js("exitOrbOnlyFromJS && exitOrbOnlyFromJS()")
+        win.evaluate_js("if(typeof exitOrbOnlyFromJS==='function') exitOrbOnlyFromJS();")
         win.evaluate_js(f"showHudCard('network_radar', {json.dumps(data)})")
     count = len(data["devices"])
     return (

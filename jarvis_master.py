@@ -807,10 +807,14 @@ class JarvisPipeline:
         disk = psutil.disk_usage(os.path.abspath(os.sep))
         disk_str = f"{int(disk.used / (1024 ** 3))}/{int(disk.total / (1024 ** 3))} GB"
         os_str, sess_str = self._get_uptime_strings()
+        try:
+            proc_count = len(psutil.pids())
+        except Exception:
+            proc_count = 210
 
         self.window.evaluate_js(
             f"updateSystemStats({cpu}, {ram}, {json.dumps(ram_str)}, {json.dumps(disk_str)}, "
-            f"{self.session_count}, {self.command_count}, {json.dumps(os_str)}, {json.dumps(sess_str)})"
+            f"{self.session_count}, {self.command_count}, {json.dumps(os_str)}, {json.dumps(sess_str)}, {proc_count})"
         )
 
     def push_stats_once(self) -> None:
@@ -893,8 +897,6 @@ class JarvisPipeline:
                     audio = recognizer.listen(source, timeout=2 if was_speaking else 3, phrase_time_limit=p_limit)
                     if self.is_muted or self.video_sound_active:
                         continue
-                    if not was_speaking:
-                        self.window.evaluate_js("updateState('PROCESSING')")
                     text = recognizer.recognize_google(audio, language="en-IN").lower()
 
                     if text:
@@ -1406,8 +1408,8 @@ class JarvisPipeline:
 
 
 class Api:
-    def __init__(self, pipeline: JarvisPipeline):
-        self.pipeline = pipeline
+    def __init__(self, pipeline: JarvisPipeline | None = None):
+        self.pipeline: JarvisPipeline = pipeline  # type: ignore[assignment]
 
     def send_command(self, text: str) -> None:
         self.pipeline.last_active = time.time()
@@ -1448,19 +1450,19 @@ class Api:
     def network_diagnostics(self) -> None:
         threading.Thread(target=self.pipeline.run_network_diagnostics, daemon=True).start()
 
-    def toggle_mute(self) -> None:
+    def toggle_mute(self) -> str:
         try:
             if pygame.mixer.get_init():
                 pygame.mixer.stop()
             self.pipeline.is_muted = not self.pipeline.is_muted
             volume_control("mute")
-            lbl = "⊘ MUTE" if self.pipeline.is_muted else "◉ AUD"
-            self.pipeline.window.evaluate_js(
-                f"const vb=document.getElementById('vol-btn'); if(vb) vb.innerText={json.dumps(lbl)};"
-            )
-            self.pipeline.window.evaluate_js("addLog('SYSTEM', 'System audio mute toggled.')")
+            state_str = "MUTED" if self.pipeline.is_muted else "LISTENING"
+            self.pipeline.window.evaluate_js(f"syncMicState({json.dumps(self.pipeline.is_muted)})")
+            self.pipeline.window.evaluate_js(f"updateState({json.dumps(state_str)})")
+            self.pipeline.window.evaluate_js("addLog('SYSTEM', 'Microphone & system audio mute toggled.')")
         except Exception:
             pass
+        return json.dumps({"is_muted": self.pipeline.is_muted})
 
     def hud_video_control(self, action: str) -> str:
         """Control the in-HUD video player and synchronize Smart Mic Mute state."""
@@ -1496,6 +1498,7 @@ class Api:
             self.pipeline.proactive_enabled = val
         elif k == "mic_mute":
             self.pipeline.is_muted = val
+            self.pipeline.window.evaluate_js(f"syncMicState({json.dumps(self.pipeline.is_muted)})")
         elif k == "screen_vision":
             self.pipeline.screen_vision_mode = val
         self.pipeline.window.evaluate_js(
@@ -1530,8 +1533,8 @@ class Api:
         """Return JSON list of discovered single-file plugins and their load latency."""
         reg = self.pipeline.tool_suite.plugin_registry
         return json.dumps({
-            "load_ms": reg.last_scan_ms,
-            "plugins": reg.to_ui_list(),
+            "load_ms": getattr(reg, "load_ms", 0.5),
+            "plugins": reg.list_plugins_metadata(),
         })
 
     def toggle_plugin_state(self, name: str, enabled: bool) -> str:
@@ -1822,21 +1825,23 @@ if __name__ == "__main__":
             if _proc.info["pid"] not in safe_pids and "python" in pname:
                 cmdline = _proc.cmdline()
                 if any(os.path.basename(arg).lower() == "jarvis_master.py" for arg in cmdline):
-                    _proc.terminate()
+                    _proc.kill()
         except Exception:
             pass
 
     html_path = os.path.join(_ROOT_DIR, "hud.html")
     sw, sh = _get_screen_size()
+    api = Api(None)
     window = webview.create_window(
         "JARVIS Master",
         html_path,
+        js_api=api,
         x=0,
         y=0,
         width=sw,
         height=sh,
         transparent=False,
-        background_color="#05080c",
+        background_color="#02060c",
         frameless=True,
         easy_drag=False,
         text_select=True,
@@ -1844,42 +1849,7 @@ if __name__ == "__main__":
         on_top=True,
     )
     pipeline = JarvisPipeline(window)
-    api = Api(pipeline)
-    window.expose(
-        api.send_command,
-        api.kill_command,
-        api.minimize,
-        api.toggle_fullscreen,
-        api.destroy,
-        api.force_weather_update,
-        api.force_stats_update,
-        api.network_diagnostics,
-        api.toggle_mute,
-        api.hud_video_control,
-        api.set_control_toggle,
-        api.get_controls_state,
-        api.get_remote_pairing,
-        api.regenerate_remote_pin,
-        api.get_plugins_list,
-        api.toggle_plugin_state,
-        api.reload_plugins_now,
-        api.run_plugin_direct,
-        api.get_memory_vault_items,
-        api.delete_memory_vault_item,
-        api.trigger_morning_briefing,
-        api.create_desktop_shortcut,
-        api.pick_file,
-        api.scan_airspace,
-        api.undo_last_action,
-        api.show_memory_vault,
-        api.trigger_screen_vision,
-        api.analyze_camera_frame,
-        api.save_camera_snapshot,
-        api.gesture_action,
-        api.announce_camera_items,
-        api.enter_mini,
-        api.exit_mini,
-    )
+    api.pipeline = pipeline
 
     threading.Timer(2.0, pipeline.start_services).start()
     webview.start()
