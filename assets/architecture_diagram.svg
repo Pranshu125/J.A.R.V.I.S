@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 680" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#02070f" />
+      <stop offset="50%" stop-color="#041022" />
+      <stop offset="100%" stop-color="#020812" />
+    </linearGradient>
+    <linearGradient id="boxGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#071a30" />
+      <stop offset="100%" stop-color="#030c18" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#241905" />
+      <stop offset="100%" stop-color="#0d0902" />
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#08223a" stroke-width="1" />
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="680" fill="url(#bgGrad)" />
+  <rect width="1280" height="680" fill="url(#grid)" />
+  <rect x="14" y="14" width="1252" height="652" fill="none" stroke="#00d4ff" stroke-width="1.5" stroke-opacity="0.6" />
+
+  <!-- Header -->
+  <rect x="28" y="26" width="1224" height="58" fill="#041224" stroke="#00d4ff" stroke-width="1.5" />
+  <text x="48" y="52" fill="#00e5ff" font-family="Consolas, monospace" font-size="20" font-weight="bold" letter-spacing="2">
+    J.A.R.V.I.S. / F.R.I.D.A.Y.  --  MARK LVIII + BAREHANDS SYSTEM ARCHITECTURE
+  </text>
+  <text x="48" y="72" fill="#7cb8dc" font-family="Consolas, monospace" font-size="12" letter-spacing="1">
+    ZERO-DEAD-AIR VOICE PIPELINE  |  9-MODEL FALLBACK LADDER  |  12 CORE OS SKILLS  |  5X SINGLE-FILE PLUGIN ENGINE  |  HOLOGRAPHIC HUD
+  </text>
+
+  <!-- Column 1: Multimodal Input & Sensor Layer -->
+  <rect x="28" y="102" width="280" height="546" fill="url(#boxGrad)" stroke="#00d4ff" stroke-width="1.5" />
+  <rect x="28" y="102" width="280" height="32" fill="#082442" stroke="#00d4ff" stroke-width="1" />
+  <text x="42" y="123" fill="#00e5ff" font-family="Consolas, monospace" font-size="13" font-weight="bold" letter-spacing="1.5">
+    01 // MULTIMODAL INPUT LAYER
+  </text>
+
+  <!-- Input Boxes -->
+  <rect x="44" y="150" width="248" height="74" fill="#04101e" stroke="#00a8cc" stroke-width="1" />
+  <text x="56" y="170" fill="#00e5ff" font-family="Consolas, monospace" font-size="12" font-weight="bold">VOICE &amp; WAKE-WORD ENGINE</text>
+  <text x="56" y="188" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Wake Word + Push-to-Talk (Space)</text>
+  <text x="56" y="204" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Smart Mic Mute on Video Audio</text>
+  <text x="56" y="218" fill="#00d4ff" font-family="Consolas, monospace" font-size="10">- Instant Voice Ack (&lt;150ms)</text>
+
+  <rect x="44" y="240" width="248" height="84" fill="#04101e" stroke="#00a8cc" stroke-width="1" />
+  <text x="56" y="260" fill="#00e5ff" font-family="Consolas, monospace" font-size="12" font-weight="bold">BAREHANDS SPATIAL AR VISION</text>
+  <text x="56" y="278" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- MediaPipe 21-Landmark Skeleton</text>
+  <text x="56" y="294" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Palm Ring (J.A.R.V.I.S. ACTIVE)</text>
+  <text x="56" y="310" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- 4 Orbs: VAULT / PROPS / WIDGETS</text>
+
+  <rect x="44" y="340" width="248" height="84" fill="#04101e" stroke="#00a8cc" stroke-width="1" />
+  <text x="56" y="360" fill="#00e5ff" font-family="Consolas, monospace" font-size="12" font-weight="bold">DUAL VISUAL AWARENESS</text>
+  <text x="56" y="378" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Live Screen Capture + Webcam</text>
+  <text x="56" y="394" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- YOLOv8 Real-Time Object HUD</text>
+  <text x="56" y="410" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Face / Emotion / Distance Scan</text>
+
+  <rect x="44" y="440" width="248" height="84" fill="#04101e" stroke="#00a8cc" stroke-width="1" />
+  <text x="56" y="460" fill="#00e5ff" font-family="Consolas, monospace" font-size="12" font-weight="bold">INSTANT KILL / INTERRUPT</text>
+  <text x="56" y="478" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Global Cancel Event (_cancel_ev)</text>
+  <text x="56" y="494" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Halts Video Resolve Mid-Flight</text>
+  <text x="56" y="510" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Halts TTS &amp; Tool Chains Immediately</text>
+
+  <rect x="44" y="540" width="248" height="90" fill="#04101e" stroke="#00a8cc" stroke-width="1" />
+  <text x="56" y="560" fill="#00e5ff" font-family="Consolas, monospace" font-size="12" font-weight="bold">PHONE QR REMOTE DASHBOARD</text>
+  <text x="56" y="578" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Port 8766 Mobile Web Controller</text>
+  <text x="56" y="594" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Remote Commands, Media &amp; Mute</text>
+  <text x="56" y="610" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Instant LAN QR Code Pairing</text>
+
+  <!-- Column 2: Core Orchestrator & 9-Model Fallback Ladder -->
+  <rect x="342" y="102" width="310" height="546" fill="url(#boxGrad)" stroke="#00d4ff" stroke-width="1.5" />
+  <rect x="342" y="102" width="310" height="32" fill="#082442" stroke="#00d4ff" stroke-width="1" />
+  <text x="356" y="123" fill="#00e5ff" font-family="Consolas, monospace" font-size="13" font-weight="bold" letter-spacing="1.5">
+    02 // 9-MODEL FALLBACK LADDER
+  </text>
+
+  <rect x="358" y="150" width="278" height="238" fill="#04101e" stroke="#00d4ff" stroke-width="1" />
+  <text x="370" y="170" fill="#00e5ff" font-family="Consolas, monospace" font-size="12" font-weight="bold">AUTO-FAILOVER CASCADE (SAVES 11S)</text>
+  <text x="370" y="192" fill="#b4dcf5" font-family="Consolas, monospace" font-size="11">01. gemini-2.5-flash          [20s]</text>
+  <text x="370" y="210" fill="#b4dcf5" font-family="Consolas, monospace" font-size="11">02. gemini-2.5-flash-lite     [15s]</text>
+  <text x="370" y="228" fill="#b4dcf5" font-family="Consolas, monospace" font-size="11">03. gemini-3-flash-preview    [20s]</text>
+  <text x="370" y="246" fill="#b4dcf5" font-family="Consolas, monospace" font-size="11">04. gemini-3.1-flash-lite-pre [15s]</text>
+  <text x="370" y="264" fill="#b4dcf5" font-family="Consolas, monospace" font-size="11">05. gemini-2.5-pro            [30s]</text>
+  <text x="370" y="282" fill="#b4dcf5" font-family="Consolas, monospace" font-size="11">06. gemini-3.1-pro-preview    [30s]</text>
+  <text x="370" y="300" fill="#b4dcf5" font-family="Consolas, monospace" font-size="11">07. gemini-2.0-flash          [15s]</text>
+  <text x="370" y="318" fill="#b4dcf5" font-family="Consolas, monospace" font-size="11">08. gemini-2.0-flash-lite     [12s]</text>
+  <text x="370" y="336" fill="#ffaa00" font-family="Consolas, monospace" font-size="11">09. Groq Llama-3.3-70B / Local</text>
+  <text x="370" y="362" fill="#00e5ff" font-family="Consolas, monospace" font-size="10">- 60s Per-Model Cooldown Blacklist</text>
+  <text x="370" y="378" fill="#00e5ff" font-family="Consolas, monospace" font-size="10">- ~1,000 Fewer Tokens / Session</text>
+
+  <rect x="358" y="404" width="278" height="110" fill="url(#goldGrad)" stroke="#ffaa00" stroke-width="1" />
+  <text x="370" y="424" fill="#ffaa00" font-family="Consolas, monospace" font-size="12" font-weight="bold">TWO-LAYER PERSISTENT MEMORY VAULT</text>
+  <text x="370" y="444" fill="#f0d49a" font-family="Consolas, monospace" font-size="11">- Layer 1: Compact Identity Index</text>
+  <text x="370" y="462" fill="#f0d49a" font-family="Consolas, monospace" font-size="11">- Layer 2: On-Demand Deep Recall</text>
+  <text x="370" y="480" fill="#f0d49a" font-family="Consolas, monospace" font-size="11">- ChromaDB Vector + SQLite Facts</text>
+  <text x="370" y="498" fill="#f0d49a" font-family="Consolas, monospace" font-size="11">- Cross-Session Context Continuity</text>
+
+  <rect x="358" y="528" width="278" height="102" fill="#04101e" stroke="#00a8cc" stroke-width="1" />
+  <text x="370" y="548" fill="#00e5ff" font-family="Consolas, monospace" font-size="12" font-weight="bold">INDIAN ENGLISH / HINGLISH TTS</text>
+  <text x="370" y="568" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- JARVIS: en-IN-Prabhat / hi-IN-Madhur</text>
+  <text x="370" y="586" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- FRIDAY: en-IN-Neerja / hi-IN-Swara</text>
+  <text x="370" y="604" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Real-Time Viseme Lip-Sync Queue</text>
+
+  <!-- Column 3: 12 Focused Skills & 5x Plugin Engine -->
+  <rect x="686" y="102" width="274" height="546" fill="url(#boxGrad)" stroke="#00d4ff" stroke-width="1.5" />
+  <rect x="686" y="102" width="274" height="32" fill="#082442" stroke="#00d4ff" stroke-width="1" />
+  <text x="700" y="123" fill="#00e5ff" font-family="Consolas, monospace" font-size="13" font-weight="bold" letter-spacing="1.5">
+    03 // SKILLS &amp; PLUGIN ENGINE
+  </text>
+
+  <rect x="702" y="150" width="242" height="252" fill="#04101e" stroke="#00a8cc" stroke-width="1" />
+  <text x="714" y="170" fill="#00e5ff" font-family="Consolas, monospace" font-size="12" font-weight="bold">12 FOCUSED CORE OS SKILLS</text>
+  <text x="714" y="190" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">01. open_app (OS Launcher)</text>
+  <text x="714" y="206" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">02. computer_settings (Vol/WiFi)</text>
+  <text x="714" y="222" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">03. video_on_command (Original)</text>
+  <text x="714" y="238" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">04. multi_web_search (4-Mode)</text>
+  <text x="714" y="254" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">05. visual_awareness (Screen/Cam)</text>
+  <text x="714" y="270" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">06. file_controller (Disk/Files)</text>
+  <text x="714" y="286" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">07. cmd_control (Safe Shell)</text>
+  <text x="714" y="302" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">08. weather_briefing (Live Met)</text>
+  <text x="714" y="318" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">09. reminder_scheduler (Alarms)</text>
+  <text x="714" y="334" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">10. memory_vault (Recall/Save)</text>
+  <text x="714" y="350" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">11. communication_hub (Messages)</text>
+  <text x="714" y="366" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">12. code_dev_agent (Eng Agent)</text>
+  <text x="714" y="388" fill="#00e5ff" font-family="Consolas, monospace" font-size="10">+ 22 Mark-LV Action Modules</text>
+
+  <rect x="702" y="418" width="242" height="106" fill="#04101e" stroke="#00a8cc" stroke-width="1" />
+  <text x="714" y="438" fill="#00e5ff" font-family="Consolas, monospace" font-size="12" font-weight="bold">5X FAST PLUGIN LOADER</text>
+  <text x="714" y="458" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Single-File Drop-In (plugins/)</text>
+  <text x="714" y="474" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- AST Metadata Cache (.cache.json)</text>
+  <text x="714" y="490" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- mtime/size Instant Validation</text>
+  <text x="714" y="506" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Lazy Module Execution</text>
+
+  <rect x="702" y="538" width="242" height="92" fill="#04101e" stroke="#00a8cc" stroke-width="1" />
+  <text x="714" y="558" fill="#00e5ff" font-family="Consolas, monospace" font-size="12" font-weight="bold">IN-HUD VIDEO ON COMMAND</text>
+  <text x="714" y="576" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Dual-Stream 1080p + Original Audio</text>
+  <text x="714" y="592" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Strictly No Auto-Dubbing</text>
+  <text x="714" y="608" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Talks While Resolving Stream</text>
+
+  <!-- Column 4: Mark LVIII Holographic HUD -->
+  <rect x="994" y="102" width="258" height="546" fill="url(#boxGrad)" stroke="#00d4ff" stroke-width="1.5" />
+  <rect x="994" y="102" width="258" height="32" fill="#082442" stroke="#00d4ff" stroke-width="1" />
+  <text x="1008" y="123" fill="#00e5ff" font-family="Consolas, monospace" font-size="13" font-weight="bold" letter-spacing="1.5">
+    04 // MARK LVIII HOLOGRAPHIC HUD
+  </text>
+
+  <rect x="1010" y="150" width="226" height="122" fill="#04101e" stroke="#00a8cc" stroke-width="1" />
+  <text x="1022" y="170" fill="#00e5ff" font-family="Consolas, monospace" font-size="12" font-weight="bold">5 CENTER VISUALIZER MODES</text>
+  <text x="1022" y="190" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">1. HOLO HEAD (810-V 3D Mesh)</text>
+  <text x="1022" y="206" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">2. REACTOR (72-Tick Mark-LV)</text>
+  <text x="1022" y="222" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">3. CIRCUIT (Jared Rhod PCB Die)</text>
+  <text x="1022" y="238" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">4. SHADER ORB (3D Gyro Rings)</text>
+  <text x="1022" y="254" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">5. CENTER CAM (Barehands AR)</text>
+
+  <rect x="1010" y="288" width="226" height="122" fill="#04101e" stroke="#00a8cc" stroke-width="1" />
+  <text x="1022" y="308" fill="#00e5ff" font-family="Consolas, monospace" font-size="12" font-weight="bold">CENTER-STAGE OVERLAY CARDS</text>
+  <text x="1022" y="328" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Network Radar (360 Polar Sweep)</text>
+  <text x="1022" y="344" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Disk Map (Squarified Treemap)</text>
+  <text x="1022" y="360" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- 3D Earth Globe (Orthographic)</text>
+  <text x="1022" y="376" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Weather + 24h Temp Curve</text>
+  <text x="1022" y="392" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Diagnostics 4-Ring Meters</text>
+
+  <rect x="1010" y="426" width="226" height="96" fill="#04101e" stroke="#00a8cc" stroke-width="1" />
+  <text x="1022" y="446" fill="#00e5ff" font-family="Consolas, monospace" font-size="12" font-weight="bold">ZERO-LATENCY DRAWERS</text>
+  <text x="1022" y="466" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Separate SETUP Drawer</text>
+  <text x="1022" y="482" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Separate CONTROLS Drawer</text>
+  <text x="1022" y="498" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Conical 2D HueWheel Theming</text>
+
+  <rect x="1010" y="538" width="226" height="92" fill="#04101e" stroke="#00a8cc" stroke-width="1" />
+  <text x="1022" y="558" fill="#00e5ff" font-family="Consolas, monospace" font-size="12" font-weight="bold">LIVE TELEMETRY &amp; FOOTER</text>
+  <text x="1022" y="576" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- 4 Circular Gauges (CPU/MEM/GPU)</text>
+  <text x="1022" y="592" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- 36-Bar Center Voice Waveform</text>
+  <text x="1022" y="608" fill="#9bc7e6" font-family="Consolas, monospace" font-size="11">- Unlimited WS Session Heartbeat</text>
+
+  <!-- Connectors -->
+  <line x1="308" y1="260" x2="342" y2="260" stroke="#00e5ff" stroke-width="2" />
+  <line x1="308" y1="460" x2="342" y2="460" stroke="#00e5ff" stroke-width="2" />
+  <line x1="652" y1="260" x2="686" y2="260" stroke="#00e5ff" stroke-width="2" />
+  <line x1="652" y1="460" x2="686" y2="460" stroke="#00e5ff" stroke-width="2" />
+  <line x1="960" y1="260" x2="994" y2="260" stroke="#00e5ff" stroke-width="2" />
+  <line x1="960" y1="460" x2="994" y2="460" stroke="#00e5ff" stroke-width="2" />
+</svg>

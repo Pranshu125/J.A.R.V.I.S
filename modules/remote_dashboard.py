@@ -81,21 +81,21 @@ _MOBILE_HTML = """<!DOCTYPE html>
   </div>
   <div class="cmd-box">
     <input type="text" id="cmd-in" placeholder="Speak or type command to JARVIS..." onkeydown="if(event.key==='Enter')sendCmd()">
-    <button onclick="startVoice()" title="Voice Dictation">🎙</button>
-    <button onclick="sendCmd()">SEND ➤</button>
+    <button onclick="startVoice()" title="Voice Dictation">◉ MIC</button>
+    <button onclick="sendCmd()">SEND ▸</button>
   </div>
   <div class="grid-btns">
-    <button class="danger" onclick="act('kill')">⏹ STOP / KILL</button>
-    <button onclick="act('mute')">🔇 TOGGLE MUTE</button>
+    <button class="danger" onclick="act('kill')">◼ STOP / KILL</button>
+    <button onclick="act('mute')">◈ TOGGLE MUTE</button>
     <button onclick="act('center_cam')">◉ CENTER CAMERA</button>
     <button onclick="act('orb_mode')">◎ MINI ORB / HUD</button>
-    <button onclick="act('briefing')">☀ MORNING BRIEF</button>
-    <button onclick="act('radar')">✈ AIRSPACE RADAR</button>
-    <button onclick="act('stop_video')">✕ CLOSE VIDEO</button>
+    <button onclick="act('briefing')">◈ MORNING BRIEF</button>
+    <button onclick="act('radar')">◈ AIRSPACE RADAR</button>
+    <button onclick="act('stop_video')">[X] CLOSE VIDEO</button>
     <button onclick="act('switch_mode')">⇄ JARVIS / FRIDAY</button>
   </div>
   <div class="upload-row">
-    <span>📎 Send file to PC (file_processor):</span>
+    <span>[+] Send file to PC (file_processor):</span>
     <input type="file" id="file-in" style="max-width:175px;font-size:11px;" onchange="uploadFile(this)">
   </div>
   <div class="log-box" id="log-box"></div>

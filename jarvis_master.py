@@ -740,15 +740,15 @@ class JarvisPipeline:
             code = w_data["weather_code"]
 
             if code == 0:
-                desc, icon = "clear sky", "☼"
+                desc, icon = "clear sky", "◉"
             elif code < 4:
                 desc, icon = "partly cloudy", "◐"
             elif code < 50:
-                desc, icon = "overcast clouds", "☁\uFE0E"
+                desc, icon = "overcast clouds", "◎"
             elif code < 80:
-                desc, icon = "rain showers", "☂\uFE0E"
+                desc, icon = "rain showers", "◈"
             else:
-                desc, icon = "thunderstorm", "↯"
+                desc, icon = "thunderstorm", "▲"
 
             loc_full = f"{city}, {country}" if country else city
             args_js = ", ".join(

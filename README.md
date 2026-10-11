@@ -1,91 +1,186 @@
-# J.A.R.V.I.S. & F.R.I.D.A.Y. — Unified Cognitive Operating System
+# J.A.R.V.I.S. / F.R.I.D.A.Y. -- Mark LVIII + Barehands Spatial AI Operating System
 
-An enterprise-grade, real-time bilingual voice and spatial desktop operating system for Windows. This system unifies the complete action, agent, vision, radar, and UI capabilities of 11 open-source reference architectures alongside the Zoey OS 3D spatial workspace design, strictly locked to two core personas: **J.A.R.V.I.S.** (Male, Cyan HUD) and **F.R.I.D.A.Y.** (Female, Crimson HUD) with seamless English and Hindi/Hinglish execution.
+![J.A.R.V.I.S. Mark LVIII Holographic HUD Suite](assets/hud_mark_lviii_preview.png)
 
----
-
-## 1. Repository-by-Repository Comparative Analysis & Integration Matrix
-
-All reference repositories were cloned into `Repos/`, analyzed file-by-file, and merged into this unified build so that `D:\JARVIS` acts as a strict superset of every single repository:
-
-| Reference Repository | Core Capabilities in Reference Repo | How Integrated & Upgraded in `D:\JARVIS` |
-| :--- | :--- | :--- |
-| **FatihMakes/Mark-LV** | 17 auto-discovered `TOOL` modules (`open_app`, `web_search`, `weather_report`, `send_message`, `reminder`, `youtube_video`, `computer_settings`, `browser_control`, `file_controller`, `desktop_control`, `code_helper`, `dev_agent`, `computer_control`, `game_updater`, `flight_finder`, `file_processor`, `video_player`), `core/undo.py`, `core/confirm.py`, `memory/memory_manager.py`, `actions/background_monitor.py`, `actions/system_monitor.py`, `actions/proactive.py` | 100% of all 17 action modules auto-loaded via `core/action_loader.py` inside `modules/mark_lv_bridge.py`, plus `undo`, `confirm`, `memory_manager`, `background_monitor`, `system_monitor`, and `proactive` wired into `jarvis_master.py` and patched to `gemini-3.8-flash`. |
-| **FatihMakes/Mark-XXXIX-OR** | Autonomous multi-step Agent (`agent/planner.py`, `agent/executor.py`, `agent/task_queue.py`, `agent/error_handler.py`) that decomposes complex goals, injects context across steps, auto-translates, and self-heals failed steps | Integrated as the `agent_task` tool in `modules/mark_lv_bridge.py` and exposed to Gemini 3.8 Flash and Ollama. |
-| **FatihMakes/Mark-X.1** & **AI-Assistant-1.1** | Live 200km OpenSky Network aircraft transponder radar (`aircraft_module.py`), Haversine distance/bearing calculation, flight route lookup, and FlightRadar24 map launcher | Integrated as the `aircraft_report` tool and dedicated HUD quick-action button (`api.scan_airspace()`). |
-| **FatihMakes/Mark-X-TR**, **Mark-X**, & **AI-Assistant-for-Computer** | Subprocess window suppression (`CREATE_NO_WINDOW`), dynamic path resolution, and localized multi-language system prompts | Integrated global `subprocess.Popen` console suppression in `jarvis_master.py` and bilingual English + Hindi/Hinglish prompt & neural voice routing in `modules/tts_engine.py`. |
-| **SAGAR-TAMANG/ultron-by-sagar-builds** | Multi-layer Three.js holographic wireframe sphere + orbital rings (`lib/orbScene.ts`) and MediaPipe HandLandmarker 1-hand pinch-to-spin / 2-hand pinch-to-zoom (`lib/handTracker.ts`) | Integrated directly into `hud.html` (`initThreeOrb` 3-layer holographic orb + `toggleHandTracking` MediaPipe WebGL hand-gesture controller). |
-| **SAGAR-TAMANG/friday-tony-stark-demo** | Parallel RSS global/financial intelligence (`modules/world_intel.py`), interactive `worldmonitor.app` satellite launch, and multi-app Windows control | Integrated via `modules/world_intel.py`, `modules/system_control.py`, and HUD quick-launch pills. |
-| **Zoey OS (`zoeyos.com`)** | 3D particle centerpiece, persistent long-term memory vault, and multi-agent workspace | Integrated 1,200-node Fibonacci audio-reactive core inside the multi-ring holographic orb and structured `memory/long_term.json` prompt injection. |
+**J.A.R.V.I.S. (Just A Rather Very Intelligent System) & F.R.I.D.A.Y.** is a full-stack, multimodal desktop AI operating system and holographic HUD engineered in Python and HTML5/WebGL Canvas. It fuses the **Mark LV / Mark LVIII** holographic interface architecture with **Barehands** 21-landmark spatial hand-tracking AR, a **9-Model Gemini Fallback Ladder**, **12 Focused Core OS Skills**, a **5x Faster Single-File Plugin Engine**, **In-HUD Original-Language Video Playback with Smart Mic Mute**, and a **Two-Layer Persistent Memory Vault**.
 
 ---
 
-## 2. Complete 35-Tool Autonomous Capability Inventory
+## Visual Overview
 
-Every command spoken in English or Hindi/Hinglish (or typed in the HUD) is routed by **Gemini 3.8 Flash** (with local **Ollama `llama3.2`** fallback) across 35 native tools:
+### 1. System Architecture Blueprint
 
-### A. Mark-LV Auto-Discovered Action Suite (17 Modules)
-1. **`open_app`**: Launch, close, minimize, maximize, or switch to any installed desktop application (`winreg`, `psutil`, `pyautogui`).
-2. **`web_search`**: DuckDuckGo search (`mode='search'`), breaking news (`mode='news'`), and multi-product comparison (`mode='compare'`).
-3. **`weather_report`**: City/timeframe weather forecasts (`today`, `tomorrow`, `week`) plus live Windy.com radar display.
-4. **`send_message`**: Automated messaging across WhatsApp, Telegram, Instagram, and Discord.
-5. **`reminder`**: Persistent desktop notifications scheduled via Windows Task Scheduler (`schtasks`).
-6. **`youtube_video`**: Play YouTube videos, summarize video transcripts (`youtube_transcript_api`), fetch metadata (`yt_dlp`), or list trending videos.
-7. **`computer_settings`**: Volume up/down/set/mute, brightness up/down/set, dark mode toggle, Wi-Fi/Bluetooth toggles, lock screen, sleep, restart, shutdown, tab/zoom/scroll controls.
-8. **`browser_control`**: Playwright/CDP smart browser automation (`go_to`, `search`, `click`, `type`, `scroll`, `fill_form`, `smart_click`, `smart_type`, `get_text`, `press`, `close`).
-9. **`file_controller`**: File & directory operations (`list`, `create_file`, `create_folder`, `delete` via `send2trash`, `move`, `copy`, `rename`, `read`, `write`, `find`, `largest`, `disk_usage`, `organize`, `info`).
-10. **`desktop_control`**: Set desktop wallpaper from local file or URL (`SystemParametersInfoW`), organize desktop by file type or date, clean desktop, inspect desktop stats.
-11. **`code_helper`**: Generate, edit, explain, run, or auto-fix code in any programming language and open in VS Code.
-12. **`dev_agent`**: Autonomous multi-file software architect that plans, scaffolds, installs dependencies, opens VS Code, runs, and auto-debugs full projects.
-13. **`computer_control`**: Direct GUI mouse/keyboard automation (`type`, `smart_type`, `click`, `double_click`, `right_click`, `hotkey`, `press`, `scroll`, `move`, `drag`, `copy`, `paste`, `screenshot`, `screen_find`, `focus_window`, `random_data`).
-14. **`game_updater`**: Game launcher, installer, updater, and scheduled background updater across Steam, Epic Games, Riot, Xbox, GOG, Ubisoft, EA, and Battle.net.
-15. **`flight_finder`**: Live Google Flights route, airline, duration, and price search.
-16. **`file_processor`**: Multi-format file intelligence for attached/local files (`📎` button in HUD): PDFs (summarize, extract text, convert to Word), Images (OCR, describe, resize, compress, convert), DOCX/TXT (summarize, translate, fix writing), Excel/CSV (analyze, filter, sort), Audio/Video, and Archives.
-17. **`video_player`**: Play, stop, summarize, or analyze specific timestamps of video files and streams.
+![J.A.R.V.I.S. Mark LVIII Architecture Diagram](assets/architecture_diagram.svg)
 
-### B. Core, Agent, Radar, Memory, Vision & Workspace Tools (18 Tools)
-18. **`screen_process` / `analyze_screen`**: Captures the display (`mss`) or webcam (`cv2`) and analyzes it with **Gemini 3.8 Flash Vision**.
-19. **`aircraft_report`**: Scans a 200km radius around the user's coordinates via the **OpenSky Network API** (reporting callsign, registration country, distance, speed in km/h, and heading) or opens the live **FlightRadar24** map.
-20. **`agent_task`**: Deploys the **Mark-XXXIX Autonomous Agent Planner & Executor** (`agent/planner.py`, `agent/executor.py`) for complex multi-step goals with automatic error recovery.
-21. **`save_memory`**: Stores structured user facts (`identity`, `preferences`, `projects`, `relationships`, `wishes`, `notes`) in `memory/long_term.json`.
-22. **`recall_memory`**: Searches the permanent long-term memory vault by keyword.
-23. **`manage_monitor`**: Adds, removes, lists, or checks daily background news/topic monitors (`actions/background_monitor.py`).
-24. **`system_status`**: Deep hardware telemetry report (CPU %, RAM GB, NVML GPU %, WMI CPU temperature, uptime, and active process count).
-25. **`undo`**: Reverses the last file, desktop, or system setting operation (`core/undo.py`) or lists the undo stack.
-26. **`split_workspace`**: Tiles two applications side-by-side (`Win+Left` and `Win+Right`).
-27. **`get_world_news` & `open_world_monitor`**: Parallel RSS global intelligence + interactive satellite dashboard (`worldmonitor.app`).
-28. **`get_finance_news` & `open_finance_monitor`**: Live financial market feeds + interactive market monitor.
-29. **`launch_application` / `system_hardware_control` / `window_management` / `open_website` / `execute_terminal`**: Fast-path OS & PowerShell execution.
+### 2. Barehands Spatial AR Stage & Center Camera Vision
+
+![Barehands Spatial AR Stage Preview](assets/barehands_ar_preview.png)
 
 ---
 
-## 3. Architecture & File Structure
+## Core Engineering Highlights
+
+### 1. Media, Voice & Real-Time Interaction
+- **Video on Command (In-HUD Original-Language Playback):** Play any YouTube URL, local media file, or natural-language description (for example, `"play the new Dune trailer"`) directly inside the holographic HUD overlay (`#hud-video-overlay`). Uses `yt-dlp` with `language!=auto` audio stream selection and dual-stream `<video>` + `<audio>` synchronization for 1080p playback in the video's original language (strictly zero random auto-dubbing).
+- **Talks While It Loads (Zero Dead Air):** J.A.R.V.I.S. speaks an immediate natural acknowledgement (`"On it, Sir."` / `"Pulling that up right away, Sir."`) while video streams or complex tools resolve asynchronously in the background. Saying `"stop"` or `"cancel"` trips the global `_cancel_ev` interrupt flag and aborts background resolution before the video overlay even opens.
+- **Smart Mic Mute:** Whenever the in-HUD video player outputs audio, the HUD automatically signals `{action: "video_audio_state", playing: true}` over WebSocket, engaging `_video_audio_playing` in the voice loop so the microphone mutes itself and J.A.R.V.I.S. never talks back to movie dialogue.
+- **Authentic Indian English, Hindi & Hinglish Voice Engine:**
+  - **J.A.R.V.I.S. (Male):** `en-IN-PrabhatNeural` (Indian English) and `hi-IN-MadhurNeural` (Hindi / Devanagari).
+  - **F.R.I.D.A.Y. (Female):** `en-IN-NeerjaNeural` (Expressive Indian English) and `hi-IN-SwaraNeural` (Hindi / Devanagari).
+  - Automatic script detection seamlessly switches voices mid-conversation while streaming real-time phoneme viseme weights to the 3D Holographic Head.
+
+---
+
+### 2. 9-Model Gemini Fallback Ladder & Lean Core
+If any Gemini model is rate-limited (`429`), overloaded (`503`), or times out, [`MarkLVBridge`](modules/mark_lv_bridge.py) automatically cascades across a 9-model ladder with per-model timeouts and a 60-second cooldown blacklist, saving up to 11 seconds per failed call and preventing UI hangs:
+
+| Priority | Model Identifier | Timeout | Role in Cascade |
+| :--- | :--- | :--- | :--- |
+| **01** | `gemini-2.5-flash` | `20s` | Primary low-latency multimodal tool router |
+| **02** | `gemini-2.5-flash-lite` | `15s` | High-speed secondary flash tier |
+| **03** | `gemini-3-flash-preview` | `20s` | Next-gen preview flash reasoning |
+| **04** | `gemini-3.1-flash-lite-preview` | `15s` | Ultra-fast preview fallback |
+| **05** | `gemini-2.5-pro` | `30s` | Deep reasoning & complex code synthesis |
+| **06** | `gemini-3.1-pro-preview` | `30s` | High-complexity analytical fallback |
+| **07** | `gemini-2.0-flash` | `15s` | Secondary stable flash generation |
+| **08** | `gemini-2.0-flash-lite` | `12s` | Lightweight emergency cloud fallback |
+| **09** | `Groq Llama-3.3-70B / Ollama` | `15s` | Independent cloud/local offline failover |
+
+- **Leaner Prompt & Tool Declarations (~1,000 Fewer Tokens/Session):** Core OS control is consolidated into **12 Focused Core Skills** + dynamically discovered single-file plugins + two-layer memory index injection, cutting ~1,000 tokens per turn while preserving all 22+ legacy Mark-LV action handlers via `_LEGACY_ACTION_ALIASES`.
+
+---
+
+### 3. Mark LVIII Holographic HUD & 5 Center Visualizers
+The HUD ([`hud.html`](hud.html)) provides five real-time interactive center-stage modes selectable from the top bar:
+
+1. **`HOLO HEAD` (810-Vertex 3D Human Holographic Mesh):**
+   - Ported from the Mark-LV 3D anatomical rig ([`assets/head_mesh.js`](assets/head_mesh.js)): **810 3D vertices, 1,554 flat-shaded back-face-culled triangles, and 788 depth-graded wireframe edges**.
+   - Features anatomical eye sockets with saccade gaze drift, periodic eyelid blinks, vertical holographic scan planes, interactive mouse-drag yaw/pitch rotation, and real-time phoneme viseme lip-sync (`jaw`, `lips`, `brow` vertex weights).
+2. **`REACTOR` (Mark-LV 72-Graduation Arc Reactor Core):**
+   - Multi-ring counter-rotating turbine blades, 72 degree-graduation ticks (`000` / `090` / `180` / `270`), radial energy spokes, and audio-modulated core bloom.
+3. **`CIRCUIT` (Jared Rhod `ai-visualizer` Living Circuit Board):**
+   - Central `[ J . A . R . V . I . S . ]` microprocessor package with 48 perimeter gold contact pins, 45-degree Manhattan-routed PCB traces (`JP34`, `JP72`, `Q34`, `R85`, `U86`), auxiliary IC chips, and glowing data packets that race inward on user speech and burst outward when J.A.R.V.I.S. responds.
+4. **`SHADER ORB` (3D Gyroscopic Particle Sphere):**
+   - 3D Fibonacci-lattice particle sphere surrounded by three orthogonal gyroscopic orbital rings with Barehands hand-pinch rotation and zoom.
+5. **`CENTER CAM` (Barehands Spatial AR Stage + Live Vision):**
+   - Brings the live camera feed to the center stage with simultaneous **YOLOv8 object detection reticles**, **face/emotion/distance HUD overlays**, and the **Barehands Spatial AR Palm Ring** (`J.A.R.V.I.S. / ACTIVE`) surrounded by 4 interactive satellite orbs (`VAULT`, `PROPS`, `WIDGETS`, `NOTES`) and the translucent `Stream Vault` glass overlay.
+
+---
+
+### 4. Mark LVIII Center-Stage Holographic Overlays
+Triggered by voice, tool calls, or the top bar (`RADAR`, `DISK`, `GLOBE`, `WEATHER`, `DIAG`), `#hud-card-overlay` renders full center-stage interactive cards framed by corner L-brackets:
+- **`NETWORK RADAR` (`network_radar`):** 360-degree rotating polar radar sweep, plotted LAN/WAN endpoints, Gigabit NIC status cards, active device table, and scrolling latency sparkline.
+- **`DISK MAP` (`disk_map`):** Interactive squarified storage treemap canvas, segmented circular `% USED` ring gauge, and largest directory allocation bars.
+- **`3D EARTH GLOBE` (`earth_globe`):** Interactive orthographic 3D globe with continental landmass polygons, latitude/longitude graticule, northern aurora oval, inclined orbital ground track, seismic epicenter rings, and drag/zoom controls.
+- **`WEATHER TELEMETRY` (`weather`):** Live meteorological readout, 2x3 atmospheric sensor grid (`FEELS LIKE`, `HUMIDITY`, `WIND`, `UV INDEX`, `PRESSURE`, `VISIBILITY`), 24-hour temperature curve canvas, and 7-day forecast strip.
+- **`SYSTEM DIAGNOSTICS` (`diagnostics`):** Four segmented circular ring meters (`CPU`, `RAM`, `GPU`, `DISK`), rolling 60-second CPU history waveform, and top active process table.
+
+---
+
+### 5. Instant Separate Drawers & Live Conical HueWheel Theming
+- **Zero-Latency `SETUP` Drawer (`#setup-drawer`):** Dedicated right-side slide-out drawer for configuring API keys (`GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENWEATHER_API_KEY`), viewing the 9-Model Fallback Ladder status, and inspecting loaded single-file plugins.
+- **Zero-Latency `CONTROLS` Drawer (`#controls-drawer`):** Dedicated left-side slide-out drawer with instant switches for Persona (`J.A.R.V.I.S.` / `F.R.I.D.A.Y.`), Wake Word (`ON` / `OFF`), Hold-to-Talk (`SPACE`), Smart Mic Mute, Continuous Vision (`SCREEN + CAM`), Center Stage Mode, 8 Instant Theme Swatches (`CYAN`, `GOLD`, `FRIDAY`, `EMERALD`, `VIOLET`, `CRIMSON`, `ARCTIC`, `AMBER`), and Quick Action launchers.
+- **2D Conical HueWheel Customizer (`THEME` Modal):** Full 360-degree HSV conical color wheel canvas (`#conical-hue-wheel`) that updates all HUD CSS variables and 3D canvas shaders (`--cyan`, `--gold`, `--bg`) in real time at 60 FPS.
+
+---
+
+### 6. Fast Single-File Plugin System (5x Faster Loading)
+Drop any single `.py` file into [`plugins/`](plugins/) to unlock a new skill automatically:
+- [`modules/plugin_loader.py`](modules/plugin_loader.py) uses an AST/metadata cache (`plugins/.plugin_cache.json`) keyed by file `mtime` and `size` so unchanged plugins load **5x faster** without re-importing heavy dependencies at startup.
+- Built-in plugins included out of the box:
+  - [`plugins/network_radar.py`](plugins/network_radar.py) -- Live 360-degree LAN/WAN radar sweep, active interface telemetry, and latency diagnostics.
+  - [`plugins/disk_analyzer.py`](plugins/disk_analyzer.py) -- Squarified storage treemap and largest directory space analyzer.
+  - [`plugins/earth_globe.py`](plugins/earth_globe.py) -- Interactive 3D orthographic Earth telemetry, orbital track, and coordinate locator.
+  - [`plugins/hardware_schematic.py`](plugins/hardware_schematic.py) -- Interactive 3D holographic hardware schematic viewer inside the HUD.
+  - [`plugins/pomodoro.py`](plugins/pomodoro.py) -- Focus timer and deep-work sprint session manager.
+  - [`plugins/_template.py`](plugins/_template.py) -- Ready-to-copy starter template for single-file skill creation.
+
+#### Authoring a New Plugin in 15 Lines
+```python
+PLUGIN_META = {
+    "name": "custom_skill",
+    "description": "Run a custom diagnostic or automation task.",
+    "parameters": {
+        "target": {"type": "STRING", "description": "Target name or resource", "required": True}
+    },
+}
+
+def execute(parameters: dict, player=None, session_memory=None) -> str:
+    target = parameters.get("target", "default")
+    return f"Custom skill executed on {target}."
+```
+
+---
+
+## Repository Structure
 
 ```text
-D:\JARVIS\
-├── jarvis_master.py          # Master pipeline, Gemini 3.8 Flash + Ollama router, STT/TTS workers, pywebview API
-├── hud.html                  # 3-Layer Three.js Holographic Orb, MediaPipe Hand Gestures, Telemetry & Tactical HUD
-├── START_JARVIS.bat          # One-click desktop launcher
-├── modules\
-│   ├── mark_lv_bridge.py     # Unified bridge loading all 17 Mark-LV actions, Mark-XXXIX Agent, OpenSky Radar & Vision
-│   ├── system_control.py     # Win32 hardware, window management, and split-screen workspace tiling
-│   ├── tts_engine.py         # Zero-lock in-memory bilingual Edge-TTS engine (JARVIS & FRIDAY voices)
-│   └── world_intel.py        # Parallel RSS news & financial intelligence scrapers
-└── Repos\                    # Cloned reference repositories (Mark-LV, Mark-XXXIX-OR, ultron-by-sagar-builds, etc.)
+D:\JARVIS
+|-- jarvis_master.py               # Master orchestrator, voice loop, PyWebView HUD & WebSocket server
+|-- hud.html                       # Mark LVIII + Barehands Holographic HUD (3D Head, Overlays, AR)
+|-- memory_engine.py               # ChromaDB vector store + SQLite persistent memory engine
+|-- vision_sensor.py               # YOLOv8 object detection, OCR, face & distance vision engine
+|-- requirements.txt               # Python package dependencies
+|-- assets/
+|   |-- head_mesh.js               # 810-vertex, 1,554-triangle, 788-edge 3D Holographic Head mesh
+|   |-- hud_mark_lviii_preview.png # 6-panel visual showcase of the Mark LVIII HUD
+|   |-- barehands_ar_preview.png   # Barehands Spatial AR & Center Camera visual showcase
+|   `-- architecture_diagram.svg   # System architecture vector blueprint
+|-- modules/
+|   |-- mark_lv_bridge.py          # 9-Model Gemini Fallback Ladder, 12 Core Skills & Video Resolver
+|   |-- plugin_loader.py           # 5x Fast mtime-cached single-file plugin loader
+|   |-- remote_dashboard.py        # Mobile Remote Dashboard HTTP server + QR Code generator
+|   |-- system_control.py          # OS volume, brightness, WiFi, process & power control
+|   |-- tts_engine.py              # Indian English / Hindi / Hinglish neural TTS & viseme dispatcher
+|   `-- world_intel.py             # Multi-mode web search (news / research / price / compare) & briefings
+|-- plugins/                       # Drop-in single-file skills (auto-discovered on startup)
+`-- memory/                        # Two-layer persistent memory vault (MEMORY.md + SQLite + Chroma)
 ```
 
 ---
 
-## 4. Installation & Usage
+## Installation & Quick Start
 
-### Prerequisites
-- Windows 10 or Windows 11 (64-bit)
-- Python 3.10+ with virtual environment in `D:\JARVIS\venv`
-- `GEMINI_API_KEY` configured in `.env` or Windows User Environment Variables
-
-### Launching
-Double-click the **`J.A.R.V.I.S`** shortcut on your Desktop, or run:
-
+### 1. Environment Setup
 ```powershell
-D:\JARVIS\START_JARVIS.bat
+git clone https://github.com/Pranshu125/J.A.R.V.I.S.git
+cd J.A.R.V.I.S
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
 ```
+
+### 2. Configure API Keys
+Create a `.env` file in the project root (or configure keys directly inside the HUD `SETUP` drawer at runtime):
+```ini
+GEMINI_API_KEY=your_gemini_api_key_here
+GROQ_API_KEY=your_optional_groq_key_here
+OPENWEATHER_API_KEY=your_optional_openweather_key_here
+```
+
+### 3. Launch J.A.R.V.I.S. Mark LVIII
+```powershell
+.\venv\Scripts\python.exe jarvis_master.py
+```
+
+---
+
+## Keyboard, Voice & Spatial Gesture Reference
+
+| Input / Control | Action |
+| :--- | :--- |
+| **`Spacebar` (Hold)** | Push-to-Talk voice capture while held; releases to dispatch immediately |
+| **`"Jarvis ..."` / `"Friday ..."`** | Hands-free Wake Word activation |
+| **`"Stop"` / `"Cancel"` / `KILL` Button** | Instant mid-flight cancellation of active TTS, tool execution, or video loading |
+| **`HOLO HEAD` / `REACTOR` / `CIRCUIT` / `SHADER ORB` / `CENTER CAM`** | Switch Center Visualizer mode in real time |
+| **`RADAR` / `DISK` / `GLOBE` / `WEATHER` / `DIAG`** | Open interactive Mark LVIII center-stage holographic telemetry overlays |
+| **Thumb + Index Pinch (`Barehands`)** | Grab and rotate the 3D Holographic Head / Orb, or select an orbiting AR palm node (`VAULT`, `PROPS`, `WIDGETS`, `NOTES`) |
+| **Open Palm (5 Fingers)** | Expand the holographic visualizer / open the Barehands `J.A.R.V.I.S. / ACTIVE` palm ring |
+| **Closed Fist (0 Fingers)** | Collapse active spatial overlay / return orb to compact idle state |
+| **`QR REMOTE` Top-Bar Button** | Display scannable LAN QR code to control J.A.R.V.I.S. from any smartphone browser |
+
+---
+
+## Credits & Architectural Inspiration
+- **FatihMakes (`Mark-LV` / `Mark-LVIII`):** 810-vertex 3D holographic head rig, phoneme viseme lip-sync engine, 9-model Gemini fallback ladder, dual-stream original-language video player, and center-stage telemetry overlays.
+- **Jared Rhod (`Barehands`, `fullstack-agent`, `ai-memory-vault`, `ai-visualizer`):** 21-landmark spatial hand tracking, palm-locked AR radial menu (`VAULT`, `PROPS`, `WIDGETS`, `NOTES`), living PCB silicon die visualizer, and two-layer persistent memory architecture.

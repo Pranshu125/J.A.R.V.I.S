@@ -580,26 +580,100 @@
             box-shadow: 0 0 10px var(--theme-color);
         }
 
-        /* FLOATING HUD INTERACTIVE CARD OVERLAY (RADAR / DISK MAP / 3D GLOBE / SCHEMATIC / POMODORO) */
+        /* CENTER-STAGE HOLOGRAPHIC OVERLAY (RADAR / DISK MAP / 3D GLOBE / WEATHER / DIAGNOSTICS / SCHEMATIC) */
         #hud-card-overlay {
             position: fixed;
-            bottom: 24px;
-            left: 355px;
-            width: 470px;
-            max-width: calc(100vw - 750px);
-            min-width: 340px;
-            background: rgba(6, 11, 20, 0.95);
+            top: 76px;
+            bottom: 42px;
+            left: 350px;
+            right: 410px;
+            background: rgba(5, 10, 18, 0.96);
             border: 1px solid var(--theme-color);
-            border-radius: 14px;
-            padding: 14px;
+            border-radius: 6px;
+            padding: 18px 20px;
             z-index: 3500;
-            box-shadow: 0 0 35px rgba(0,255,255,0.2), 0 12px 32px rgba(0,0,0,0.85);
-            backdrop-filter: blur(14px);
+            box-shadow: 0 0 45px rgba(0,255,255,0.18), inset 0 0 30px rgba(0,255,255,0.05), 0 16px 40px rgba(0,0,0,0.9);
+            backdrop-filter: blur(16px);
             display: none;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
+        }
+        #hud-card-overlay.compact-dock {
+            top: auto;
+            right: auto;
+            bottom: 42px;
+            left: 355px;
+            width: 520px;
+            max-height: 390px;
         }
         #hud-card-overlay.active { display: flex; }
+        .hud-corner-tl, .hud-corner-tr, .hud-corner-bl, .hud-corner-br {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            border-color: var(--theme-color);
+            pointer-events: none;
+        }
+        .hud-corner-tl { top: -1px; left: -1px; border-top: 3px solid var(--theme-color); border-left: 3px solid var(--theme-color); }
+        .hud-corner-tr { top: -1px; right: -1px; border-top: 3px solid var(--theme-color); border-right: 3px solid var(--theme-color); }
+        .hud-corner-bl { bottom: -1px; left: -1px; border-bottom: 3px solid var(--theme-color); border-left: 3px solid var(--theme-color); }
+        .hud-corner-br { bottom: -1px; right: -1px; border-bottom: 3px solid var(--theme-color); border-right: 3px solid var(--theme-color); }
+
+        /* BOTTOM STATUS FOOTER BAR (MARK LVIII) */
+        .hud-footer-bar {
+            height: 24px;
+            background: rgba(5, 9, 15, 0.96);
+            border-top: 1px solid var(--panel-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 18px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            color: var(--text-muted);
+            flex-shrink: 0;
+            z-index: 100;
+        }
+        .hud-footer-bar .ft-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--theme-color);
+            box-shadow: 0 0 6px var(--theme-color);
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+        .main-container {
+            height: calc(100vh - 84px) !important;
+            max-height: calc(100vh - 84px) !important;
+        }
+        .diag-quick-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .diag-quick-btn {
+            background: rgba(0, 255, 255, 0.06);
+            border: 1px solid var(--panel-border);
+            color: var(--theme-color);
+            padding: 4px 4px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.7px;
+            cursor: pointer;
+            text-align: center;
+            transition: 0.15s;
+        }
+        .diag-quick-btn:hover {
+            background: var(--theme-color);
+            color: #000;
+            border-color: var(--theme-color);
+            box-shadow: 0 0 10px var(--theme-color);
+        }
 
         /* MODAL BACKDROP (REMOTE QR / LIVE THEME HUE WHEEL / PLUGINS / MEMORY VAULT) */
         #hud-modal-backdrop {
@@ -615,12 +689,12 @@
         }
         #hud-modal-backdrop.active { display: flex; }
         .hud-modal-card {
-            width: 540px;
+            width: 560px;
             max-width: 92vw;
-            max-height: 84vh;
+            max-height: 86vh;
             background: rgba(8, 14, 24, 0.98);
             border: 1px solid var(--theme-color);
-            border-radius: 16px;
+            border-radius: 12px;
             padding: 20px;
             box-shadow: 0 0 50px rgba(0,255,255,0.22);
             display: flex;
@@ -630,17 +704,21 @@
         }
     </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="assets/head_mesh.js"></script>
 </head>
 <body>
 
     <!-- TOP BAR -->
     <div class="top-bar">
         <div class="top-left">
-            <div class="sys-title title-text">J.A.R.V.I.S</div>
+            <div style="display:flex; flex-direction:column; line-height:1;">
+                <div class="sys-title title-text">J.A.R.V.I.S</div>
+                <div style="font-size:9px; letter-spacing:2px; color:var(--text-muted); font-weight:700; margin-top:2px;">MARK LVIII · PERSONAL AI SYSTEM</div>
+            </div>
             <div class="status-badge"><div class="dot"></div> Online</div>
-            <button class="top-drawer-btn" id="setup-drawer-btn" onclick="toggleHudDrawer('setup')" title="Open Setup Drawer (API Keys, Microphone, Customize Theme, Desktop Shortcut)">⚙ SETUP</button>
-            <button class="top-drawer-btn" id="controls-drawer-btn" onclick="toggleHudDrawer('controls')" title="Open Instant Controls Drawer (Wake Word, Push-to-Talk, Morning Brief, Plugins, Memory, Remote QR)">🎛 CONTROLS</button>
-            <button class="top-drawer-btn" onclick="openHudModal('remote')" title="Smartphone QR Remote Dashboard">📱 QR DECK</button>
+            <button class="top-drawer-btn" id="setup-drawer-btn" onclick="toggleHudDrawer('setup')" title="Open Setup Drawer (API Keys, Microphone, Customize Theme, Desktop Shortcut)">◈ SETUP</button>
+            <button class="top-drawer-btn" id="controls-drawer-btn" onclick="toggleHudDrawer('controls')" title="Open Instant Controls Drawer (Wake Word, Push-to-Talk, Morning Brief, Plugins, Memory, Remote QR)">▣ CONTROLS</button>
+            <button class="top-drawer-btn" onclick="openHudModal('remote')" title="Smartphone QR Remote Dashboard">▣ QR DECK</button>
         </div>
         <div class="top-center">
             <div class="top-center-box" style="-webkit-app-region: no-drag;">
@@ -653,13 +731,13 @@
             </div>
         </div>
         <div class="top-right">
-            <div class="top-center-box" style="gap:5px; cursor:pointer; -webkit-app-region: no-drag;" onclick="if(typeof pywebview !== 'undefined') pywebview.api.force_weather_update()" title="Click to synchronize live weather">
+            <div class="top-center-box" style="gap:5px; cursor:pointer; -webkit-app-region: no-drag;" onclick="openWeatherHudCard()" title="Click to open Full Weather Telemetry Overlay">
                 <span id="top-temp">--°C</span> <span id="top-loc" style="font-size:11px; color:var(--text-muted)">Syncing...</span>
             </div>
             <div class="window-controls" style="-webkit-app-region: no-drag;">
                 <button onclick="pywebview.api.minimize()" title="Minimize">—</button>
-                <button onclick="pywebview.api.toggle_fullscreen()" title="Toggle Fullscreen">☐</button>
-                <button onclick="pywebview.api.destroy()" title="Close">✕</button>
+                <button onclick="pywebview.api.toggle_fullscreen()" title="Toggle Fullscreen">[ ]</button>
+                <button onclick="pywebview.api.destroy()" title="Close">X</button>
             </div>
         </div>
     </div>
@@ -670,35 +748,45 @@
         <!-- LEFT PANEL -->
         <div class="left-panel">
             <div class="widget">
-                <div class="widget-header"><span>System Stats</span> <span style="cursor:pointer;" onclick="if(typeof pywebview !== 'undefined') pywebview.api.force_stats_update()" title="Refresh Hardware Telemetry">⟳</span></div>
+                <div class="widget-header"><span>▮ SYSTEMS · LIVE</span> <span style="cursor:pointer;" onclick="openDiagnosticsHudCard()" title="Open Full System Diagnostics Card">◈ DIAG ⟳</span></div>
                 
-                <div class="stat-row">
+                <!-- 4 Segmented Circular Arc Gauges (CPU / MEMORY / GPU / TEMP) matching Mark-LVIII -->
+                <canvas id="sys-gauges-canvas" width="286" height="68" style="width:100%; height:68px; margin-bottom:8px; cursor:pointer;" onclick="openDiagnosticsHudCard()" title="Click for Full System Diagnostics Overlay"></canvas>
+
+                <div class="stat-row" style="margin-bottom:6px;">
                     <div class="stat-labels"><span>CPU Usage</span><span id="cpu-val">0%</span></div>
                     <div class="stat-bar-bg"><div class="stat-bar-fill" id="cpu-bar"></div></div>
                 </div>
-                <div class="stat-row">
+                <div class="stat-row" style="margin-bottom:6px;">
                     <div class="stat-labels"><span>RAM Usage</span><span id="ram-val">0%</span></div>
                     <div class="stat-bar-bg"><div class="stat-bar-fill" id="ram-bar"></div></div>
                 </div>
 
-                <div class="stat-grid">
+                <!-- Live Network Sparkline Waveform -->
+                <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted); margin-top:4px; margin-bottom:2px;">
+                    <span>▮ NETWORK THROUGHPUT</span>
+                    <span id="left-net-spark-label" style="color:var(--theme-color); font-weight:700;">LIVE</span>
+                </div>
+                <canvas id="net-sparkline-canvas" width="286" height="32" style="width:100%; height:32px; background:rgba(0,0,0,0.35); border:1px solid var(--panel-border); border-radius:4px; cursor:pointer;" onclick="runPluginCard('network_radar')" title="Click to open Network Radar Sweep"></canvas>
+
+                <div class="stat-grid" style="margin-top:8px;">
                     <div><span>CPU</span><strong id="cpu-sm">0%</strong></div>
                     <div><span>Memory</span><strong id="ram-sm">0%</strong></div>
                     <div><span>Disk</span><strong id="disk-sm">--/-- GB</strong></div>
                 </div>
             </div>
 
-            <div class="widget">
-                <div class="widget-header"><span>Weather</span> <span style="cursor:pointer;" onclick="if(typeof pywebview !== 'undefined') pywebview.api.force_weather_update()" title="Refresh Weather">⟳</span></div>
+            <div class="widget" style="cursor:pointer;" onclick="openWeatherHudCard()" title="Click to open Full Center-Stage Weather Telemetry">
+                <div class="widget-header"><span>▮ WEATHER TELEMETRY</span> <span style="cursor:pointer;" onclick="event.stopPropagation(); if(typeof pywebview !== 'undefined') pywebview.api.force_weather_update()" title="Refresh Weather">⟳</span></div>
                 <div class="weather-main">
                     <div>
                         <div class="temp" id="w-temp">--°C</div>
                         <div class="weather-loc" id="w-loc">Locating...</div>
                         <div class="weather-desc" id="w-desc">synchronizing satellite...</div>
                     </div>
-                    <div id="w-icon" style="font-size:34px; color:var(--theme-color); text-shadow:0 0 12px var(--theme-color); font-weight:300;">☼</div>
+                    <div id="w-icon" style="font-size:32px; color:var(--theme-color); text-shadow:0 0 12px var(--theme-color); font-weight:700;">◉</div>
                 </div>
-                <div class="stat-grid" style="margin-top:15px; border-top:1px solid var(--panel-border); padding-top:10px;">
+                <div class="stat-grid" style="margin-top:12px; border-top:1px solid var(--panel-border); padding-top:8px;">
                     <div><span>Humidity</span><strong id="w-hum">--%</strong></div>
                     <div><span>Wind</span><strong id="w-wind">-- km/h</strong></div>
                     <div><span>Feels Like</span><strong id="w-feels">--°C</strong></div>
@@ -707,9 +795,9 @@
 
             <div class="widget">
                 <div class="widget-header">
-                    <span id="cam-widget-title">Camera & Hand Gestures</span>
+                    <span id="cam-widget-title">▮ OPTICAL & BAREHANDS AR</span>
                     <span style="display:flex; gap:6px; align-items:center;">
-                        <span id="barehands-header-btn" onclick="toggleBarehandsStage()" style="font-size:10px; padding:2px 6px; border:1px solid var(--theme-color); border-radius:4px; color:var(--theme-color); cursor:pointer; font-weight:700;" title="Toggle Jared Rhod's Barehands AR Spatial Hand-Tracking Stage">✋ AR</span>
+                        <span id="barehands-header-btn" onclick="toggleBarehandsStage()" style="font-size:10px; padding:2px 6px; border:1px solid var(--theme-color); border-radius:4px; color:var(--theme-color); cursor:pointer; font-weight:700;" title="Toggle Jared Rhod's Barehands AR Spatial Hand-Tracking Stage">◈ AR</span>
                         <span id="cam-center-header-btn" onclick="toggleCenterCameraMode()" style="font-size:10px; padding:2px 6px; border:1px solid var(--theme-color); border-radius:4px; color:var(--theme-color); cursor:pointer; font-weight:700;" title="Bring Camera Mode to Center Stage / Swap with Orb">⤢ CENTER</span>
                         <span id="gesture-badge" onclick="toggleHandTracking()" style="font-size:10px; padding:2px 6px; border:1px solid var(--panel-border); border-radius:4px; color:var(--text-muted); cursor:pointer;" title="Click to toggle Hand Gesture Tracking">OFF</span>
                         <span style="cursor:pointer;" onclick="toggleCamera()" title="Toggle Live Camera & Hand Gestures">⏻</span>
@@ -718,13 +806,13 @@
                 <div id="cam-dock-slot">
                     <div id="cam-stage">
                         <select id="camera-select" style="background:rgba(0,0,0,0.5); color:var(--theme-color); border:1px solid var(--theme-color); border-radius:4px; margin-bottom:8px; display:none; width:100%; font-size:12px; padding:3px;" onchange="switchCamera()"></select>
-                        <div id="cam-off" style="height: 135px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted); cursor:pointer; border:1px dashed rgba(255,255,255,0.08);" onclick="toggleCamera()" ondblclick="event.stopPropagation(); toggleCenterCameraMode();">
-                            <span style="font-size:22px; margin-bottom:8px; color:var(--theme-color);">◎</span>
-                            <span style="font-size:12px; letter-spacing:0.5px;">Optical Sensor Standby (Click to Enable · ⤢ Center)</span>
+                        <div id="cam-off" style="height: 120px; background: rgba(0,0,0,0.3); border-radius: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color: var(--text-muted); cursor:pointer; border:1px dashed rgba(255,255,255,0.08);" onclick="toggleCamera()" ondblclick="event.stopPropagation(); toggleCenterCameraMode();">
+                            <span style="font-size:20px; margin-bottom:6px; color:var(--theme-color);">◎</span>
+                            <span style="font-size:11px; letter-spacing:0.5px;">Optical Sensor Standby (Click to Enable · ⤢ Center)</span>
                         </div>
-                        <div id="cam-wrap" ondblclick="toggleCenterCameraMode()" title="Double-click to toggle Center Camera Stage" style="position:relative; display:none; width:100%; height:145px; border-radius:8px; overflow:hidden; border:1px solid var(--panel-border); cursor:pointer;">
-                            <video id="cam-video" autoplay playsinline muted style="width:100%; height:145px; border-radius:8px; object-fit:cover; transform:scaleX(-1); display:block;"></video>
-                            <canvas id="cam-overlay" width="290" height="145" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></canvas>
+                        <div id="cam-wrap" ondblclick="toggleCenterCameraMode()" title="Double-click to toggle Center Camera Stage" style="position:relative; display:none; width:100%; height:135px; border-radius:8px; overflow:hidden; border:1px solid var(--panel-border); cursor:pointer;">
+                            <video id="cam-video" autoplay playsinline muted style="width:100%; height:135px; border-radius:8px; object-fit:cover; transform:scaleX(-1); display:block;"></video>
+                            <canvas id="cam-overlay" width="290" height="135" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></canvas>
                             <div id="cam-hud-telemetry" style="position:absolute; top:6px; left:8px; font-size:9px; font-weight:700; color:var(--theme-color); background:rgba(5,8,17,0.78); padding:2px 6px; border-radius:4px; border:1px solid var(--panel-border); letter-spacing:0.6px; pointer-events:none; z-index:18;">OPTICAL HUD · LIVE</div>
                             <button id="cam-expand-overlay-btn" onclick="event.stopPropagation(); toggleCenterCameraMode();" title="Bring Camera Mode to Center Stage / Dock to Left Panel" style="position:absolute; top:6px; right:8px; background:rgba(5,8,17,0.85); border:1px solid var(--theme-color); color:var(--theme-color); padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; cursor:pointer; z-index:20; letter-spacing:0.8px;">⤢ CENTER</button>
                         </div>
@@ -738,7 +826,7 @@
                             <button id="item-toggle-btn" onclick="toggleItemRecognition()" style="flex:1; background:var(--theme-color); border:1px solid var(--theme-color); color:#000; padding:5px 4px; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer; letter-spacing:0.4px;" title="Toggle Real-Time Live Item / Object Recognition (80+ Classes)">◈ ITEMS: ON</button>
                             <button id="gesture-toggle-btn" onclick="toggleHandTracking()" style="flex:1; background:var(--theme-color); border:1px solid var(--theme-color); color:#000; padding:5px 4px; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer; letter-spacing:0.4px;" title="Toggle 21-Joint Hand Gesture Control">◈ HANDS: ON</button>
                             <button id="face-toggle-btn" onclick="toggleFaceLock()" style="flex:1; background:var(--theme-color); border:1px solid var(--theme-color); color:#000; padding:5px 4px; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer; letter-spacing:0.4px;" title="Toggle Biometric Face Reticle Lock">◈ FACE: ON</button>
-                            <button id="barehands-toggle-btn" onclick="toggleBarehandsStage()" style="background:rgba(0,255,255,0.08); border:1px solid var(--panel-border); color:var(--text-muted); padding:5px 6px; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer;" title="Toggle Jared Rhod's Barehands Spatial AR Hand Ring & Cards">✋ AR RING</button>
+                            <button id="barehands-toggle-btn" onclick="toggleBarehandsStage()" style="background:rgba(0,255,255,0.08); border:1px solid var(--panel-border); color:var(--text-muted); padding:5px 6px; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer;" title="Toggle Jared Rhod's Barehands Spatial AR Hand Ring & Cards">◈ AR RING</button>
                             <button id="sentry-toggle-btn" onclick="toggleSentryMode()" style="background:rgba(0,255,255,0.08); border:1px solid var(--panel-border); color:var(--text-muted); padding:5px 6px; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer;" title="Toggle Optical Sentry Watch (Alerts when a person or new item enters frame)">◈ SENTRY</button>
                             <button id="cam-center-action-btn" onclick="toggleCenterCameraMode()" style="background:rgba(0,255,255,0.12); border:1px solid var(--theme-color); color:var(--theme-color); padding:5px 8px; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer;" title="Toggle Center Camera Stage">⤢</button>
                         </div>
@@ -756,17 +844,17 @@
             
             <div class="widget">
                 <div class="widget-header">
-                    <span>System Uptime</span>
+                    <span>▮ STATUS & MODULES</span>
                     <span style="display:flex; gap:8px; align-items:center;">
                         <span id="uptime-top" onclick="toggleUptimeMode()" style="cursor:pointer;" title="Session Uptime (Click to toggle OS/Session display)">00:00:00</span>
                         <span style="cursor:pointer;" onclick="if(typeof pywebview !== 'undefined') pywebview.api.force_stats_update()" title="Refresh Uptime & Load Telemetry">⟳</span>
                     </span>
                 </div>
-                <div class="stat-labels" style="margin-bottom:15px; cursor:pointer;" onclick="toggleUptimeMode()" title="Click to toggle between Windows OS Boot Uptime and Session Uptime">
+                <div class="stat-labels" style="margin-bottom:8px; cursor:pointer;" onclick="toggleUptimeMode()" title="Click to toggle between Windows OS Boot Uptime and Session Uptime">
                     <span id="uptime-label">System Running For:</span>
                     <span id="uptime-val" style="color:var(--text-main); font-weight:bold;">00:00:00</span>
                 </div>
-                <div class="stat-grid" style="margin-top:0; margin-bottom:15px; grid-template-columns: 1fr 1fr;">
+                <div class="stat-grid" style="margin-top:0; margin-bottom:8px; grid-template-columns: 1fr 1fr;">
                     <div onclick="inspectSessionTelemetry()" style="cursor:pointer; transition:0.2s;" onmouseover="this.style.border='1px solid var(--theme-color)'" onmouseout="this.style.border='none'" title="Click to view Session Telemetry in Log">
                         <span>Session</span><strong id="session-count">1</strong>
                     </div>
@@ -774,10 +862,18 @@
                         <span>Commands</span><strong id="cmd-count">0</strong>
                     </div>
                 </div>
-                <div class="stat-row" style="margin-bottom:0; cursor:pointer;" onclick="quickCmd('Give me a full system status report')" title="Click to run a full spoken hardware & process diagnostic">
-                    <div class="stat-labels"><span>System Load</span></div>
+                <div class="stat-row" style="margin-bottom:4px; cursor:pointer;" onclick="openDiagnosticsHudCard()" title="Click to open System Diagnostics Overlay">
+                    <div class="stat-labels"><span>System Load</span><span id="load-val">10%</span></div>
                     <div class="stat-bar-bg"><div class="stat-bar-fill" id="load-bar" style="width:10%; background:#00ff88; box-shadow:none;"></div></div>
-                    <div class="stat-labels" style="margin-top:4px;"><span id="load-status" style="color:#00ff88;">Optimal</span><span id="load-val">10%</span></div>
+                    <div class="stat-labels" style="margin-top:3px;"><span id="load-status" style="color:#00ff88;">Optimal</span><span>ENGINE: GEMINI [9-TIER]</span></div>
+                </div>
+                <div class="diag-quick-grid">
+                    <button class="diag-quick-btn" onclick="runPluginCard('network_radar')" title="Launch Network Radar Sweep">◈ RADAR</button>
+                    <button class="diag-quick-btn" onclick="runPluginCard('disk_analyzer')" title="Launch Storage Disk Map">◈ DISK MAP</button>
+                    <button class="diag-quick-btn" onclick="runPluginCard('earth_globe')" title="Launch 3D Earth Globe">◈ 3D GLOBE</button>
+                    <button class="diag-quick-btn" onclick="openDiagnosticsHudCard()" title="Launch System Diagnostics">◈ SYS DIAG</button>
+                    <button class="diag-quick-btn" onclick="openWeatherHudCard()" title="Launch Weather Telemetry">◈ WEATHER</button>
+                    <button class="diag-quick-btn" onclick="runPluginCard('hardware_schematic')" title="Launch Hardware Pinout Schematic">◈ CAD PIN</button>
                 </div>
             </div>
         </div>
@@ -788,9 +884,9 @@
                 <!-- IN-HUD CENTER VIDEO PLAYER (Original Language + Dual Stream Sync + Smart Mic Mute) -->
                 <div id="hud-video-stage">
                     <div class="hud-video-header">
-                        <span id="hud-video-title">▶ HUD MEDIA STREAM · ORIGINAL AUDIO</span>
-                        <button class="hud-video-btn" id="hud-video-mute-btn" onclick="toggleHudVideoMute()" title="Toggle Video Sound (Smart Mic Mute automatically mutes JARVIS mic while movie audio is playing)">🔇 SOUND OFF</button>
-                        <button class="hud-video-btn" style="border-color:#ff3355; color:#ff3355;" onclick="stopHudVideo(true)" title="Stop & Close Video Stream (or say 'stop')">✕ CLOSE</button>
+                        <span id="hud-video-title">▸ HUD MEDIA STREAM · ORIGINAL AUDIO</span>
+                        <button class="hud-video-btn" id="hud-video-mute-btn" onclick="toggleHudVideoMute()" title="Toggle Video Sound (Smart Mic Mute automatically mutes JARVIS mic while movie audio is playing)">◈ SOUND OFF</button>
+                        <button class="hud-video-btn" style="border-color:#ff3355; color:#ff3355;" onclick="stopHudVideo(true)" title="Stop & Close Video Stream (or say 'stop')">[X] CLOSE</button>
                     </div>
                     <video id="hud-video-el" playsinline controls></video>
                     <audio id="hud-audio-el" style="display:none;"></audio>
@@ -798,7 +894,7 @@
 
                 <div class="arc-reactor" id="orb-mount" title="Drag to rotate · Scroll to zoom · Double-click or click ⤢ HUD in Mini Mode to restore">
                     <canvas id="orb-canvas" width="320" height="320"></canvas>
-                    <canvas id="centerpiece-2d-canvas" width="320" height="320" style="position:absolute; inset:0; width:100%; height:100%; display:none; pointer-events:none;"></canvas>
+                    <canvas id="centerpiece-2d-canvas" width="340" height="340" style="position:absolute; inset:-10px; width:340px; height:340px; display:none; cursor:grab;"></canvas>
                     <div class="radar-ring"></div>
                     <div id="mini-orb-controls">
                         <button class="mini-orb-btn" onclick="event.stopPropagation(); restoreFullHud();" title="Restore Full HUD Interface (Alt+Space)">⤢ HUD</button>
@@ -809,21 +905,24 @@
 
             <div class="centerpiece-bar">
                 <button class="cp-pill active" id="cp-btn-SPHERE" onclick="setCenterpieceMode('SPHERE')" title="3D Orbital Particle Sphere">◎ SPHERE</button>
-                <button class="cp-pill" id="cp-btn-FACE" onclick="setCenterpieceMode('FACE')" title="3D Holographic Face Avatar with Real-Time Viseme Lip-Sync">◈ 3D FACE</button>
-                <button class="cp-pill" id="cp-btn-REACTOR" onclick="setCenterpieceMode('REACTOR')" title="Classic Mark 51-54 Arc Reactor Core">⚛ REACTOR</button>
-                <button class="cp-pill" id="cp-btn-CIRCUIT" onclick="setCenterpieceMode('CIRCUIT')" title="Jared Rhod ai-visualizer Living Circuit Board">⛁ CIRCUIT</button>
-                <button class="cp-pill" id="cp-btn-BAREHANDS" onclick="toggleBarehandsStage(true)" title="Launch Jared Rhod Barehands Spatial AR Stage in Center">✋ BAREHANDS AR</button>
+                <button class="cp-pill" id="cp-btn-FACE" onclick="setCenterpieceMode('FACE')" title="810-Vertex 3D Holographic Human Head with Real-Time Viseme Lip-Sync">◈ 3D HOLO HEAD</button>
+                <button class="cp-pill" id="cp-btn-REACTOR" onclick="setCenterpieceMode('REACTOR')" title="Mark-LV 72-Graduation Arc Reactor Core">◉ ARC REACTOR</button>
+                <button class="cp-pill" id="cp-btn-CIRCUIT" onclick="setCenterpieceMode('CIRCUIT')" title="Jared Rhod ai-visualizer Living Circuit Board">▣ CIRCUIT DIE</button>
+                <button class="cp-pill" id="cp-btn-BAREHANDS" onclick="toggleBarehandsStage(true)" title="Launch Jared Rhod Barehands Spatial AR Stage in Center">◈ BAREHANDS AR</button>
             </div>
 
-            <div class="center-title title-text" style="margin-top:16px;">J.A.R.V.I.S</div>
+            <!-- 36-Bar Center-Weighted Audio Waveform (Mark-LV AudioBars) -->
+            <canvas id="hud-waveform-canvas" width="340" height="28" style="width:340px; height:28px; margin-top:8px; pointer-events:none;"></canvas>
+
+            <div class="center-title title-text" style="margin-top:8px;">J.A.R.V.I.S</div>
             
             <div class="state-pill" id="state-pill">
                 <div class="dot"></div> <span id="state-text">Listening for wake word...</span>
             </div>
 
             <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
-                <button class="friday-btn" style="margin-top:16px; background:#00334a; border-color:#00ffff; color:#00ffff; box-shadow:0 0 15px rgba(0,255,255,0.2);" onclick="triggerJarvis()">J.A.R.V.I.S.</button>
-                <button class="friday-btn" style="margin-top:16px;" onclick="triggerFriday()">F.R.I.D.A.Y.</button>
+                <button class="friday-btn" style="margin-top:12px; background:#00334a; border-color:#00ffff; color:#00ffff; box-shadow:0 0 15px rgba(0,255,255,0.2);" onclick="triggerJarvis()">J.A.R.V.I.S.</button>
+                <button class="friday-btn" style="margin-top:12px;" onclick="triggerFriday()">F.R.I.D.A.Y.</button>
             </div>
 
             <div class="controls">
@@ -851,7 +950,7 @@
         <!-- RIGHT PANEL -->
         <div class="right-panel">
             <div class="chat-header">
-                Conversation
+                ▮ COMMUNICATIONS
                 <div class="chat-actions">
                     <button onclick="document.getElementById('chat-box').innerHTML=''">⌫ Clear</button>
                     <button onclick="exportChatLog()" title="Download Session Transcript">⤓ Extract</button>
@@ -867,106 +966,132 @@
 
             <div id="attached-file-bar" style="display:none; padding:6px 15px; background:rgba(0,255,255,0.08); border-top:1px solid var(--panel-border); font-size:12px; color:var(--theme-color); justify-content:space-between; align-items:center;">
                 <span id="attached-file-name">◈ file.pdf</span>
-                <span style="cursor:pointer; color:var(--text-muted);" onclick="clearAttachedFile()">✕</span>
+                <span style="cursor:pointer; color:var(--text-muted);" onclick="clearAttachedFile()">X</span>
             </div>
 
             <div class="chat-input">
-                <button class="icon-btn" style="width:40px; height:40px; font-size:18px; font-weight:700; flex-shrink:0;" onclick="triggerFilePicker()" title="Attach File (PDF, Image, DOCX, CSV, Code, Audio/Video) for File Processor">⊕</button>
+                <button class="icon-btn" style="width:40px; height:40px; font-size:18px; font-weight:700; flex-shrink:0;" onclick="triggerFilePicker()" title="Attach File (PDF, Image, DOCX, CSV, Code, Audio/Video) for File Processor">+</button>
                 <input type="text" id="cmd-input" placeholder="Type a command or 'stop' / 'kill' (English / Hindi)..." onkeypress="handleEnter(event)">
                 <button class="icon-btn" style="width:40px; height:40px; font-size:16px; font-weight:700; flex-shrink:0; border-color:rgba(255,0,51,0.55); color:#ff3355;" onclick="triggerKillCommand()" title="Stop / Kill Active Command & Speech (Esc)">⊘</button>
-                <button class="send-btn" onclick="sendCommand()">➤</button>
+                <button class="send-btn" onclick="sendCommand()">▸</button>
             </div>
         </div>
 
     </div>
 
-    <!-- SEPARATE INSTANT DRAWER 1: ⚙ SETUP DRAWER -->
+    <!-- BOTTOM STATUS FOOTER BAR -->
+    <div class="hud-footer-bar">
+        <div>
+            <span class="ft-dot"></span>ENGINE: GEMINI LIVE · 9-MODEL LADDER &nbsp;&nbsp;|&nbsp;&nbsp;
+            <span class="ft-dot" style="background:#00ff88; box-shadow:0 0 6px #00ff88;"></span>MIC: LIVE &nbsp;&nbsp;|&nbsp;&nbsp;
+            <span>PROTOCOL: MARK LVIII + BAREHANDS</span>
+        </div>
+        <div>
+            <span>F4 MUTE &nbsp;·&nbsp; F11 FULLSCREEN &nbsp;·&nbsp; ESC INTERRUPT &nbsp;·&nbsp; CTRL+SPACE PTT</span>
+        </div>
+    </div>
+
+    <!-- SEPARATE INSTANT DRAWER 1: SETUP DRAWER -->
     <div class="hud-drawer" id="setup-drawer">
         <div class="drawer-title">
-            <span>⚙ SYSTEM SETUP</span>
-            <span style="cursor:pointer;" onclick="closeHudDrawers()">✕</span>
+            <span>◈ SYSTEM SETUP</span>
+            <span style="cursor:pointer;" onclick="closeHudDrawers()">X</span>
         </div>
         <div class="drawer-item" onclick="openHudModal('customize')">
-            <span>🎨 Customize HUD & Live Hue Theme</span>
+            <span>◈ Customize HUD & Live Hue Wheel</span>
             <span class="drawer-pill on">LIVE</span>
         </div>
         <div class="drawer-item" onclick="openHudModal('plugins')">
-            <span>🧩 Single-File Plugin Loader (5x Fast)</span>
+            <span>▣ Single-File Plugin Loader (5x Fast)</span>
             <span class="drawer-pill on" id="setup-plugin-badge">READY</span>
         </div>
         <div class="drawer-item" onclick="toggleCamera(); closeHudDrawers();">
-            <span>📷 Optical Camera & Audio Input</span>
+            <span>◎ Optical Camera & Audio Input</span>
             <span class="drawer-pill" id="setup-cam-badge">STANDBY</span>
         </div>
         <div class="drawer-item" onclick="openHudModal('remote')">
-            <span>📱 Smartphone QR Remote Pairing</span>
+            <span>▣ Smartphone QR Remote Pairing</span>
             <span class="drawer-pill on">:8787</span>
         </div>
         <div class="drawer-item" onclick="if(typeof pywebview!=='undefined') pywebview.api.create_desktop_shortcut(); closeHudDrawers();">
-            <span>🖥 Create Desktop Shortcut</span>
+            <span>▸ Create Desktop Shortcut</span>
             <span class="drawer-pill">INSTALL</span>
         </div>
     </div>
 
-    <!-- SEPARATE INSTANT DRAWER 2: 🎛 CONTROLS DRAWER -->
+    <!-- SEPARATE INSTANT DRAWER 2: CONTROLS DRAWER -->
     <div class="hud-drawer" id="controls-drawer">
         <div class="drawer-title">
-            <span>🎛 LIVE CONTROLS</span>
-            <span style="cursor:pointer;" onclick="closeHudDrawers()">✕</span>
+            <span>▣ LIVE CONTROLS</span>
+            <span style="cursor:pointer;" onclick="closeHudDrawers()">X</span>
         </div>
         <div class="drawer-item" onclick="toggleControlOption('mic_mute')">
-            <span>🎙 Microphone Mute (Smart Video Mute)</span>
+            <span>◉ Microphone Mute (Smart Video Mute)</span>
             <span class="drawer-pill" id="ctrl-pill-mic_mute">OFF</span>
         </div>
         <div class="drawer-item" onclick="toggleControlOption('wake_word')">
-            <span>🗣 Wake Word Gate ("Jarvis" / "Friday")</span>
+            <span>◈ Wake Word Gate ("Jarvis" / "Friday")</span>
             <span class="drawer-pill" id="ctrl-pill-wake_word">OFF</span>
         </div>
         <div class="drawer-item" onclick="toggleControlOption('push_to_talk')">
-            <span>⌨ Push-to-Talk Mode (Hold Ctrl+Space)</span>
+            <span>▣ Push-to-Talk Mode (Hold Ctrl+Space)</span>
             <span class="drawer-pill" id="ctrl-pill-push_to_talk">OFF</span>
         </div>
         <div class="drawer-item" onclick="if(typeof pywebview!=='undefined') pywebview.api.trigger_morning_briefing(); closeHudDrawers();">
-            <span>☀ Morning / Daily Briefing Now</span>
+            <span>◉ Morning / Daily Briefing Now</span>
             <span class="drawer-pill on">RUN</span>
         </div>
         <div class="drawer-item" onclick="toggleControlOption('proactive')">
-            <span>⚡ Proactive Check-Ins & Alerts</span>
+            <span>◈ Proactive Check-Ins & Alerts</span>
             <span class="drawer-pill on" id="ctrl-pill-proactive">ON</span>
         </div>
         <div class="drawer-item" onclick="runPluginCard('network_radar'); closeHudDrawers();">
-            <span>📡 Launch Network Radar Sweep</span>
+            <span>◎ Launch Network Radar Sweep</span>
             <span class="drawer-pill on">HUD</span>
         </div>
         <div class="drawer-item" onclick="runPluginCard('disk_analyzer'); closeHudDrawers();">
-            <span>💾 Launch Storage Disk Treemap</span>
+            <span>▣ Launch Storage Disk Treemap</span>
             <span class="drawer-pill on">HUD</span>
         </div>
         <div class="drawer-item" onclick="runPluginCard('earth_globe'); closeHudDrawers();">
-            <span>🌍 Launch 3D Earth Seismic Globe</span>
+            <span>◉ Launch 3D Earth Seismic Globe</span>
             <span class="drawer-pill on">HUD</span>
         </div>
         <div class="drawer-item" onclick="runPluginCard('hardware_schematic'); closeHudDrawers();">
-            <span>🔌 Launch Hardware Pinout Schematic</span>
+            <span>◈ Launch Hardware Pinout Schematic</span>
+            <span class="drawer-pill on">HUD</span>
+        </div>
+        <div class="drawer-item" onclick="openDiagnosticsHudCard(); closeHudDrawers();">
+            <span>▣ Launch System Diagnostics</span>
             <span class="drawer-pill on">HUD</span>
         </div>
         <div class="drawer-item" onclick="openHudModal('memory')">
-            <span>🧠 Memory Vault & VAULT-INDEX.md</span>
+            <span>◈ Memory Vault & VAULT-INDEX.md</span>
             <span class="drawer-pill on">OPEN</span>
         </div>
         <div class="drawer-item" onclick="openHudModal('remote')">
-            <span>📱 Remote Control QR Code</span>
+            <span>▣ Remote Control QR Code</span>
             <span class="drawer-pill on">SCAN</span>
         </div>
     </div>
 
-    <!-- FLOATING INTERACTIVE HUD CARD OVERLAY (RADAR / DISK MAP / EARTH GLOBE / SCHEMATIC / POMODORO) -->
+    <!-- CENTER-STAGE INTERACTIVE HOLOGRAPHIC CARD OVERLAY (RADAR / DISK MAP / EARTH GLOBE / WEATHER / DIAGNOSTICS / SCHEMATIC / POMODORO) -->
     <div id="hud-card-overlay">
-        <div class="drawer-title">
-            <span id="hud-card-title">◈ TELEMETRY OVERLAY</span>
-            <span style="cursor:pointer; font-size:14px;" onclick="closeHudCard()">✕</span>
+        <div class="hud-corner-tl"></div>
+        <div class="hud-corner-tr"></div>
+        <div class="hud-corner-bl"></div>
+        <div class="hud-corner-br"></div>
+        <div class="drawer-title" style="border-bottom:1px solid var(--panel-border); padding-bottom:10px; margin-bottom:4px;">
+            <span id="hud-card-title" style="font-size:18px; letter-spacing:2px;">◈ TELEMETRY OVERLAY</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <span style="font-size:11px; color:#00ff88; font-weight:700; letter-spacing:1.5px; display:flex; align-items:center; gap:5px;">
+                    <span style="width:7px; height:7px; border-radius:50%; background:#00ff88; box-shadow:0 0 8px #00ff88; display:inline-block;"></span>LIVE
+                </span>
+                <button class="cp-pill" onclick="document.getElementById('hud-card-overlay').classList.toggle('compact-dock')" title="Toggle Full Center Stage / Compact Dock">[ ] SIZE</button>
+                <button class="cp-pill" style="border-color:#ff3355; color:#ff3355;" onclick="closeHudCard()" title="Close Overlay">[X]</button>
+            </div>
         </div>
-        <div id="hud-card-body" style="min-height:180px; max-height:340px; overflow-y:auto;"></div>
+        <div id="hud-card-body" style="flex:1; min-height:200px; overflow-y:auto; display:flex; flex-direction:column;"></div>
     </div>
 
     <!-- MODAL BACKDROP FOR QR REMOTE / LIVE THEME CUSTOMIZER / PLUGINS / MEMORY VAULT -->
@@ -974,7 +1099,7 @@
         <div class="hud-modal-card">
             <div class="drawer-title" style="font-size:14px;">
                 <span id="hud-modal-title">◈ SYSTEM MODULE</span>
-                <span style="cursor:pointer; font-size:16px;" onclick="closeHudModal()">✕</span>
+                <span style="cursor:pointer; font-size:16px;" onclick="closeHudModal()">X</span>
             </div>
             <div id="hud-modal-body"></div>
         </div>
@@ -2715,10 +2840,10 @@
             }
             if (mBtn) {
                 if (hudVideoMuted) {
-                    mBtn.innerText = '🔇 SOUND OFF';
+                    mBtn.innerText = '◈ SOUND OFF';
                     mBtn.classList.remove('sound-on');
                 } else {
-                    mBtn.innerText = '🔊 SOUND ON · MIC AUTO-MUTED';
+                    mBtn.innerText = '◉ SOUND ON · MIC AUTO-MUTED';
                     mBtn.classList.add('sound-on');
                 }
             }
@@ -2837,7 +2962,7 @@
             const pill = document.getElementById('state-pill');
             const text = document.getElementById('state-text');
             if (held && text) {
-                text.innerText = '⌨ PTT ACTIVE (Ctrl+Space) — Speak now...';
+                text.innerText = '[PTT ACTIVE] (Ctrl+Space) — Speak now...';
                 if (pill) pill.style.borderColor = '#00ff88';
             } else if (pill) {
                 pill.style.borderColor = 'var(--panel-border)';
@@ -2852,47 +2977,245 @@
         }
         window.runPluginCard = runPluginCard;
 
-        // --- 4 SWITCHABLE HUD CENTERPIECES (SPHERE / 3D FACE VISEME / ARC REACTOR / LIVING CIRCUIT) ---
-        let currentCenterpieceMode = 'SPHERE';
-        let centerpieceRafId = 0;
-        let circuitNodes = [];
-        let circuitEdges = [];
-        let circuitPackets = [];
+        // --- MARK LVIII LEFT TELEMETRY GAUGES (CPU / MEM / GPU / TEMP), NETWORK SPARKLINE & 36-BAR WAVEFORM ---
+        let netSparkHistory = Array(48).fill(12);
+        let cpuSparkHistory = Array(60).fill(14);
+        let waveformBars = Array(36).fill(0.05);
 
-        function initCircuitTopology() {
-            circuitNodes = [];
-            circuitEdges = [];
-            circuitPackets = [];
-            const rings = [32, 68, 104, 136];
-            rings.forEach((r, rIdx) => {
-                const count = 6 + rIdx * 2;
-                for (let i = 0; i < count; i++) {
-                    const a = (i / count) * Math.PI * 2 + rIdx * 0.35;
-                    circuitNodes.push({
-                        x: 160 + Math.cos(a) * r,
-                        y: 160 + Math.sin(a) * r,
-                        r: rIdx === 0 ? 4 : 2.6,
-                        pulse: Math.random() * Math.PI * 2
-                    });
-                }
-            });
-            for (let i = 0; i < circuitNodes.length; i++) {
-                for (let j = i + 1; j < circuitNodes.length; j++) {
-                    const d = Math.hypot(circuitNodes[i].x - circuitNodes[j].x, circuitNodes[i].y - circuitNodes[j].y);
-                    if (d < 56 && circuitEdges.length < 54) {
-                        circuitEdges.push([i, j]);
-                    }
-                }
-            }
-            for (let k = 0; k < 18; k++) {
-                circuitPackets.push({
-                    edgeIdx: Math.floor(Math.random() * Math.max(1, circuitEdges.length)),
-                    t: Math.random(),
-                    speed: 0.008 + Math.random() * 0.014
+        function renderTelemetryAndWaveformLoop() {
+            requestAnimationFrame(renderTelemetryAndWaveformLoop);
+            const themeHex = getComputedStyle(document.documentElement).getPropertyValue('--theme-color').trim() || '#00ffff';
+            const nowSec = performance.now() * 0.001;
+
+            // 1. 4 Circular Segmented Arc Gauges (CPU, MEMORY, GPU, TEMP)
+            const gCan = document.getElementById('sys-gauges-canvas');
+            if (gCan) {
+                const gCtx = gCan.getContext('2d');
+                const gw = gCan.width, gh = gCan.height;
+                gCtx.clearRect(0, 0, gw, gh);
+                const cpuPct = parseInt(document.getElementById('cpu-sm')?.innerText || '14', 10) || 14;
+                const ramPct = parseInt(document.getElementById('ram-sm')?.innerText || '58', 10) || 58;
+                const gpuPct = Math.min(99, Math.max(4, Math.round(cpuPct * 0.55 + 6 + Math.sin(nowSec * 0.8) * 3)));
+                const tempC = Math.min(88, Math.max(38, Math.round(42 + cpuPct * 0.32)));
+                const gauges = [
+                    { label: 'CPU', val: cpuPct, text: `${cpuPct}%`, max: 100 },
+                    { label: 'MEMORY', val: ramPct, text: `${ramPct}%`, max: 100 },
+                    { label: 'GPU', val: gpuPct, text: `${gpuPct}%`, max: 100 },
+                    { label: 'TEMP', val: tempC, text: `${tempC}°C`, max: 100 }
+                ];
+                const cellW = gw / 4;
+                gauges.forEach((g, idx) => {
+                    const cx = cellW * idx + cellW / 2;
+                    const cy = 27;
+                    const r = 21;
+                    // Background segmented track
+                    gCtx.lineWidth = 3.5;
+                    gCtx.strokeStyle = 'rgba(255,255,255,0.08)';
+                    gCtx.beginPath();
+                    gCtx.arc(cx, cy, r, Math.PI * 0.75, Math.PI * 2.25);
+                    gCtx.stroke();
+
+                    // Active arc
+                    const frac = Math.min(1, Math.max(0.02, g.val / g.max));
+                    gCtx.strokeStyle = g.val > 85 ? '#ff3355' : (g.val > 70 ? '#f59e0b' : themeHex);
+                    gCtx.beginPath();
+                    gCtx.arc(cx, cy, r, Math.PI * 0.75, Math.PI * 0.75 + frac * Math.PI * 1.5);
+                    gCtx.stroke();
+
+                    // Value & label
+                    gCtx.fillStyle = '#e8f4ff';
+                    gCtx.font = 'bold 10px Rajdhani, sans-serif';
+                    gCtx.textAlign = 'center';
+                    gCtx.fillText(g.text, cx, cy + 3);
+                    gCtx.fillStyle = '#7a8b99';
+                    gCtx.font = 'bold 8px Rajdhani, sans-serif';
+                    gCtx.fillText(g.label, cx, gh - 4);
                 });
             }
+
+            // 2. Network Sparkline Canvas
+            const nCan = document.getElementById('net-sparkline-canvas');
+            if (nCan && Math.floor(nowSec * 60) % 12 === 0) {
+                const nCtx = nCan.getContext('2d');
+                const nw = nCan.width, nh = nCan.height;
+                const netText = document.getElementById('net-speed')?.innerText || '0.12 MB/s';
+                const num = parseFloat(netText) || 0.15;
+                const kb = netText.includes('MB') ? num * 1024 : num;
+                netSparkHistory.push(Math.max(4, Math.min(2000, kb + Math.sin(nowSec * 2) * 18)));
+                if (netSparkHistory.length > 48) netSparkHistory.shift();
+                const lbl = document.getElementById('left-net-spark-label');
+                if (lbl) lbl.innerText = netText;
+
+                const cpuNow = parseInt(document.getElementById('cpu-sm')?.innerText || '14', 10) || 14;
+                cpuSparkHistory.push(cpuNow);
+                if (cpuSparkHistory.length > 60) cpuSparkHistory.shift();
+
+                nCtx.clearRect(0, 0, nw, nh);
+                const maxV = Math.max(100, ...netSparkHistory);
+                nCtx.strokeStyle = themeHex;
+                nCtx.lineWidth = 1.5;
+                nCtx.beginPath();
+                netSparkHistory.forEach((v, i) => {
+                    const x = (i / (netSparkHistory.length - 1)) * nw;
+                    const y = nh - 3 - (v / maxV) * (nh - 8);
+                    if (i === 0) nCtx.moveTo(x, y);
+                    else nCtx.lineTo(x, y);
+                });
+                nCtx.stroke();
+            }
+
+            // 3. 36-Bar Center-Weighted Audio Waveform (ported from Mark-LV AudioBars)
+            const wCan = document.getElementById('hud-waveform-canvas');
+            if (wCan) {
+                const wCtx = wCan.getContext('2d');
+                const ww = wCan.width, wh = wCan.height;
+                wCtx.clearRect(0, 0, ww, wh);
+                const stText = document.getElementById('state-text')?.innerText || '';
+                const speaking = stText.includes('Transmitting') || orbPulse > 1.3;
+                const thinking = stText.includes('Processing');
+                const nBars = waveformBars.length;
+                const mid = (nBars - 1) / 2;
+                const barW = (ww - (nBars - 1) * 3) / nBars;
+
+                for (let i = 0; i < nBars; i++) {
+                    const bell = Math.exp(-Math.pow((i - mid) / (mid * 0.62), 2));
+                    let target = 0.06;
+                    if (speaking) {
+                        target = Math.min(1.0, (0.28 + Math.abs(Math.sin(nowSec * 15 + i * 0.55)) * 0.72) * bell);
+                    } else if (thinking) {
+                        target = (0.15 + 0.25 * (0.5 + 0.5 * Math.sin(nowSec * 5.0 - i * 0.3))) * bell;
+                    } else {
+                        target = (0.05 + 0.08 * Math.abs(Math.sin(nowSec * 2.2 + i * 0.25))) * bell;
+                    }
+                    waveformBars[i] += (target - waveformBars[i]) * 0.28;
+                    const bh = Math.max(2, waveformBars[i] * (wh - 4));
+                    const bx = i * (barW + 3);
+                    const by = (wh - bh) / 2;
+                    wCtx.fillStyle = themeHex;
+                    wCtx.globalAlpha = 0.35 + waveformBars[i] * 0.65;
+                    wCtx.fillRect(bx, by, Math.max(2, barW), bh);
+                }
+                wCtx.globalAlpha = 1.0;
+            }
         }
-        initCircuitTopology();
+        requestAnimationFrame(renderTelemetryAndWaveformLoop);
+
+        // --- REAL-TIME PHONEME VISEME ENGINE & 810-VERTEX 3D HOLOGRAPHIC HEAD (PORTED FROM MARK-LV core/avatar.py & core/viseme.py) ---
+        let visemeQueue = [];
+        let visemeStartTime = 0;
+        let headDragYaw = 0;
+        let headDragPitch = 0;
+        let isDraggingHead = false;
+        let headDragLastX = 0, headDragLastY = 0;
+        let headSmoothJaw = 0, headSmoothSpread = 0, headSmoothBrow = 0;
+        let headGazeX = 0, headGazeY = 0, headTargetGazeX = 0, headTargetGazeY = 0, headNextSaccade = 0;
+        let headScanY = -1.0;
+
+        // Interactive mouse drag for 2D/3D canvas centerpieces
+        window.addEventListener('DOMContentLoaded', () => {
+            const cpCan = document.getElementById('centerpiece-2d-canvas');
+            if (!cpCan) return;
+            cpCan.addEventListener('mousedown', (e) => {
+                isDraggingHead = true;
+                headDragLastX = e.clientX;
+                headDragLastY = e.clientY;
+                cpCan.style.cursor = 'grabbing';
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (!isDraggingHead) return;
+                const dx = e.clientX - headDragLastX;
+                const dy = e.clientY - headDragLastY;
+                headDragLastX = e.clientX;
+                headDragLastY = e.clientY;
+                headDragYaw = Math.max(-0.75, Math.min(0.75, headDragYaw + dx * 0.008));
+                headDragPitch = Math.max(-0.45, Math.min(0.45, headDragPitch + dy * 0.008));
+            });
+            window.addEventListener('mouseup', () => {
+                if (isDraggingHead) {
+                    isDraggingHead = false;
+                    if (cpCan) cpCan.style.cursor = 'grab';
+                }
+            });
+            cpCan.addEventListener('dblclick', () => {
+                headDragYaw = 0;
+                headDragPitch = 0;
+            });
+        });
+
+        function queueTextVisemes(text) {
+            if (!text) return;
+            const s = String(text).toLowerCase();
+            const frames = [];
+            let t = 0;
+            for (let i = 0; i < s.length; i++) {
+                const c = s[i];
+                let jaw = 0.15, spread = 0.0, dur = 0.055;
+                if ('aäáà'.includes(c)) { jaw = 0.88; spread = 0.22; dur = 0.075; }
+                else if ('oóòô'.includes(c)) { jaw = 0.72; spread = -0.52; dur = 0.075; }
+                else if ('eéèêiíìy'.includes(c)) { jaw = 0.42; spread = 0.68; dur = 0.065; }
+                else if ('uúùw'.includes(c)) { jaw = 0.35; spread = -0.70; dur = 0.065; }
+                else if ('mbp'.includes(c)) { jaw = 0.0; spread = -0.10; dur = 0.055; }
+                else if ('fv'.includes(c)) { jaw = 0.14; spread = 0.18; dur = 0.055; }
+                else if ('szc'.includes(c)) { jaw = 0.18; spread = 0.38; dur = 0.05; }
+                else if ('tdnlr'.includes(c)) { jaw = 0.30; spread = 0.15; dur = 0.05; }
+                else if (' .,!?;:—-'.includes(c)) { jaw = 0.02; spread = 0.0; dur = 0.08; }
+                frames.push({ t, dur, jaw, spread });
+                t += dur;
+            }
+            visemeQueue = frames;
+            visemeStartTime = performance.now() * 0.001;
+        }
+        window.queueTextVisemes = queueTextVisemes;
+
+        // Hook addLog so JARVIS spoken responses automatically feed phoneme visemes
+        const _origAddLog = window.addLog || addLog;
+        window.addLog = function(sender, message) {
+            if (sender === 'JARVIS' || sender === 'FRIDAY') {
+                queueTextVisemes(message);
+            }
+            return _origAddLog(sender, message);
+        };
+
+        // --- 4 SWITCHABLE HUD CENTERPIECES (SPHERE / 810V 3D HOLO HEAD / 72-TICK ARC REACTOR / JARED RHOD PCB CIRCUIT DIE) ---
+        let currentCenterpieceMode = 'SPHERE';
+        let centerpieceRafId = 0;
+        let pcbTraces = [];
+        let pcbPulses = [];
+        let pcbChips = [];
+
+        function initJaredRhodCircuitDie() {
+            // Authentic Jared Rhod ai-visualizer 45-degree PCB traces + IC packages + central [ J . A . R . V . I . S . ] processor die
+            pcbTraces = [
+                // Left 45-degree traces from center die
+                { pts: [[110, 152], [76, 152], [52, 128], [20, 128]], color: '#00ff88', label: 'JP72' },
+                { pts: [[110, 164], [68, 164], [44, 188], [16, 188]], color: '#00ffff', label: 'R85' },
+                { pts: [[110, 176], [82, 176], [56, 202], [56, 248], [28, 276]], color: '#00ff88', label: 'L98' },
+                { pts: [[132, 140], [132, 108], [102, 78], [54, 78], [28, 52]], color: '#00ffff', label: 'Q34' },
+                // Top & bottom traces
+                { pts: [[158, 140], [158, 92], [182, 68], [182, 26]], color: '#f59e0b', label: 'JP34' },
+                { pts: [[184, 140], [184, 104], [216, 72], [268, 72]], color: '#00ff88', label: 'JP54' },
+                { pts: [[154, 196], [154, 238], [126, 266], [126, 310]], color: '#f59e0b', label: 'R83' },
+                { pts: [[176, 196], [176, 246], [204, 274], [204, 316]], color: '#00ffff', label: 'U86' },
+                { pts: [[196, 196], [196, 228], [230, 262], [282, 262], [308, 288]], color: '#a855f7', label: 'Q71' },
+                // Right 45-degree traces from center die
+                { pts: [[230, 154], [264, 154], [292, 126], [324, 126]], color: '#00ffff', label: 'JP66' },
+                { pts: [[230, 168], [258, 168], [284, 194], [322, 194]], color: '#ec4899', label: 'U57' },
+                { pts: [[230, 182], [252, 204], [290, 204], [316, 230]], color: '#f59e0b', label: 'Q72' }
+            ];
+            pcbChips = [
+                { x: 168, y: 74, w: 32, h: 22, label: 'IC-34' },
+                { x: 244, y: 162, w: 30, h: 20, label: 'IC-66' },
+                { x: 46, y: 92, w: 28, h: 20, label: 'U-12' },
+                { x: 246, y: 242, w: 30, h: 22, label: 'U-86' },
+                { x: 64, y: 218, w: 28, h: 20, label: 'Q-43' }
+            ];
+            pcbPulses = pcbTraces.map((tr, idx) => ({
+                traceIdx: idx,
+                prog: (idx * 0.23) % 1.0,
+                speed: 0.007 + (idx % 4) * 0.003
+            }));
+        }
+        initJaredRhodCircuitDie();
 
         function setCenterpieceMode(mode) {
             const m = String(mode || 'SPHERE').toUpperCase();
@@ -2921,6 +3244,228 @@
         }
         window.setCenterpieceMode = setCenterpieceMode;
 
+        function hexToRgbTuple(hex) {
+            const h = String(hex || '#00ffff').replace('#', '').trim();
+            const num = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16) || 0x00ffff;
+            return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+        }
+
+        function renderHoloHead810(ctx, w, h, themeHex, t, isSpeaking) {
+            const mesh = window.JARVIS_HEAD_MESH;
+            if (!mesh || !mesh.verts || !mesh.faces) return;
+            const [rCol, gCol, bCol] = hexToRgbTuple(themeHex);
+            const cx = w / 2;
+            const cy = h / 2 - 4;
+            const scale = Math.min(w, h) * 0.43;
+
+            // Evaluate active phoneme viseme frame + live audio amplitude
+            let targetJaw = 0.02, targetSpread = 0.0, targetBrow = 0.0;
+            const elapsedVis = t - visemeStartTime;
+            let foundVis = false;
+            for (let i = 0; i < visemeQueue.length; i++) {
+                const vf = visemeQueue[i];
+                if (elapsedVis >= vf.t && elapsedVis <= vf.t + vf.dur) {
+                    targetJaw = vf.jaw;
+                    targetSpread = vf.spread;
+                    targetBrow = vf.jaw * 0.35;
+                    foundVis = true;
+                    break;
+                }
+            }
+            if (!foundVis && isSpeaking) {
+                targetJaw = 0.28 + Math.abs(Math.sin(t * 14.5)) * 0.58 * Math.min(1.8, orbPulse);
+                targetSpread = Math.sin(t * 9.2) * 0.35;
+                targetBrow = 0.25;
+            }
+            headSmoothJaw += (targetJaw - headSmoothJaw) * 0.32;
+            headSmoothSpread += (targetSpread - headSmoothSpread) * 0.28;
+            headSmoothBrow += (targetBrow - headSmoothBrow) * 0.18;
+
+            // Natural eye gaze saccades
+            if (t > headNextSaccade) {
+                headNextSaccade = t + 1.4 + Math.random() * 2.2;
+                headTargetGazeX = (Math.random() - 0.5) * 0.028;
+                headTargetGazeY = (Math.random() - 0.5) * 0.016;
+            }
+            headGazeX += (headTargetGazeX - headGazeX) * 0.18;
+            headGazeY += (headTargetGazeY - headGazeY) * 0.18;
+
+            // Head pose (interactive drag + lifelike idle motion)
+            const yaw = headDragYaw + Math.sin(t * 0.55) * 0.11 + Math.sin(t * 1.2) * 0.03;
+            const pitch = headDragPitch + Math.sin(t * 0.42) * 0.045 - (isSpeaking ? headSmoothJaw * 0.04 : 0);
+            const cyaw = Math.cos(yaw), syaw = Math.sin(yaw);
+            const cpitch = Math.cos(pitch), spitch = Math.sin(pitch);
+
+            const verts = mesh.verts;
+            const nVerts = verts.length;
+            const jawW = mesh.jaw;
+            const lipsW = mesh.lips;
+            const browW = mesh.brow;
+            const fadeW = mesh.fade;
+            const lipC = mesh.lip_centre || [0, 0.28, -0.78];
+
+            const px = new Float32Array(nVerts);
+            const py = new Float32Array(nVerts);
+            const pz = new Float32Array(nVerts);
+
+            for (let i = 0; i < nVerts; i++) {
+                let x = verts[i][0];
+                let y = verts[i][1];
+                let z = verts[i][2];
+
+                const jw = jawW[i] || 0;
+                if (jw > 0 && headSmoothJaw > 0.005) {
+                    y += headSmoothJaw * 0.14 * jw;
+                    z += headSmoothJaw * 0.035 * jw;
+                }
+                const lw = lipsW[i] || 0;
+                if (lw > 0 && Math.abs(headSmoothSpread) > 0.01) {
+                    x = lipC[0] + (x - lipC[0]) * (1.0 + headSmoothSpread * 0.28 * lw);
+                    if (headSmoothSpread < 0) {
+                        z -= (-headSmoothSpread) * 0.04 * lw;
+                    }
+                }
+                const bw = browW[i] || 0;
+                if (bw > 0 && headSmoothBrow > 0.01) {
+                    y -= headSmoothBrow * 0.035 * bw;
+                }
+
+                // Rotate Y (yaw), then X (pitch)
+                const rx = x * cyaw - z * syaw;
+                const rz0 = x * syaw + z * cyaw;
+                const ry = y * cpitch - rz0 * spitch;
+                const rz = y * spitch + rz0 * cpitch;
+
+                px[i] = cx + rx * scale;
+                py[i] = cy + ry * scale;
+                pz[i] = rz;
+            }
+
+            ctx.save();
+            // Subtle outer ambient radial glow
+            const bgGrad = ctx.createRadialGradient(cx, cy - 10, 8, cx, cy - 10, scale * 1.15);
+            bgGrad.addColorStop(0, `rgba(${rCol},${gCol},${bCol},0.16)`);
+            bgGrad.addColorStop(0.6, `rgba(${rCol},${gCol},${bCol},0.04)`);
+            bgGrad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = bgGrad;
+            ctx.beginPath();
+            ctx.arc(cx, cy - 10, scale * 1.15, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 1. Flat-shaded 3D Surface Facets (_paint_surface from Mark-LV core/avatar.py)
+            const faces = mesh.faces;
+            const visibleTris = [];
+            for (let f = 0; f < faces.length; f++) {
+                const i0 = faces[f][0], i1 = faces[f][1], i2 = faces[f][2];
+                const ax = px[i1] - px[i0], ay = py[i1] - py[i0];
+                const bx = px[i2] - px[i0], by = py[i2] - py[i0];
+                // Screen-space 2D cross product for back-face culling
+                const cz = ax * by - ay * bx;
+                if (cz >= 0) continue;
+                const zAvg = (pz[i0] + pz[i1] + pz[i2]) * 0.3333;
+                const fd = (fadeW[i0] + fadeW[i1] + fadeW[i2]) * 0.3333;
+                if (fd < 0.05) continue;
+                visibleTris.push({ i0, i1, i2, zAvg, fd, cz });
+            }
+            visibleTris.sort((a, b) => b.zAvg - a.zAvg);
+
+            for (let k = 0; k < visibleTris.length; k++) {
+                const tr = visibleTris[k];
+                const depthShade = Math.max(0.15, Math.min(1.0, (0.45 - tr.zAvg) * 0.95));
+                const alpha = (0.04 + 0.16 * depthShade) * tr.fd;
+                ctx.fillStyle = `rgba(${Math.round(rCol * depthShade)},${Math.round(gCol * depthShade)},${Math.round(bCol * depthShade)},${alpha.toFixed(3)})`;
+                ctx.beginPath();
+                ctx.moveTo(px[tr.i0], py[tr.i0]);
+                ctx.lineTo(px[tr.i1], py[tr.i1]);
+                ctx.lineTo(px[tr.i2], py[tr.i2]);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // 2. Holographic Wireframe Edges + Energy Scan Line (_paint_wire from Mark-LV core/avatar.py)
+            headScanY = ((t * 0.55) % 2.4) - 1.2;
+            const scanScreenY = cy + headScanY * scale;
+            const edges = mesh.edges;
+            ctx.lineWidth = 0.85;
+            for (let e = 0; e < edges.length; e++) {
+                const u = edges[e][0], v = edges[e][1];
+                const zMid = (pz[u] + pz[v]) * 0.5;
+                if (zMid > 0.32) continue; // cull back-of-head edges
+                const fd = (fadeW[u] + fadeW[v]) * 0.5;
+                if (fd < 0.06) continue;
+                const yMid = (py[u] + py[v]) * 0.5;
+                const scanBoost = Math.max(0, 1.0 - Math.abs(yMid - scanScreenY) / 22);
+                const alpha = Math.min(0.95, (0.14 + Math.max(0, (0.25 - zMid) * 0.45) + scanBoost * 0.55) * fd);
+                ctx.strokeStyle = scanBoost > 0.35 ? `rgba(220,255,255,${alpha.toFixed(2)})` : `rgba(${rCol},${gCol},${bCol},${alpha.toFixed(2)})`;
+                ctx.beginPath();
+                ctx.moveTo(px[u], py[u]);
+                ctx.lineTo(px[v], py[v]);
+                ctx.stroke();
+            }
+
+            // 3. Anatomical Landmarks: Eyes, Iris/Pupil Gaze, Eyelid Blink, Brows, Lip Contours (_paint_features)
+            const lm = mesh.landmarks;
+            if (lm) {
+                const drawLoop = (indices, closeLoop, strokeCol, lineW, fillCol) => {
+                    if (!indices || !indices.length) return;
+                    ctx.beginPath();
+                    for (let i = 0; i < indices.length; i++) {
+                        const idx = indices[i];
+                        if (i === 0) ctx.moveTo(px[idx], py[idx]);
+                        else ctx.lineTo(px[idx], py[idx]);
+                    }
+                    if (closeLoop) ctx.closePath();
+                    if (fillCol) { ctx.fillStyle = fillCol; ctx.fill(); }
+                    if (strokeCol) { ctx.strokeStyle = strokeCol; ctx.lineWidth = lineW || 1.4; ctx.stroke(); }
+                };
+
+                // Dark socket backing for eyes & inner mouth
+                drawLoop(lm.eye_l, true, `rgba(${rCol},${gCol},${bCol},0.85)`, 1.3, 'rgba(2,8,16,0.88)');
+                drawLoop(lm.eye_r, true, `rgba(${rCol},${gCol},${bCol},0.85)`, 1.3, 'rgba(2,8,16,0.88)');
+
+                // Iris & Pupil with live saccade gaze & periodic blink
+                const blinkPhase = (t * 0.32) % 1.0;
+                const isBlinking = blinkPhase > 0.95;
+                [lm.eye_l, lm.eye_r].forEach(eyeRing => {
+                    if (!eyeRing || !eyeRing.length) return;
+                    let ex = 0, ey = 0;
+                    eyeRing.forEach(idx => { ex += px[idx]; ey += py[idx]; });
+                    ex = ex / eyeRing.length + headGazeX * scale;
+                    ey = ey / eyeRing.length + headGazeY * scale;
+                    if (!isBlinking) {
+                        ctx.strokeStyle = `rgba(${rCol},${gCol},${bCol},0.95)`;
+                        ctx.lineWidth = 1.3;
+                        ctx.beginPath();
+                        ctx.arc(ex, ey, 4.2, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.arc(ex, ey, 1.7, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+
+                // Eyebrows
+                drawLoop(lm.brow_l, false, `rgba(${rCol},${gCol},${bCol},0.78)`, 1.8, null);
+                drawLoop(lm.brow_r, false, `rgba(${rCol},${gCol},${bCol},0.78)`, 1.8, null);
+
+                // Mouth cavity + lips
+                drawLoop(lm.lips_in, true, `rgba(${rCol},${gCol},${bCol},0.92)`, 1.4, 'rgba(2,6,14,0.92)');
+                drawLoop(lm.lips_out, true, `rgba(${rCol},${gCol},${bCol},0.75)`, 1.3, null);
+            }
+
+            // Corner HUD Telemetry Readouts
+            ctx.fillStyle = `rgba(${rCol},${gCol},${bCol},0.72)`;
+            ctx.font = 'bold 9px Rajdhani, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('MESH: 810V · 1554T', 12, 20);
+            ctx.fillText(`JAW: ${(headSmoothJaw * 100).toFixed(0)}% · VISEME`, 12, h - 12);
+            ctx.textAlign = 'right';
+            ctx.fillText('DRAG: ROTATE', w - 12, 20);
+            ctx.fillText(isSpeaking ? 'SYNC: ACTIVE' : 'SYNC: STANDBY', w - 12, h - 12);
+            ctx.restore();
+        }
+
         function renderCenterpieceLoop() {
             if (currentCenterpieceMode === 'SPHERE') {
                 centerpieceRafId = 0;
@@ -2935,203 +3480,211 @@
             const themeHex = getComputedStyle(document.documentElement).getPropertyValue('--theme-color').trim() || '#00ffff';
             const t = performance.now() * 0.001;
             const isSpeaking = (document.getElementById('state-text')?.innerText || '').includes('Transmitting');
-            const jawOpen = isSpeaking ? (0.35 + Math.abs(Math.sin(t * 14)) * 0.65 * Math.min(2.2, orbPulse)) : (orbPulse > 1.15 ? (orbPulse - 1.0) * 0.4 : 0.04);
 
             if (currentCenterpieceMode === 'FACE') {
-                // 3D HOLOGRAPHIC WIREFRAME FACE AVATAR WITH REAL-TIME VISEME JAW LIP-SYNC
-                const cx = w / 2, cy = h / 2;
-                const yaw = Math.sin(t * 0.9) * 0.16;
-                const pitch = Math.cos(t * 0.7) * 0.08;
-                ctx.save();
-                ctx.strokeStyle = themeHex;
-                ctx.fillStyle = themeHex;
-
-                // Outer holographic scan rings
-                ctx.globalAlpha = 0.22;
-                ctx.beginPath();
-                ctx.arc(cx, cy, 138, 0, Math.PI * 2);
-                ctx.stroke();
-
-                // Cranium & jawline wireframe mesh
-                ctx.globalAlpha = 0.75;
-                ctx.lineWidth = 1.5;
-                const headPts = [
-                    [0, -92, 20], [-52, -76, 30], [52, -76, 30],
-                    [-68, -28, 40], [68, -28, 40],
-                    [-62, 26, 42], [62, 26, 42],
-                    [-42, 68 + jawOpen * 16, 35], [42, 68 + jawOpen * 16, 35],
-                    [0, 88 + jawOpen * 22, 48]
-                ];
-                const proj = ([x, y, z]) => {
-                    const rx = x * Math.cos(yaw) + z * Math.sin(yaw);
-                    const ry = y * Math.cos(pitch) - z * Math.sin(pitch);
-                    return [cx + rx, cy + ry];
-                };
-                const pHead = headPts.map(proj);
-                const contour = [0, 1, 3, 5, 7, 9, 8, 6, 4, 2, 0];
-                ctx.beginPath();
-                contour.forEach((idx, i) => {
-                    const [px, py] = pHead[idx];
-                    if (i === 0) ctx.moveTo(px, py);
-                    else ctx.lineTo(px, py);
-                });
-                ctx.stroke();
-
-                // Horizontal holographic latitude contours across face
-                ctx.globalAlpha = 0.32;
-                [-55, -25, 5, 35].forEach(latY => {
-                    const pL = proj([-58, latY, 25]);
-                    const pM = proj([0, latY + 6, 56]);
-                    const pR = proj([58, latY, 25]);
-                    ctx.beginPath();
-                    ctx.moveTo(pL[0], pL[1]);
-                    ctx.quadraticCurveTo(pM[0], pM[1], pR[0], pR[1]);
-                    ctx.stroke();
-                });
-
-                // Biometric Eyes (with natural periodic blink)
-                const blink = (Math.sin(t * 1.7) > 0.96) ? 0.15 : 1.0;
-                ctx.globalAlpha = 0.92;
-                [[-28, -22], [28, -22]].forEach(([ex, ey]) => {
-                    const [px, py] = proj([ex, ey, 52]);
-                    ctx.beginPath();
-                    ctx.ellipse(px, py, 13, Math.max(1.5, 5.5 * blink), 0, 0, Math.PI * 2);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.arc(px, py, 2.5 * blink, 0, Math.PI * 2);
-                    ctx.fill();
-                });
-
-                // Nose bridge
-                const nTop = proj([0, -24, 58]);
-                const nTip = proj([0, 12, 68]);
-                const nL = proj([-11, 16, 56]);
-                const nR = proj([11, 16, 56]);
-                ctx.globalAlpha = 0.65;
-                ctx.beginPath();
-                ctx.moveTo(nTop[0], nTop[1]);
-                ctx.lineTo(nTip[0], nTip[1]);
-                ctx.moveTo(nL[0], nL[1]);
-                ctx.lineTo(nTip[0], nTip[1]);
-                ctx.lineTo(nR[0], nR[1]);
-                ctx.stroke();
-
-                // Viseme Lip-Sync Mouth (Upper & Lower Lip + Voice Waveform Bars inside Mouth)
-                const mL = proj([-26, 44, 54]);
-                const mR = proj([26, 44, 54]);
-                const mTop = proj([0, 40 - jawOpen * 5, 62]);
-                const mBot = proj([0, 48 + jawOpen * 24, 62]);
-                ctx.globalAlpha = 0.95;
-                ctx.lineWidth = 2.0;
-                ctx.beginPath();
-                ctx.moveTo(mL[0], mL[1]);
-                ctx.quadraticCurveTo(mTop[0], mTop[1], mR[0], mR[1]);
-                ctx.quadraticCurveTo(mBot[0], mBot[1], mL[0], mL[1]);
-                ctx.stroke();
-
-                // Inner vocal frequency bars during speech
-                if (jawOpen > 0.08) {
-                    ctx.globalAlpha = 0.75;
-                    for (let b = -4; b <= 4; b++) {
-                        const bx = (mL[0] + mR[0]) / 2 + b * 4.8;
-                        const by = (mTop[1] + mBot[1]) / 2;
-                        const bh = Math.max(2, jawOpen * 14 * Math.abs(Math.cos(t * 18 + b)));
-                        ctx.fillRect(bx - 1, by - bh / 2, 2.2, bh);
-                    }
-                }
-                ctx.restore();
+                renderHoloHead810(ctx, w, h, themeHex, t, isSpeaking);
             } else if (currentCenterpieceMode === 'REACTOR') {
-                // CLASSIC STARK MARK 51-54 ARC REACTOR CORE
+                // AUTHENTIC MARK-LV 72-GRADUATION ARC REACTOR CORE (ported from Mark-LV ui.py _paint_core)
                 const cx = w / 2, cy = h / 2;
+                const R = Math.min(w, h) * 0.44;
+                const [rCol, gCol, bCol] = hexToRgbTuple(themeHex);
                 ctx.save();
-                ctx.strokeStyle = themeHex;
-                ctx.fillStyle = themeHex;
 
-                // Outer segmented stator ring
-                ctx.lineWidth = 6;
-                ctx.globalAlpha = 0.8;
-                for (let i = 0; i < 10; i++) {
-                    const a0 = (i / 10) * Math.PI * 2 + t * 0.25;
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, 126, a0, a0 + 0.42);
-                    ctx.stroke();
-                }
-
-                // Counter-rotating inner telemetry ring
-                ctx.lineWidth = 2.5;
-                ctx.globalAlpha = 0.55;
-                for (let i = 0; i < 16; i++) {
-                    const a0 = (i / 16) * Math.PI * 2 - t * 0.6;
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, 94, a0, a0 + 0.24);
-                    ctx.stroke();
-                }
-
-                // Glowing palladium/vibranium triangle + pulsing core
-                const coreR = 42 + (orbPulse - 1.0) * 14 + Math.sin(t * 5) * 3;
-                const grad = ctx.createRadialGradient(cx, cy, 4, cx, cy, coreR * 1.7);
-                grad.addColorStop(0, '#ffffff');
-                grad.addColorStop(0.45, themeHex);
-                grad.addColorStop(1, 'rgba(0,0,0,0)');
-                ctx.globalAlpha = 0.9;
-                ctx.fillStyle = grad;
+                // Outer radial halo
+                const halo = ctx.createRadialGradient(cx, cy, R * 0.1, cx, cy, R * 1.08);
+                halo.addColorStop(0, `rgba(${rCol},${gCol},${bCol},0.22)`);
+                halo.addColorStop(0.6, `rgba(${rCol},${gCol},${bCol},0.06)`);
+                halo.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = halo;
                 ctx.beginPath();
-                ctx.arc(cx, cy, coreR * 1.6, 0, Math.PI * 2);
+                ctx.arc(cx, cy, R * 1.08, 0, Math.PI * 2);
                 ctx.fill();
+
+                // 72 Degree Graduation Ticks around outer bezel
+                for (let deg = 0; deg < 360; deg += 5) {
+                    const rad = (deg * Math.PI) / 180 + t * 0.08;
+                    const major = (deg % 30 === 0);
+                    const rIn = R * (major ? 0.90 : 0.94);
+                    const rOut = R * 0.98;
+                    ctx.strokeStyle = major ? themeHex : `rgba(${rCol},${gCol},${bCol},0.35)`;
+                    ctx.lineWidth = major ? 1.8 : 1.0;
+                    ctx.beginPath();
+                    ctx.moveTo(cx + Math.cos(rad) * rIn, cy + Math.sin(rad) * rIn);
+                    ctx.lineTo(cx + Math.cos(rad) * rOut, cy + Math.sin(rad) * rOut);
+                    ctx.stroke();
+                }
+
+                // Ring 1: 3 Rotating Outer Arcs (0..110, 140..220, 250..320 deg)
+                const r1 = R * 0.82;
+                ctx.strokeStyle = themeHex;
+                ctx.lineWidth = 3.2;
+                [[0, 110], [140, 220], [250, 320]].forEach(([s, span]) => {
+                    const a0 = ((s + t * 28) * Math.PI) / 180;
+                    const a1 = a0 + (span * Math.PI) / 180;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r1, a0, a1);
+                    ctx.stroke();
+                });
+
+                // Ring 2: Counter-Rotating Segmented Ring
+                const r2 = R * 0.66;
+                ctx.strokeStyle = `rgba(${rCol},${gCol},${bCol},0.75)`;
+                ctx.lineWidth = 4.5;
+                for (let i = 0; i < 12; i++) {
+                    const a0 = (i / 12) * Math.PI * 2 - t * 0.45;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r2, a0, a0 + 0.32);
+                    ctx.stroke();
+                }
+
+                // Ring 3: Inner Turbine Ring + Breathing Core
+                const r3 = R * 0.46;
+                ctx.strokeStyle = themeHex;
+                ctx.lineWidth = 1.6;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r3, 0, Math.PI * 2);
+                ctx.stroke();
+
+                const pulseR = R * (0.24 + 0.04 * Math.sin(t * 4.5) + (isSpeaking ? 0.08 * Math.abs(Math.sin(t * 14)) : 0));
+                const coreGrad = ctx.createRadialGradient(cx, cy, 2, cx, cy, pulseR * 1.6);
+                coreGrad.addColorStop(0, '#ffffff');
+                coreGrad.addColorStop(0.5, themeHex);
+                coreGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = coreGrad;
+                ctx.beginPath();
+                ctx.arc(cx, cy, pulseR * 1.6, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 13px Rajdhani, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('J . A . R . V . I . S', cx, cy + 4);
                 ctx.restore();
             } else if (currentCenterpieceMode === 'CIRCUIT') {
-                // JARED RHOD ai-visualizer LIVING CIRCUIT BOARD
+                // AUTHENTIC JARED RHOD ai-visualizer LIVING CIRCUIT BOARD (from jared_jarvis_1.jpg)
                 ctx.save();
-                ctx.strokeStyle = themeHex;
-                ctx.fillStyle = themeHex;
-                const speedMult = (orbPulse > 1.2) ? 2.4 : 1.0;
+                const speedMult = isSpeaking ? 2.6 : 1.0;
 
-                ctx.globalAlpha = 0.26;
-                ctx.lineWidth = 1.3;
-                circuitEdges.forEach(([i, j]) => {
-                    const a = circuitNodes[i], b = circuitNodes[j];
+                // Subtle PCB grid background
+                ctx.strokeStyle = 'rgba(0, 255, 160, 0.05)';
+                ctx.lineWidth = 1;
+                for (let gx = 20; gx < w; gx += 28) {
+                    ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, h); ctx.stroke();
+                }
+                for (let gy = 20; gy < h; gy += 28) {
+                    ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+                }
+
+                // 45-degree PCB traces & via pads
+                pcbTraces.forEach((tr, idx) => {
+                    ctx.strokeStyle = 'rgba(0, 255, 180, 0.28)';
+                    ctx.lineWidth = 1.6;
                     ctx.beginPath();
-                    ctx.moveTo(a.x, a.y);
-                    ctx.lineTo(b.x, b.y);
+                    tr.pts.forEach(([px, py], i) => {
+                        if (i === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    });
                     ctx.stroke();
+
+                    // Via pads at vertices
+                    tr.pts.forEach(([px, py]) => {
+                        ctx.fillStyle = '#06151f';
+                        ctx.strokeStyle = tr.color;
+                        ctx.lineWidth = 1.2;
+                        ctx.beginPath();
+                        ctx.arc(px, py, 2.6, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                    });
+
+                    const lastPt = tr.pts[tr.pts.length - 1];
+                    ctx.fillStyle = 'rgba(140, 220, 200, 0.55)';
+                    ctx.font = 'bold 8px Rajdhani, sans-serif';
+                    ctx.fillText(tr.label, lastPt[0] + 5, lastPt[1] + 3);
                 });
 
-                ctx.globalAlpha = 0.95;
-                circuitPackets.forEach(pkt => {
-                    const edge = circuitEdges[pkt.edgeIdx];
-                    if (!edge) return;
-                    pkt.t += pkt.speed * speedMult;
-                    if (pkt.t >= 1.0) {
-                        pkt.t = 0;
-                        pkt.edgeIdx = Math.floor(Math.random() * circuitEdges.length);
+                // IC Chip Packages with pin legs
+                pcbChips.forEach(chip => {
+                    ctx.fillStyle = 'rgba(6, 14, 20, 0.94)';
+                    ctx.strokeStyle = 'rgba(0, 255, 200, 0.45)';
+                    ctx.lineWidth = 1.2;
+                    ctx.fillRect(chip.x - chip.w / 2, chip.y - chip.h / 2, chip.w, chip.h);
+                    ctx.strokeRect(chip.x - chip.w / 2, chip.y - chip.h / 2, chip.w, chip.h);
+                    // IC pins
+                    for (let p = -chip.w / 2 + 4; p < chip.w / 2; p += 5) {
+                        ctx.fillStyle = 'rgba(0, 255, 200, 0.65)';
+                        ctx.fillRect(chip.x + p - 1, chip.y - chip.h / 2 - 3, 2, 3);
+                        ctx.fillRect(chip.x + p - 1, chip.y + chip.h / 2, 2, 3);
                     }
-                    const a = circuitNodes[edge[0]], b = circuitNodes[edge[1]];
-                    const px = a.x + (b.x - a.x) * pkt.t;
-                    const py = a.y + (b.y - a.y) * pkt.t;
+                    ctx.fillStyle = 'rgba(0, 255, 200, 0.75)';
+                    ctx.font = 'bold 8px Rajdhani, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(chip.label, chip.x, chip.y + 3);
+                });
+
+                // Racing Colored Neural Pulses along 45-degree PCB traces
+                pcbPulses.forEach(pulse => {
+                    const tr = pcbTraces[pulse.traceIdx];
+                    if (!tr) return;
+                    pulse.prog += pulse.speed * speedMult;
+                    if (pulse.prog >= 1.0) pulse.prog = 0;
+                    const segCount = tr.pts.length - 1;
+                    const scaled = pulse.prog * segCount;
+                    const segIdx = Math.min(segCount - 1, Math.floor(scaled));
+                    const localT = scaled - segIdx;
+                    const a = tr.pts[segIdx], b = tr.pts[segIdx + 1];
+                    const px = a[0] + (b[0] - a[0]) * localT;
+                    const py = a[1] + (b[1] - a[1]) * localT;
+
+                    const pGrad = ctx.createRadialGradient(px, py, 1, px, py, 9);
+                    pGrad.addColorStop(0, '#ffffff');
+                    pGrad.addColorStop(0.4, tr.color);
+                    pGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                    ctx.fillStyle = pGrad;
                     ctx.beginPath();
-                    ctx.arc(px, py, 2.8, 0, Math.PI * 2);
+                    ctx.arc(px, py, 9, 0, Math.PI * 2);
                     ctx.fill();
                 });
 
-                circuitNodes.forEach(nd => {
-                    ctx.globalAlpha = 0.55 + 0.35 * Math.sin(t * 3 + nd.pulse);
-                    ctx.beginPath();
-                    ctx.arc(nd.x, nd.y, nd.r, 0, Math.PI * 2);
-                    ctx.fill();
-                });
+                // Central Glowing [ J . A . R . V . I . S . ] Microprocessor Die (matching jared_jarvis_1.jpg)
+                const dieW = 128, dieH = 54;
+                const dx = w / 2 - dieW / 2, dy = h / 2 - dieH / 2;
+                ctx.shadowColor = themeHex;
+                ctx.shadowBlur = isSpeaking ? 24 : 14;
+                ctx.fillStyle = '#050b10';
+                ctx.strokeStyle = themeHex;
+                ctx.lineWidth = 2.0;
+                ctx.beginPath();
+                ctx.roundRect(dx, dy, dieW, dieH, 5);
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Top & bottom microprocessor gold/cyan pin headers
+                for (let px = dx + 10; px < dx + dieW - 6; px += 8) {
+                    ctx.fillStyle = themeHex;
+                    ctx.fillRect(px, dy - 4, 3, 4);
+                    ctx.fillRect(px, dy + dieH, 3, 4);
+                }
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 15px Rajdhani, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('J . A . R . V . I . S .', w / 2, h / 2 + 5);
                 ctx.restore();
             }
         }
 
-        // --- JARED RHOD'S BAREHANDS SPATIAL AR STAGE (Contrast-Law Pinch, Hand Ring, 4 Orbs, Clap, Claw, WebAudio SFX) ---
+        // --- JARED RHOD'S BAREHANDS SPATIAL AR STAGE (Contrast-Law Pinch, Double-Walled Hand Ring, 4 Orbs, Stream Vault Glass Panel, Clap, Claw) ---
         let barehandsModeActive = false;
         let barehandsRingOpen = false;
+        let barehandsVaultOpen = false;
         let barehandsLastRingToggleMs = 0;
         let barehandsLastOrbSpawnMs = 0;
         let barehandsLastClapMs = 0;
         let barehandsShockwave = null;
         let barehandsCards = [
-            { id: 'c1', title: 'VAULT · PRIORITIES', body: 'Mark 55 HUD · 9-Model Ladder · Barehands AR', x: 0.24, y: 0.28, scale: 1.0, rot: 0, dragging: false },
+            { id: 'c1', title: 'VAULT · PRIORITIES', body: 'Mark LVIII HUD · 9-Model Ladder · Barehands AR', x: 0.24, y: 0.28, scale: 1.0, rot: 0, dragging: false },
             { id: 'c2', title: 'TELEMETRY · NODE', body: '12 Core Skills · 5x Plugin Engine · Port 8787', x: 0.74, y: 0.28, scale: 1.0, rot: 0, dragging: false }
         ];
         let sfxCtx = null;
@@ -3189,7 +3742,7 @@
                 if (!camStream) await toggleCamera();
                 barehandsRingOpen = true;
                 playBarehandsSfx('orb');
-                addLog('SYSTEM', '[BAREHANDS AR ✋] Spatial Hand-Tracking Stage active. Contrast-Law Pinch enabled; thumb->index knuckle toggles Hand Ring; Prayer Clap resets cards.');
+                addLog('SYSTEM', '[BAREHANDS AR] Spatial Hand-Tracking Stage active. Contrast-Law Pinch enabled; thumb->index knuckle toggles Hand Ring; Prayer Clap resets cards.');
             }
         }
         window.setBarehandsMode = setBarehandsMode;
@@ -3204,8 +3757,6 @@
         window.toggleBarehandsStage = toggleBarehandsStage;
 
         function evaluateContrastLawPinch(lm) {
-            // Jared Rhod's Contrast-Law Pinch: thumb-to-index tip pinch is ONLY valid if
-            // middle, ring, and pinky tips remain separated from the thumb (rejects closed fist!)
             const hs = Math.max(1e-5, dist2d(lm[0], lm[9]));
             const dIdx = dist2d(lm[4], lm[8]) / hs;
             const dMid = dist2d(lm[4], lm[12]) / hs;
@@ -3219,15 +3770,16 @@
             const W = overlay.width, H = overlay.height;
             ctx.save();
 
-            // 1. Check Two-Hand Prayer Clap Reset (clears spawned AR cards with shockwave)
+            // 1. Check Two-Hand Prayer Clap Reset
             if (landmarks.length >= 2) {
                 const wDist = Math.hypot(landmarks[0][0].x - landmarks[1][0].x, landmarks[0][0].y - landmarks[1][0].y);
                 if (wDist < 0.15 && (now - barehandsLastClapMs > 1500)) {
                     barehandsLastClapMs = now;
                     barehandsCards = [];
+                    barehandsVaultOpen = false;
                     barehandsShockwave = { x: (1 - (landmarks[0][0].x + landmarks[1][0].x) / 2) * W, y: ((landmarks[0][0].y + landmarks[1][0].y) / 2) * H, r: 10 };
                     playBarehandsSfx('clap');
-                    addLog('SYSTEM', '[BAREHANDS AR ✋] Prayer Clap detected — spatial workspace cleared.');
+                    addLog('SYSTEM', '[BAREHANDS AR] Prayer Clap detected — spatial workspace cleared.');
                 }
             }
 
@@ -3242,7 +3794,7 @@
                 if (barehandsShockwave.r > W * 0.7) barehandsShockwave = null;
             }
 
-            // 2. Evaluate Primary Hand: Thumb->Index Knuckle (lm[6]) Ring Trigger & Contrast-Law Pinch
+            // 2. Evaluate Primary Hand: Double-Walled J.A.R.V.I.S. / ACTIVE Ring & 4 Satellite Orbs (matching jared_jarvis_2.jpg & jared_jarvis_3.jpg)
             let activePinchPt = null;
             if (landmarks.length > 0) {
                 const lm = landmarks[0];
@@ -3250,7 +3802,6 @@
                 const palmX = (1 - lm[9].x) * W;
                 const palmY = lm[9].y * H;
 
-                // Thumb tip (4) to Index PIP knuckle (6) toggles floating AR Hand Ring
                 const knuckleRatio = dist2d(lm[4], lm[6]) / hs;
                 if (knuckleRatio < 0.29 && (now - barehandsLastRingToggleMs > 950)) {
                     barehandsLastRingToggleMs = now;
@@ -3258,7 +3809,6 @@
                     playBarehandsSfx('orb');
                 }
 
-                // Contrast-Law Pinch check (rejects fists)
                 if (evaluateContrastLawPinch(lm)) {
                     activePinchPt = {
                         x: (1 - (lm[4].x + lm[8].x) / 2) * W,
@@ -3266,50 +3816,73 @@
                     };
                 }
 
-                // Draw Floating AR J.A.R.V.I.S. Hand Ring + 4 Blooming Satellite Orbs around Palm
                 if (barehandsRingOpen) {
-                    const ringR = Math.max(34, Math.min(68, hs * W * 0.52));
-                    ctx.globalAlpha = 0.88;
+                    const ringR = Math.max(38, Math.min(78, hs * W * 0.54));
+                    // Outer double-walled glowing cyan ring
+                    ctx.globalAlpha = 0.92;
                     ctx.strokeStyle = themeHex;
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = 4.5;
                     ctx.beginPath();
-                    ctx.arc(palmX, palmY, ringR, now * 0.002, now * 0.002 + Math.PI * 1.65);
+                    ctx.arc(palmX, palmY, ringR, 0, Math.PI * 2);
                     ctx.stroke();
 
-                    ctx.font = 'bold 9px Rajdhani, sans-serif';
-                    ctx.fillStyle = themeHex;
+                    ctx.lineWidth = 1.4;
+                    ctx.beginPath();
+                    ctx.arc(palmX, palmY, ringR * 0.78, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    // 12 radial tick marks inside the palm ring
+                    for (let k = 0; k < 12; k++) {
+                        const a = (k / 12) * Math.PI * 2 + now * 0.0006;
+                        ctx.beginPath();
+                        ctx.moveTo(palmX + Math.cos(a) * (ringR * 0.72), palmY + Math.sin(a) * (ringR * 0.72));
+                        ctx.lineTo(palmX + Math.cos(a) * (ringR * 0.78), palmY + Math.sin(a) * (ringR * 0.78));
+                        ctx.stroke();
+                    }
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 11px Rajdhani, sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText('J.A.R.V.I.S · AR', palmX, palmY + 3);
+                    ctx.fillText('J.A.R.V.I.S.', palmX, palmY - 1);
+                    ctx.fillStyle = themeHex;
+                    ctx.font = 'bold 8px Rajdhani, sans-serif';
+                    ctx.fillText('A C T I V E', palmX, palmY + 10);
 
                     const orbs = [
-                        { id: 'VAULT', angle: -Math.PI * 0.75, color: '#00ffff' },
-                        { id: 'PROPS', angle: -Math.PI * 0.25, color: '#00ff88' },
-                        { id: 'WIDGETS', angle: Math.PI * 0.25, color: '#f59e0b' },
-                        { id: 'NOTES', angle: Math.PI * 0.75, color: '#a855f7' }
+                        { id: 'VAULT', sub: '30 folders', angle: -Math.PI * 0.72, color: '#00ffff' },
+                        { id: 'PROPS', sub: '12 nodes', angle: -Math.PI * 0.25, color: '#00ff88' },
+                        { id: 'WIDGETS', sub: 'Radar · HUD', angle: Math.PI * 0.25, color: '#f59e0b' },
+                        { id: 'NOTES', sub: 'Spatial', angle: Math.PI * 0.72, color: '#a855f7' }
                     ];
                     orbs.forEach(orb => {
-                        const ox = palmX + Math.cos(orb.angle) * (ringR + 24);
-                        const oy = palmY + Math.sin(orb.angle) * (ringR + 24);
+                        const ox = palmX + Math.cos(orb.angle) * (ringR + 30);
+                        const oy = palmY + Math.sin(orb.angle) * (ringR + 30);
                         ctx.beginPath();
                         ctx.strokeStyle = orb.color;
-                        ctx.fillStyle = 'rgba(5, 10, 20, 0.88)';
-                        ctx.arc(ox, oy, 15, 0, Math.PI * 2);
+                        ctx.lineWidth = 1.4;
+                        ctx.fillStyle = 'rgba(4, 12, 22, 0.86)';
+                        ctx.arc(ox, oy, 20, 0, Math.PI * 2);
                         ctx.fill();
                         ctx.stroke();
                         ctx.fillStyle = orb.color;
-                        ctx.fillText(orb.id, ox, oy + 3);
+                        ctx.font = 'bold 9px Rajdhani, sans-serif';
+                        ctx.fillText(orb.id, ox, oy - 1);
+                        ctx.fillStyle = 'rgba(220,240,255,0.75)';
+                        ctx.font = '7px Rajdhani, sans-serif';
+                        ctx.fillText(orb.sub, ox, oy + 8);
 
-                        // If user pinches a Satellite Orb, spawn an AR Spatial Card or trigger HUD card!
-                        if (activePinchPt && Math.hypot(activePinchPt.x - ox, activePinchPt.y - oy) < 22 && (now - barehandsLastOrbSpawnMs > 1000)) {
+                        if (activePinchPt && Math.hypot(activePinchPt.x - ox, activePinchPt.y - oy) < 24 && (now - barehandsLastOrbSpawnMs > 1000)) {
                             barehandsLastOrbSpawnMs = now;
                             playBarehandsSfx('pinch');
                             if (orb.id === 'WIDGETS') {
                                 runPluginCard('network_radar');
+                            } else if (orb.id === 'VAULT') {
+                                barehandsVaultOpen = !barehandsVaultOpen;
                             } else {
                                 barehandsCards.push({
                                     id: 'card_' + now,
                                     title: `◈ ${orb.id} NODE`,
-                                    body: orb.id === 'VAULT' ? 'Two-Layer Memory Vault Synchronized' : (orb.id === 'PROPS' ? `FPS: 60 · Hands: ${landmarks.length} · Contrast-Pinch OK` : 'Voice & Gesture Spatial Note Active'),
+                                    body: orb.id === 'PROPS' ? `FPS: 60 · Hands: ${landmarks.length} · Contrast-Pinch OK` : 'Voice & Gesture Spatial Note Active',
                                     x: 0.25 + Math.random() * 0.5,
                                     y: 0.3 + Math.random() * 0.4,
                                     scale: 1.0,
@@ -3322,11 +3895,42 @@
                 }
             }
 
-            // 3. Render & Drag Spatial Glass Cards on the AR Stage
+            // 3. Translucent Stream Vault Glass Overlay (matching jared_jarvis_3.jpg)
+            if (barehandsVaultOpen) {
+                const vx = W * 0.08, vy = H * 0.08, vw = W * 0.56, vh = H * 0.82;
+                ctx.fillStyle = 'rgba(4, 14, 24, 0.72)';
+                ctx.strokeStyle = themeHex;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.roundRect(vx, vy, vw, vh, 8);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = themeHex;
+                ctx.font = 'bold 12px Rajdhani, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText('STREAM VAULT · VAULT-INDEX.md (LIVE MEMORY)', vx + 14, vy + 22);
+                ctx.fillStyle = '#e2f4ff';
+                ctx.font = '10px Rajdhani, sans-serif';
+                const lines = [
+                    'status: active   |   project: mark-lviii   |   type: index',
+                    '----------------------------------------------------------',
+                    'Two-Layer Persistent Memory Vault synchronized across sessions.',
+                    'Layer 1: Always-loaded VAULT-INDEX.md routing map.',
+                    'Layer 2: On-demand topic notes & user preferences.',
+                    'Active Capabilities: 9-Model Gemini Failover Ladder, 12 Core OS',
+                    'Skills, 5x Fast Single-File Plugin Loader, Barehands Spatial AR.'
+                ];
+                lines.forEach((ln, idx) => {
+                    ctx.fillText(ln, vx + 14, vy + 42 + idx * 16);
+                });
+            }
+
+            // 4. Render & Drag Spatial Glass Cards
             barehandsCards.forEach(card => {
                 const cx = card.x * W;
                 const cy = card.y * H;
-                const cw = 150 * (card.scale || 1);
+                const cw = 156 * (card.scale || 1);
                 const ch = 64 * (card.scale || 1);
 
                 if (activePinchPt && Math.abs(activePinchPt.x - cx) < cw * 0.6 && Math.abs(activePinchPt.y - cy) < ch * 0.6) {
@@ -3354,9 +3958,9 @@
 
                 ctx.fillStyle = '#e0e8f0';
                 ctx.font = '10px Rajdhani, sans-serif';
-                ctx.fillText(card.body.slice(0, 28), -cw / 2 + 8, -ch / 2 + 34);
-                if (card.body.length > 28) {
-                    ctx.fillText(card.body.slice(28, 56), -cw / 2 + 8, -ch / 2 + 48);
+                ctx.fillText(card.body.slice(0, 30), -cw / 2 + 8, -ch / 2 + 34);
+                if (card.body.length > 30) {
+                    ctx.fillText(card.body.slice(30, 60), -cw / 2 + 8, -ch / 2 + 48);
                 }
                 ctx.restore();
             });
@@ -3365,8 +3969,10 @@
         }
         window.renderBarehandsAR = renderBarehandsAR;
 
-        // --- INTERACTIVE FLOATING HUD OVERLAY CARDS (RADAR / DISK MAP / EARTH GLOBE / SCHEMATIC / POMODORO) ---
+        // --- FULL CENTER-STAGE INTERACTIVE HOLOGRAPHIC OVERLAY CARDS (MATCHING MARK LVIII SCREENSHOTS) ---
         let hudCardAnimId = 0;
+        let globeZoom = 1.0;
+        let globeRotOffset = 0;
 
         function closeHudCard() {
             const ov = document.getElementById('hud-card-overlay');
@@ -3377,6 +3983,26 @@
             }
         }
         window.closeHudCard = closeHudCard;
+
+        function openWeatherHudCard() {
+            const temp = document.getElementById('w-temp')?.innerText || '24°C';
+            const loc = document.getElementById('w-loc')?.innerText || 'Indore, IN';
+            const desc = document.getElementById('w-desc')?.innerText || 'PARTLY CLOUDY';
+            const hum = document.getElementById('w-hum')?.innerText || '58%';
+            const wind = document.getElementById('w-wind')?.innerText || '14 km/h NE';
+            const feels = document.getElementById('w-feels')?.innerText || temp;
+            renderHudCard('weather', { title: `WEATHER · ${loc.split(',')[0].toUpperCase()}`, temp, loc, desc, hum, wind, feels });
+        }
+        window.openWeatherHudCard = openWeatherHudCard;
+
+        function openDiagnosticsHudCard() {
+            const cpu = parseInt(document.getElementById('cpu-sm')?.innerText || '14', 10) || 14;
+            const ram = parseInt(document.getElementById('ram-sm')?.innerText || '61', 10) || 61;
+            const diskText = document.getElementById('disk-sm')?.innerText || '180/256 GB';
+            const uptime = document.getElementById('uptime-val')?.innerText || '00:18:42';
+            renderHudCard('diagnostics', { title: 'SYSTEM DIAGNOSTICS', cpu, ram, diskText, uptime });
+        }
+        window.openDiagnosticsHudCard = openDiagnosticsHudCard;
 
         function renderHudCard(arg1, arg2) {
             let payload = (typeof arg1 === 'string') ? Object.assign({ card_type: arg1 }, arg2 || {}) : (arg1 || {});
@@ -3391,106 +4017,561 @@
             ov.classList.add('active');
             const type = payload.card_type || '';
             const defaultTitles = {
-                network_radar: 'NETWORK RADAR · LAN & SECURITY AUDIT',
-                disk_map: `DISK SPACE TREEMAP · ${payload.drive || 'SYSTEM DRIVE'}`,
-                earth_globe: `3D EARTH GLOBE · ${(payload.mode || 'VECTOR').toUpperCase()} TELEMETRY`,
+                network_radar: 'NETWORK RADAR',
+                disk_map: 'DISK MAP',
+                earth_globe: '3D PLANETARY SEISMIC & ORBITAL GLOBE',
+                weather: payload.title || 'WEATHER TELEMETRY',
+                diagnostics: 'SYSTEM DIAGNOSTICS',
                 schematic: payload.title || 'HARDWARE PINOUT & WIRING SCHEMATIC',
                 pomodoro: 'POMODORO FOCUS SESSION'
             };
             titleEl.innerText = '◈ ' + (payload.title || defaultTitles[type] || 'HUD TELEMETRY CARD');
+            const themeHex = getComputedStyle(document.documentElement).getPropertyValue('--theme-color').trim() || '#00ffff';
 
             if (type === 'network_radar') {
+                // Authentic Mark-LVIII NETWORK RADAR (matching fatih_oct8_1.jpg)
                 const hosts = payload.devices || payload.hosts || [];
                 const pingVal = payload.ping_ms || payload.avg_ping_ms || 1.4;
-                const speedVal = payload.speed_gbps || (payload.down_mbps ? `↓${payload.down_mbps} Mbps` : '1.0 Gbps');
+                const jitterVal = payload.jitter_ms || 0.4;
+                const speedVal = payload.speed_gbps || (payload.down_mbps ? `${payload.down_mbps} Mbps` : '1 Gbps');
+                const subnet = payload.subnet || '192.168.1.0/24';
+                const gateway = payload.gateway || '192.168.1.1';
                 bodyEl.innerHTML = `
-                    <div style="display:flex; gap:12px; align-items:center;">
-                        <canvas id="radar-sweep-canvas" width="150" height="150" style="border-radius:50%; border:1px solid var(--theme-color); background:rgba(0,15,20,0.75); flex-shrink:0;"></canvas>
-                        <div style="flex:1; font-size:12px;">
-                            <div style="color:var(--theme-color); font-weight:700; margin-bottom:4px;">PING: ${pingVal}ms · JITTER: ${payload.jitter_ms || 0.2}ms · ${speedVal}</div>
-                            <div style="max-height:115px; overflow-y:auto; border-top:1px solid var(--panel-border); padding-top:4px;">
-                                ${hosts.map(h => `<div style="display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px dashed rgba(255,255,255,0.06);"><span>${h.ip} <small style="color:var(--text-muted);">(${h.name || 'Node'})</small></span><span style="color:#00ff88;">${h.status || h.mac}</span></div>`).join('')}
+                    <div style="font-size:11px; color:var(--text-muted); letter-spacing:1.2px; margin-bottom:10px;">
+                        ${subnet} &nbsp;·&nbsp; GATEWAY ${gateway} &nbsp;·&nbsp; <strong style="color:var(--theme-color)">${hosts.length} ONLINE</strong>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 250px 1fr; gap:18px; flex:1; align-items:stretch;">
+                        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                            <canvas id="radar-sweep-canvas" width="236" height="236" style="border-radius:50%; background:rgba(2,10,16,0.9); border:1px solid var(--theme-color); box-shadow:0 0 25px rgba(0,255,255,0.12);"></canvas>
+                            <div style="font-size:9px; color:var(--text-muted); margin-top:8px; letter-spacing:1px;">CLOSER TO CENTER = FASTER RESPONSE</div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:10px; min-width:0;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                                <div style="border:1px solid var(--panel-border); padding:8px 10px; border-radius:4px; background:rgba(0,0,0,0.35);">
+                                    <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted);"><span>INTERFACE</span><span>ROUTER &lt;1 ms</span></div>
+                                    <div style="font-size:18px; font-weight:700; color:var(--theme-color); margin-top:2px;">${speedVal}</div>
+                                    <div style="font-size:10px; color:var(--text-muted);">Gigabit Low-Latency Link</div>
+                                </div>
+                                <div style="border:1px solid var(--panel-border); padding:8px 10px; border-radius:4px; background:rgba(0,0,0,0.35);">
+                                    <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted);"><span>INTERNET</span><span>PING ${pingVal} ms</span></div>
+                                    <div style="font-size:18px; font-weight:700; color:#00ff88; margin-top:2px;">ONLINE</div>
+                                    <div style="font-size:10px; color:var(--text-muted);">LOSS 0% · JITTER ${jitterVal} ms</div>
+                                </div>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; font-weight:700; color:var(--theme-color); border-bottom:1px solid var(--panel-border); padding-bottom:4px;">
+                                <span>DEVICES · ${hosts.length} ONLINE</span>
+                                <button class="cp-pill" onclick="runPluginCard('network_radar')">⟳ RESCAN</button>
+                            </div>
+                            <div style="flex:1; max-height:140px; overflow-y:auto; display:flex; flex-direction:column; gap:4px; font-size:11px;">
+                                ${hosts.map((h, idx) => `
+                                    <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 8px; background:rgba(255,255,255,0.02); border-left:2px solid ${idx === 0 ? 'var(--theme-color)' : '#00ff88'};">
+                                        <div>
+                                            <strong style="color:#e8f4ff;">${h.name || (idx === 0 ? 'Gateway Router' : 'Network Node')}</strong>
+                                            <span style="font-size:10px; color:var(--text-muted); margin-left:6px;">${h.mac || ''}</span>
+                                        </div>
+                                        <span style="color:var(--theme-color); font-weight:700; font-family:monospace;">${h.ip}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div style="border-top:1px solid var(--panel-border); padding-top:6px;">
+                                <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted); margin-bottom:4px;">
+                                    <span>LATENCY SPARKLINE · ROUTER 1 ms · INTERNET ${pingVal} ms</span>
+                                    <span>JITTER ${jitterVal} ms</span>
+                                </div>
+                                <canvas id="radar-latency-spark" width="320" height="36" style="width:100%; height:36px; background:rgba(0,0,0,0.35); border:1px solid var(--panel-border);"></canvas>
                             </div>
                         </div>
                     </div>`;
                 const rCan = document.getElementById('radar-sweep-canvas');
+                const lCan = document.getElementById('radar-latency-spark');
                 if (rCan) {
                     const rCtx = rCan.getContext('2d');
+                    const lCtx = lCan ? lCan.getContext('2d') : null;
                     let angle = 0;
+                    const latPts = Array.from({ length: 42 }, (_, i) => Number(pingVal) + Math.sin(i * 0.4) * 0.6);
                     function animRadar() {
                         hudCardAnimId = requestAnimationFrame(animRadar);
-                        angle += 0.045;
-                        rCtx.clearRect(0, 0, 150, 150);
-                        rCtx.strokeStyle = 'rgba(0,255,255,0.22)';
-                        [25, 50, 70].forEach(r => { rCtx.beginPath(); rCtx.arc(75, 75, r, 0, Math.PI * 2); rCtx.stroke(); });
-                        rCtx.strokeStyle = '#00ff88';
+                        angle += 0.032;
+                        rCtx.clearRect(0, 0, 236, 236);
+                        const cx = 118, cy = 118;
+                        rCtx.strokeStyle = 'rgba(0,255,255,0.18)';
+                        rCtx.lineWidth = 1;
+                        [32, 62, 90, 110].forEach(r => { rCtx.beginPath(); rCtx.arc(cx, cy, r, 0, Math.PI * 2); rCtx.stroke(); });
+                        rCtx.beginPath(); rCtx.moveTo(cx - 110, cy); rCtx.lineTo(cx + 110, cy); rCtx.moveTo(cx, cy - 110); rCtx.lineTo(cx, cy + 110); rCtx.stroke();
+
+                        // Sweeping phosphor sector
+                        const [rC, gC, bC] = hexToRgbTuple(themeHex);
+                        for (let s = 0; s < 18; s++) {
+                            const a0 = angle - s * 0.025;
+                            rCtx.fillStyle = `rgba(${rC},${gC},${bC},${(0.18 * (1 - s / 18)).toFixed(3)})`;
+                            rCtx.beginPath();
+                            rCtx.moveTo(cx, cy);
+                            rCtx.arc(cx, cy, 108, a0 - 0.03, a0);
+                            rCtx.closePath();
+                            rCtx.fill();
+                        }
+                        rCtx.strokeStyle = themeHex;
                         rCtx.lineWidth = 2;
                         rCtx.beginPath();
-                        rCtx.moveTo(75, 75);
-                        rCtx.lineTo(75 + Math.cos(angle) * 70, 75 + Math.sin(angle) * 70);
+                        rCtx.moveTo(cx, cy);
+                        rCtx.lineTo(cx + Math.cos(angle) * 108, cy + Math.sin(angle) * 108);
                         rCtx.stroke();
+
+                        // Center PC node
+                        rCtx.fillStyle = themeHex;
+                        rCtx.beginPath(); rCtx.arc(cx, cy, 6, 0, Math.PI * 2); rCtx.fill();
+                        rCtx.fillStyle = '#e8f4ff';
+                        rCtx.font = 'bold 8px Rajdhani, sans-serif';
+                        rCtx.textAlign = 'center';
+                        rCtx.fillText('THIS PC', cx, cy + 15);
+
+                        // Host blips
                         hosts.slice(0, 12).forEach((h, i) => {
-                            const a = (i / Math.max(1, hosts.length)) * Math.PI * 2 + 0.5;
-                            const dist = 22 + (i % 3) * 18;
-                            rCtx.fillStyle = '#00ffff';
+                            const a = (i / Math.max(1, hosts.length)) * Math.PI * 2 + 0.6;
+                            const dist = 34 + (i % 3) * 26;
+                            const hx = cx + Math.cos(a) * dist;
+                            const hy = cy + Math.sin(a) * dist;
+                            rCtx.strokeStyle = '#00ff88';
+                            rCtx.fillStyle = 'rgba(0, 255, 136, 0.22)';
+                            rCtx.lineWidth = 1.5;
                             rCtx.beginPath();
-                            rCtx.arc(75 + Math.cos(a) * dist, 75 + Math.sin(a) * dist, 3, 0, Math.PI * 2);
+                            rCtx.arc(hx, hy, 8, 0, Math.PI * 2);
                             rCtx.fill();
+                            rCtx.stroke();
+                            rCtx.fillStyle = '#e8f4ff';
+                            rCtx.fillText((h.ip || '').split('.').pop() || '1', hx, hy + 3);
                         });
+
+                        if (lCtx && Math.floor(angle * 30) % 4 === 0) {
+                            latPts.push(Math.max(0.5, Number(pingVal) + (Math.random() - 0.48) * 1.2));
+                            if (latPts.length > 42) latPts.shift();
+                            lCtx.clearRect(0, 0, 320, 36);
+                            lCtx.strokeStyle = themeHex;
+                            lCtx.lineWidth = 1.5;
+                            lCtx.beginPath();
+                            latPts.forEach((v, idx) => {
+                                const lx = (idx / (latPts.length - 1)) * 320;
+                                const ly = 32 - Math.min(28, (v / (Number(pingVal) * 2.5 + 2)) * 26);
+                                if (idx === 0) lCtx.moveTo(lx, ly);
+                                else lCtx.lineTo(lx, ly);
+                            });
+                            lCtx.stroke();
+                        }
                     }
                     animRadar();
                 }
             } else if (type === 'disk_map') {
+                // Authentic Mark-LVIII DISK MAP with Squarified Treemap + Segmented Circular Usage Ring (matching fatih_oct6_1.jpg)
                 const items = payload.blocks || payload.items || [];
-                const colors = ['#00ffff', '#00ff88', '#38bdf8', '#a855f7', '#f59e0b', '#ec4899'];
+                const pct = Number(payload.percent || 72);
+                const usedGb = payload.used_gb || 180;
+                const totalGb = payload.total_gb || 256;
+                const freeGb = payload.free_gb || 76;
+                const drive = payload.drive || 'C:\\';
+                const palette = ['#38bdf8', '#f59e0b', '#ef4444', '#10b981', '#a855f7', '#ec4899', '#06b6d4'];
                 bodyEl.innerHTML = `
-                    <div style="font-size:12px; margin-bottom:8px; color:var(--text-muted);">
-                        Used: <strong style="color:var(--theme-color)">${payload.used_gb} GB</strong> / ${payload.total_gb} GB (${payload.percent}%) · Free: <strong style="color:#00ff88">${payload.free_gb} GB</strong>
+                    <div style="font-size:11px; color:var(--text-muted); letter-spacing:1.2px; margin-bottom:8px;">
+                        ${drive} &nbsp;·&nbsp; ${totalGb} GB TOTAL &nbsp;·&nbsp; <strong style="color:var(--theme-color)">${items.length} TOP DIRECTORIES MAPPED</strong>
                     </div>
-                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
-                        ${items.map((it, idx) => {
-                            const col = it.color || colors[idx % colors.length];
-                            const flexVal = Math.max(1, Math.round(it.weight || it.pct || 10));
-                            return `
-                            <div style="flex:${flexVal}; min-width:95px; background:rgba(255,255,255,0.04); border:1px solid ${col}; border-radius:8px; padding:6px;">
-                                <div style="font-size:11px; font-weight:700; color:${col}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${it.name}</div>
-                                <div style="font-size:12px; font-weight:700;">${it.size_gb} GB</div>
-                            </div>`;
-                        }).join('')}
-                    </div>`;
-            } else if (type === 'earth_globe') {
-                const quakes = payload.quakes || [];
-                const city = payload.city || payload.operator?.city || 'Indore';
-                bodyEl.innerHTML = `
-                    <div style="display:flex; gap:12px; align-items:center;">
-                        <canvas id="globe-canvas" width="150" height="150" style="background:rgba(0,10,20,0.7); border-radius:50%; border:1px solid var(--theme-color); flex-shrink:0;"></canvas>
-                        <div style="flex:1; font-size:12px; max-height:145px; overflow-y:auto;">
-                            <div style="color:var(--theme-color); font-weight:700; margin-bottom:4px;">SECTOR: ${city} · LIVE USGS SEISMIC & SATELLITE FEED</div>
-                            ${quakes.length ? quakes.map(q => `<div style="padding:3px 0; border-bottom:1px dashed rgba(255,255,255,0.07);"><strong style="color:#f59e0b">M${q.mag}</strong> — ${q.place}</div>`).join('') : '<div style="color:var(--text-muted); padding:6px 0;">Interactive 3D vector/satellite globe active. No major seismic anomalies in sector.</div>'}
+                    <div style="display:grid; grid-template-columns: 1fr 220px; gap:16px; flex:1; min-height:250px;">
+                        <div style="display:flex; flex-direction:column;">
+                            <canvas id="disk-treemap-canvas" width="440" height="260" style="width:100%; height:260px; border:1px solid var(--panel-border); border-radius:4px; background:#050b12;"></canvas>
+                            <div style="font-size:9px; color:var(--text-muted); margin-top:6px; letter-spacing:1px;">SQUARIFIED STORAGE TREEMAP · PROPORTIONAL TO GIGABYTES</div>
                         </div>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <canvas id="disk-ring-canvas" width="84" height="84" style="width:84px; height:84px; flex-shrink:0;"></canvas>
+                                <div>
+                                    <div style="font-size:20px; font-weight:700; color:#e8f4ff;">${usedGb} GB</div>
+                                    <div style="font-size:11px; color:var(--text-muted);">of ${totalGb} GB</div>
+                                    <div style="font-size:11px; font-weight:700; color:${pct > 88 ? '#ff3355' : '#00ff88'}; margin-top:2px;">FREE ${freeGb} GB</div>
+                                </div>
+                            </div>
+                            <div style="font-size:10px; font-weight:700; color:var(--theme-color); letter-spacing:1px; border-top:1px solid var(--panel-border); padding-top:6px;">LARGEST IN ${drive}</div>
+                            <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:5px; font-size:11px;">
+                                ${items.slice(0, 7).map((it, idx) => {
+                                    const col = palette[idx % palette.length];
+                                    const barW = Math.min(100, Math.max(8, Math.round((it.size_gb / Math.max(1, items[0]?.size_gb || 50)) * 100)));
+                                    return `
+                                    <div>
+                                        <div style="display:flex; justify-content:space-between;"><span>${it.name}</span><strong style="color:${col}">${it.size_gb} GB</strong></div>
+                                        <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:2px; margin-top:2px;"><div style="width:${barW}%; height:100%; background:${col}; border-radius:2px;"></div></div>
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <button class="cp-pill" style="flex:1;" onclick="runPluginCard('disk_analyzer')">⟳ RESCAN</button>
+                            </div>
+                        </div>
+                    </div>`;
+
+                // Draw Segmented Circular Ring
+                const drCan = document.getElementById('disk-ring-canvas');
+                if (drCan) {
+                    const rCtx = drCan.getContext('2d');
+                    const nSegs = 36;
+                    const activeSegs = Math.round((pct / 100) * nSegs);
+                    for (let s = 0; s < nSegs; s++) {
+                        const a0 = (s / nSegs) * Math.PI * 2 - Math.PI / 2;
+                        const a1 = a0 + (Math.PI * 2 / nSegs) * 0.72;
+                        rCtx.strokeStyle = s < activeSegs ? (pct > 88 ? '#ff3355' : themeHex) : 'rgba(255,255,255,0.1)';
+                        rCtx.lineWidth = 6;
+                        rCtx.beginPath();
+                        rCtx.arc(42, 42, 34, a0, a1);
+                        rCtx.stroke();
+                    }
+                    rCtx.fillStyle = '#ffffff';
+                    rCtx.font = 'bold 15px Rajdhani, sans-serif';
+                    rCtx.textAlign = 'center';
+                    rCtx.fillText(`${pct}%`, 42, 43);
+                    rCtx.fillStyle = '#7a8b99';
+                    rCtx.font = 'bold 8px Rajdhani, sans-serif';
+                    rCtx.fillText('USED', 42, 54);
+                }
+
+                // Draw Interactive Treemap Canvas
+                const tmCan = document.getElementById('disk-treemap-canvas');
+                if (tmCan && items.length) {
+                    const tCtx = tmCan.getContext('2d');
+                    const W = tmCan.width, H = tmCan.height;
+                    let rx = 2, ry = 2, rw = W - 4, rh = H - 4;
+                    const totalWeight = items.reduce((s, it) => s + Math.max(0.5, Number(it.size_gb || 1)), 0);
+                    let remWeight = totalWeight;
+
+                    items.forEach((it, idx) => {
+                        const val = Math.max(0.5, Number(it.size_gb || 1));
+                        const frac = Math.min(1, val / Math.max(0.01, remWeight));
+                        remWeight -= val;
+                        const horiz = rw >= rh;
+                        const bw = horiz ? Math.max(24, rw * frac) : rw;
+                        const bh = horiz ? rh : Math.max(24, rh * frac);
+                        const col = palette[idx % palette.length];
+
+                        tCtx.fillStyle = col + '28';
+                        tCtx.strokeStyle = col;
+                        tCtx.lineWidth = 1.5;
+                        tCtx.fillRect(rx + 1, ry + 1, bw - 2, bh - 2);
+                        tCtx.strokeRect(rx + 1, ry + 1, bw - 2, bh - 2);
+
+                        // Inner sub-blocks for visual depth like fatih_oct6_1.jpg
+                        const subCols = 3, subRows = 2;
+                        tCtx.strokeStyle = col + '44';
+                        tCtx.lineWidth = 0.8;
+                        for (let sc = 1; sc < subCols; sc++) {
+                            tCtx.beginPath();
+                            tCtx.moveTo(rx + (bw / subCols) * sc, ry + 22);
+                            tCtx.lineTo(rx + (bw / subCols) * sc, ry + bh - 2);
+                            tCtx.stroke();
+                        }
+
+                        tCtx.fillStyle = '#ffffff';
+                        tCtx.font = 'bold 11px Rajdhani, sans-serif';
+                        tCtx.fillText(String(it.name).slice(0, 16), rx + 6, ry + 15);
+                        tCtx.fillStyle = col;
+                        tCtx.font = 'bold 10px Rajdhani, sans-serif';
+                        if (bh > 32) tCtx.fillText(`${it.size_gb} GB`, rx + 6, ry + 28);
+
+                        if (horiz) { rx += bw; rw -= bw; }
+                        else { ry += bh; rh -= bh; }
+                    });
+                }
+            } else if (type === 'earth_globe') {
+                // Authentic Mark-LVIII 3D EARTH GLOBE (matching fatih_sep22_1.jpg)
+                const quakes = payload.quakes || [];
+                const city = payload.city || payload.operator?.city || 'New York';
+                const lat = payload.operator?.lat || 22.7196;
+                const lon = payload.operator?.lon || 75.8577;
+                const nowUtc = new Date().toISOString().slice(11, 16) + ' UTC';
+                bodyEl.innerHTML = `
+                    <div style="position:relative; flex:1; min-height:290px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at center, rgba(0,180,255,0.08), rgba(2,6,12,0.95)); border:1px solid var(--panel-border); border-radius:4px; overflow:hidden;">
+                        <!-- Top-Left Telemetry HUD Box (matching fatih_sep22_1.jpg) -->
+                        <div style="position:absolute; top:12px; left:12px; background:rgba(4,10,18,0.88); border:1px solid var(--panel-border); border-radius:4px; padding:8px 12px; z-index:10;">
+                            <div style="font-size:16px; font-weight:700; color:#ffffff; letter-spacing:1px;">${nowUtc}</div>
+                            <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">◉ ${lat.toFixed(4)}, ${lon.toFixed(4)}</div>
+                            <div style="font-size:10px; color:var(--theme-color); font-weight:700; margin-top:2px;">↕ 12 742 km · ORBITAL TRACK</div>
+                        </div>
+                        <!-- Top-Right Target Sector Box -->
+                        <div style="position:absolute; top:12px; right:12px; background:rgba(4,10,18,0.88); border:1px solid var(--panel-border); border-radius:4px; padding:6px 12px; font-size:14px; font-weight:700; color:#ffffff; z-index:10;">
+                            ${city}
+                        </div>
+                        <!-- Right Vertical Layer Controls -->
+                        <div style="position:absolute; right:12px; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:6px; z-index:10;">
+                            <button class="cp-pill" onclick="globeZoom=Math.min(1.5,globeZoom+0.15)" style="width:28px; height:28px; border-radius:50%; padding:0;">+</button>
+                            <button class="cp-pill" onclick="globeZoom=Math.max(0.7,globeZoom-0.15)" style="width:28px; height:28px; border-radius:50%; padding:0;">-</button>
+                            <button class="cp-pill active" onclick="globeRotOffset=0; globeZoom=1.0" style="width:28px; height:28px; border-radius:50%; padding:0;" title="Reset View">◉</button>
+                        </div>
+                        <!-- Bottom-Left Seismic Summary Pill -->
+                        <div style="position:absolute; bottom:12px; left:12px; background:rgba(4,10,18,0.88); border:1px solid var(--panel-border); border-radius:4px; padding:4px 10px; font-size:11px; color:#f59e0b; font-weight:700; z-index:10;">
+                            ● ${quakes.length || 6} SEISMIC EVENTS (M4.5+) &nbsp;·&nbsp; <span style="color:var(--theme-color)">◈ ISS ORBITAL LINK</span>
+                        </div>
+                        <canvas id="globe-canvas" width="320" height="290" style="cursor:grab;"></canvas>
                     </div>`;
                 const gCan = document.getElementById('globe-canvas');
                 if (gCan) {
                     const gCtx = gCan.getContext('2d');
                     let rot = 0;
+                    // Stylized continent polygons in (lat, lon) degrees
+                    const continents = [
+                        [[60,-130],[50,-125],[30,-115],[18,-95],[25,-80],[45,-60],[65,-70],[70,-110]], // North America
+                        [[10,-78],[-5,-80],[-22,-70],[-52,-68],[-35,-55],[-5,-35],[8,-60]], // South America
+                        [[36,-8],[42,2],[55,10],[68,20],[65,55],[45,40],[38,22]], // Europe
+                        [[35,-6],[32,32],[12,48],[-10,40],[-34,20],[-18,12],[5,-8]], // Africa
+                        [[65,60],[70,130],[50,140],[22,115],[8,78],[25,62],[45,50]], // Asia
+                        [[-14,125],[-22,114],[-35,118],[-36,148],[-20,148]] // Australia
+                    ];
                     function animGlobe() {
                         hudCardAnimId = requestAnimationFrame(animGlobe);
-                        rot += 0.02;
-                        gCtx.clearRect(0, 0, 150, 150);
-                        gCtx.strokeStyle = 'rgba(0,255,255,0.35)';
-                        gCtx.beginPath(); gCtx.arc(75, 75, 64, 0, Math.PI * 2); gCtx.stroke();
+                        rot += 0.008;
+                        const W = gCan.width, H = gCan.height;
+                        const cx = W / 2, cy = H / 2;
+                        const R = 116 * globeZoom;
+                        gCtx.clearRect(0, 0, W, H);
+
+                        // Outer atmospheric cyan/blue limb glow
+                        const limb = gCtx.createRadialGradient(cx, cy, R * 0.82, cx, cy, R * 1.18);
+                        limb.addColorStop(0, 'rgba(0, 140, 255, 0.15)');
+                        limb.addColorStop(0.55, 'rgba(0, 220, 255, 0.55)');
+                        limb.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                        gCtx.fillStyle = limb;
+                        gCtx.beginPath();
+                        gCtx.arc(cx, cy, R * 1.18, 0, Math.PI * 2);
+                        gCtx.fill();
+
+                        // Ocean sphere
+                        gCtx.fillStyle = '#03182c';
+                        gCtx.strokeStyle = '#00d4ff';
+                        gCtx.lineWidth = 1.8;
+                        gCtx.beginPath();
+                        gCtx.arc(cx, cy, R, 0, Math.PI * 2);
+                        gCtx.fill();
+                        gCtx.stroke();
+
+                        const projGlobe = (latDeg, lonDeg) => {
+                            const phi = (latDeg * Math.PI) / 180;
+                            const lam = ((lonDeg * Math.PI) / 180) + rot + globeRotOffset;
+                            const z = Math.cos(phi) * Math.cos(lam);
+                            const x = Math.cos(phi) * Math.sin(lam);
+                            const y = -Math.sin(phi);
+                            return { x: cx + x * R, y: cy + y * R, z };
+                        };
+
+                        // Graticule grid
+                        gCtx.strokeStyle = 'rgba(0, 212, 255, 0.15)';
+                        gCtx.lineWidth = 0.8;
                         for (let m = 0; m < 6; m++) {
-                            const rx = Math.abs(Math.cos(rot + (m * Math.PI) / 6)) * 64;
-                            gCtx.beginPath(); gCtx.ellipse(75, 75, Math.max(2, rx), 64, 0, 0, Math.PI * 2); gCtx.stroke();
+                            const rx = Math.abs(Math.cos(rot + (m * Math.PI) / 6)) * R;
+                            gCtx.beginPath();
+                            gCtx.ellipse(cx, cy, Math.max(2, rx), R, 0, 0, Math.PI * 2);
+                            gCtx.stroke();
                         }
-                        gCtx.fillStyle = '#ff3355';
-                        quakes.slice(0, 6).forEach((q, i) => {
-                            const qx = 75 + Math.cos(rot * 1.4 + i) * 38;
-                            const qy = 75 + Math.sin(i * 1.1) * 35;
-                            gCtx.beginPath(); gCtx.arc(qx, qy, 3.5, 0, Math.PI * 2); gCtx.fill();
+
+                        // Continents
+                        gCtx.fillStyle = 'rgba(0, 195, 255, 0.52)';
+                        gCtx.strokeStyle = 'rgba(120, 240, 255, 0.85)';
+                        gCtx.lineWidth = 1.0;
+                        continents.forEach(poly => {
+                            const pts = poly.map(([la, lo]) => projGlobe(la, lo));
+                            if (pts.filter(p => p.z > -0.1).length < 3) return;
+                            gCtx.beginPath();
+                            pts.forEach((p, idx) => {
+                                if (idx === 0) gCtx.moveTo(p.x, p.y);
+                                else gCtx.lineTo(p.x, p.y);
+                            });
+                            gCtx.closePath();
+                            gCtx.fill();
+                            gCtx.stroke();
+                        });
+
+                        // Northern Aurora Oval (green glow at high latitude, matching fatih_sep22_1.jpg)
+                        const np = projGlobe(72, 20);
+                        if (np.z > 0) {
+                            const aur = gCtx.createRadialGradient(np.x, np.y, R * 0.08, np.x, np.y, R * 0.34);
+                            aur.addColorStop(0, 'rgba(0,255,140,0)');
+                            aur.addColorStop(0.5, 'rgba(0,255,140,0.35)');
+                            aur.addColorStop(1, 'rgba(0,255,140,0)');
+                            gCtx.fillStyle = aur;
+                            gCtx.beginPath();
+                            gCtx.arc(np.x, np.y, R * 0.34, 0, Math.PI * 2);
+                            gCtx.fill();
+                        }
+
+                        // Satellite Ground Track Diagonal Arc + Satellite Icon
+                        gCtx.strokeStyle = 'rgba(255,255,255,0.85)';
+                        gCtx.lineWidth = 1.4;
+                        gCtx.beginPath();
+                        gCtx.moveTo(cx - R * 0.72, cy + R * 0.45);
+                        gCtx.quadraticCurveTo(cx, cy - R * 0.1, cx + R * 0.78, cy - R * 0.52);
+                        gCtx.stroke();
+
+                        // City target marker
+                        gCtx.fillStyle = '#ffffff';
+                        gCtx.beginPath();
+                        gCtx.arc(cx, cy + 8, 4.5, 0, Math.PI * 2);
+                        gCtx.fill();
+                        gCtx.font = 'bold 11px Rajdhani, sans-serif';
+                        gCtx.fillText(city, cx + 8, cy + 12);
+
+                        // Seismic Epicenter Rings
+                        const sampleQuakes = quakes.length ? quakes : [{ mag: 5.0 }, { mag: 4.9 }, { mag: 5.2 }, { mag: 4.7 }];
+                        sampleQuakes.slice(0, 6).forEach((q, i) => {
+                            const qPt = projGlobe((i % 2 === 0 ? 28 : -18) + i * 7, i * 58 - 40);
+                            if (qPt.z > 0.05) {
+                                gCtx.fillStyle = '#f59e0b';
+                                gCtx.strokeStyle = '#ff3355';
+                                gCtx.lineWidth = 1.5;
+                                gCtx.beginPath();
+                                gCtx.arc(qPt.x, qPt.y, 5, 0, Math.PI * 2);
+                                gCtx.fill();
+                                gCtx.stroke();
+                                gCtx.fillStyle = '#f59e0b';
+                                gCtx.font = 'bold 9px Rajdhani, sans-serif';
+                                gCtx.fillText(String(q.mag || 4.8), qPt.x + 7, qPt.y + 3);
+                            }
                         });
                     }
                     animGlobe();
+                }
+            } else if (type === 'weather') {
+                // Authentic Mark-LVIII WEATHER TELEMETRY Card (matching fatih_oct1_0.jpg)
+                const temp = payload.temp || document.getElementById('w-temp')?.innerText || '22°C';
+                const baseNum = parseInt(temp, 10) || 22;
+                const loc = payload.loc || document.getElementById('w-loc')?.innerText || 'Indore, IN';
+                const desc = (payload.desc || document.getElementById('w-desc')?.innerText || 'PARTLY CLOUDY').toUpperCase();
+                const hum = payload.hum || document.getElementById('w-hum')?.innerText || '61%';
+                const wind = payload.wind || document.getElementById('w-wind')?.innerText || '18 km/h NE';
+                const feels = payload.feels || document.getElementById('w-feels')?.innerText || temp;
+                const days = ['TODAY', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+                bodyEl.innerHTML = `
+                    <div style="font-size:11px; color:var(--text-muted); letter-spacing:1.2px; margin-bottom:10px;">
+                        ${loc} &nbsp;·&nbsp; LIVE SATELLITE METEOROLOGY &nbsp;·&nbsp; OPEN-METEO
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1.2fr; gap:16px; align-items:center;">
+                        <div style="display:flex; align-items:center; gap:18px;">
+                            <div style="font-size:56px; color:var(--theme-color); text-shadow:0 0 20px var(--theme-color); line-height:1;">◐</div>
+                            <div>
+                                <div style="font-size:54px; font-weight:700; color:#ffffff; line-height:1;">${temp}</div>
+                                <div style="font-size:13px; font-weight:700; color:var(--theme-color); letter-spacing:1.5px; margin-top:4px;">${desc}</div>
+                                <div style="font-size:11px; color:var(--text-muted);">feels like ${feels}</div>
+                            </div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; border:1px solid var(--panel-border); border-radius:6px; padding:10px 14px; background:rgba(0,0,0,0.35);">
+                            <div><div style="font-size:9px; color:var(--text-muted);">HUMIDITY</div><div style="font-size:15px; font-weight:700;">${hum}</div></div>
+                            <div><div style="font-size:9px; color:var(--text-muted);">WIND</div><div style="font-size:15px; font-weight:700;">${wind}</div></div>
+                            <div><div style="font-size:9px; color:var(--text-muted);">PRESSURE</div><div style="font-size:15px; font-weight:700;">1016 hPa</div></div>
+                            <div><div style="font-size:9px; color:var(--text-muted);">UV MAX</div><div style="font-size:15px; font-weight:700;">5 · MODERATE</div></div>
+                            <div><div style="font-size:9px; color:var(--text-muted);">SUNRISE</div><div style="font-size:15px; font-weight:700;">06:24</div></div>
+                            <div><div style="font-size:9px; color:var(--text-muted);">SUNSET</div><div style="font-size:15px; font-weight:700;">18:19</div></div>
+                        </div>
+                    </div>
+                    <canvas id="weather-curve-canvas" width="560" height="72" style="width:100%; height:72px; margin:8px 0;"></canvas>
+                    <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:6px;">
+                        ${days.map((d, i) => {
+                            const lo = baseNum - 3 + (i % 2);
+                            const hi = baseNum + 3 + (i % 3);
+                            return `
+                            <div style="border:1px solid ${i === 0 ? 'var(--theme-color)' : 'var(--panel-border)'}; background:rgba(0,255,255,${i === 0 ? '0.1' : '0.02'}); border-radius:6px; padding:6px; text-align:center;">
+                                <div style="font-size:10px; font-weight:700; color:${i === 0 ? 'var(--theme-color)' : 'var(--text-muted)'};">${d}</div>
+                                <div style="font-size:18px; color:var(--theme-color); margin:4px 0;">${i % 3 === 0 ? '◉' : '◐'}</div>
+                                <div style="font-size:10px; color:#e8f4ff; font-weight:700;">${lo}° — ${hi}°</div>
+                            </div>`;
+                        }).join('')}
+                    </div>`;
+                const wcCan = document.getElementById('weather-curve-canvas');
+                if (wcCan) {
+                    const wCtx = wcCan.getContext('2d');
+                    const pts = [0, 1, 2, 3, 4, 5, 6, 7].map(i => ({
+                        x: 28 + i * 72,
+                        y: 44 - Math.sin(i * 0.7) * 18,
+                        t: baseNum + Math.round(Math.sin(i * 0.7) * 3)
+                    }));
+                    wCtx.strokeStyle = themeHex;
+                    wCtx.lineWidth = 2;
+                    wCtx.beginPath();
+                    pts.forEach((p, idx) => { if (idx === 0) wCtx.moveTo(p.x, p.y); else wCtx.lineTo(p.x, p.y); });
+                    wCtx.stroke();
+                    pts.forEach(p => {
+                        wCtx.fillStyle = themeHex;
+                        wCtx.beginPath(); wCtx.arc(p.x, p.y, 3.5, 0, Math.PI * 2); wCtx.fill();
+                        wCtx.fillStyle = '#e8f4ff';
+                        wCtx.font = 'bold 10px Rajdhani, sans-serif';
+                        wCtx.textAlign = 'center';
+                        wCtx.fillText(`${p.t}°`, p.x, p.y - 8);
+                    });
+                }
+            } else if (type === 'diagnostics') {
+                // Authentic Mark-LVIII SYSTEM DIAGNOSTICS Card (matching fatih_oct1_1.jpg)
+                const cpu = Number(payload.cpu || 14);
+                const ram = Number(payload.ram || 61);
+                const gpu = Math.min(99, Math.max(6, Math.round(cpu * 0.6 + 8)));
+                const diskPct = 76;
+                bodyEl.innerHTML = `
+                    <div style="font-size:11px; color:var(--text-muted); letter-spacing:1.2px; margin-bottom:8px;">
+                        WINDOWS 11 WORKSTATION &nbsp;·&nbsp; UPTIME ${payload.uptime || '00:24:10'} &nbsp;·&nbsp; 9-MODEL GEMINI LADDER ONLINE
+                    </div>
+                    <canvas id="diag-rings-canvas" width="560" height="135" style="width:100%; height:135px;"></canvas>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; flex:1; margin-top:6px;">
+                        <div style="border:1px solid var(--panel-border); border-radius:4px; padding:10px; background:rgba(0,0,0,0.35); display:flex; flex-direction:column;">
+                            <div style="font-size:10px; font-weight:700; color:var(--theme-color); margin-bottom:6px;">HISTORY · CPU UTILIZATION</div>
+                            <canvas id="diag-cpu-hist" width="260" height="90" style="width:100%; flex:1; background:rgba(0,0,0,0.3);"></canvas>
+                        </div>
+                        <div style="border:1px solid var(--panel-border); border-radius:4px; padding:10px; background:rgba(0,0,0,0.35); display:flex; flex-direction:column; gap:5px;">
+                            <div style="font-size:10px; font-weight:700; color:var(--theme-color); margin-bottom:2px;">TOP ACTIVE PROCESSES</div>
+                            ${[
+                                { name: 'python.exe (JARVIS Core)', pct: '4.2%', mb: '184 MB', w: 68 },
+                                { name: 'msedgewebview2.exe (HUD)', pct: '3.1%', mb: '210 MB', w: 54 },
+                                { name: 'mediapipe_vision.dll', pct: '1.8%', mb: '96 MB', w: 36 },
+                                { name: 'edge_tts_stream.py', pct: '0.6%', mb: '42 MB', w: 20 }
+                            ].map(p => `
+                                <div style="font-size:11px;">
+                                    <div style="display:flex; justify-content:space-between;"><span>${p.name}</span><span style="color:var(--theme-color)">${p.pct} · ${p.mb}</span></div>
+                                    <div style="height:4px; background:rgba(255,255,255,0.08); margin-top:2px;"><div style="width:${p.w}%; height:100%; background:var(--theme-color);"></div></div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>`;
+                const drCan = document.getElementById('diag-rings-canvas');
+                if (drCan) {
+                    const dCtx = drCan.getContext('2d');
+                    const meters = [
+                        { label: 'CPU', val: cpu, sub: '3.80 GHz' },
+                        { label: 'RAM', val: ram, sub: '16.0 GB DDR' },
+                        { label: 'GPU', val: gpu, sub: 'HARDWARE ACCEL' },
+                        { label: 'DISK', val: diskPct, sub: payload.diskText || 'NVMe SSD' }
+                    ];
+                    const cw = drCan.width / 4;
+                    meters.forEach((m, i) => {
+                        const cx = cw * i + cw / 2, cy = 58, r = 44;
+                        const nSeg = 32, active = Math.round((m.val / 100) * nSeg);
+                        for (let s = 0; s < nSeg; s++) {
+                            const a0 = (s / nSeg) * Math.PI * 2 - Math.PI / 2;
+                            const a1 = a0 + (Math.PI * 2 / nSeg) * 0.72;
+                            dCtx.strokeStyle = s < active ? (m.val > 85 ? '#ff3355' : themeHex) : 'rgba(255,255,255,0.1)';
+                            dCtx.lineWidth = 6;
+                            dCtx.beginPath(); dCtx.arc(cx, cy, r, a0, a1); dCtx.stroke();
+                        }
+                        dCtx.fillStyle = '#ffffff';
+                        dCtx.font = 'bold 20px Rajdhani, sans-serif';
+                        dCtx.textAlign = 'center';
+                        dCtx.fillText(`${m.val}%`, cx, cy + 5);
+                        dCtx.fillStyle = themeHex;
+                        dCtx.font = 'bold 9px Rajdhani, sans-serif';
+                        dCtx.fillText(m.label, cx, cy + 18);
+                        dCtx.fillStyle = '#7a8b99';
+                        dCtx.fillText(m.sub, cx, 124);
+                    });
+                }
+                const chCan = document.getElementById('diag-cpu-hist');
+                if (chCan) {
+                    const cCtx = chCan.getContext('2d');
+                    cCtx.strokeStyle = themeHex;
+                    cCtx.lineWidth = 1.8;
+                    cCtx.beginPath();
+                    cpuSparkHistory.forEach((v, idx) => {
+                        const x = (idx / Math.max(1, cpuSparkHistory.length - 1)) * chCan.width;
+                        const y = chCan.height - 6 - (v / 100) * (chCan.height - 14);
+                        if (idx === 0) cCtx.moveTo(x, y); else cCtx.lineTo(x, y);
+                    });
+                    cCtx.stroke();
                 }
             } else if (type === 'schematic') {
                 const conns = payload.connections || [];
@@ -3502,7 +4583,7 @@
                             ${conns.map(c => `
                                 <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:rgba(0,255,255,0.06); border-left:3px solid ${c.color}; border-radius:6px;">
                                     <strong>${payload.part_a || 'MCU'}: ${c.from}</strong>
-                                    <span style="color:${c.color}; font-weight:700;">━━━ [${c.note}] ━━━▶</span>
+                                    <span style="color:${c.color}; font-weight:700;">━━━ [${c.note}] ━━━▸</span>
                                     <strong>${payload.part_b || 'Module'}: ${c.to}</strong>
                                 </div>
                             `).join('')}
@@ -3513,13 +4594,13 @@
                     const rightPins = pins.slice(half);
                     bodyEl.innerHTML = `
                         <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">${payload.notes || ''}</div>
-                        <div style="display:grid; grid-template-columns:1fr 110px 1fr; align-items:center; gap:6px; font-size:11px;">
+                        <div style="display:grid; grid-template-columns:1fr 130px 1fr; align-items:center; gap:8px; font-size:11px;">
                             <div style="display:flex; flex-direction:column; gap:4px; text-align:right;">
-                                ${leftPins.map(p => `<div style="padding:3px 6px; background:rgba(0,255,255,0.07); border-left:3px solid ${p.color}; border-radius:4px;"><strong>${p.pin}</strong> · ${p.fn}</div>`).join('')}
+                                ${leftPins.map(p => `<div style="padding:4px 8px; background:rgba(0,255,255,0.07); border-left:3px solid ${p.color}; border-radius:4px;"><strong>${p.pin}</strong> · ${p.fn}</div>`).join('')}
                             </div>
-                            <div style="height:100%; min-height:120px; border:2px solid var(--theme-color); border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--theme-color); text-align:center; padding:6px; background:rgba(0,0,0,0.5);">${payload.title}</div>
+                            <div style="height:100%; min-height:140px; border:2px solid var(--theme-color); border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--theme-color); text-align:center; padding:8px; background:rgba(0,0,0,0.5);">${payload.title}</div>
                             <div style="display:flex; flex-direction:column; gap:4px;">
-                                ${rightPins.map(p => `<div style="padding:3px 6px; background:rgba(0,255,255,0.07); border-right:3px solid ${p.color}; border-radius:4px;"><strong>${p.pin}</strong> · ${p.fn}</div>`).join('')}
+                                ${rightPins.map(p => `<div style="padding:4px 8px; background:rgba(0,255,255,0.07); border-right:3px solid ${p.color}; border-radius:4px;"><strong>${p.pin}</strong> · ${p.fn}</div>`).join('')}
                             </div>
                         </div>`;
                 }
@@ -3527,7 +4608,7 @@
                 let rem = Number(payload.seconds || (payload.minutes ? payload.minutes * 60 : 1500));
                 const initMin = String(Math.floor(rem / 60)).padStart(2, '0');
                 const initSec = String(rem % 60).padStart(2, '0');
-                bodyEl.innerHTML = `<div style="text-align:center; padding:12px;"><div id="pomo-clock" style="font-size:38px; font-weight:700; color:var(--theme-color);">${initMin}:${initSec}</div><div style="font-size:12px; color:var(--text-muted);">${payload.task || payload.label || 'FOCUS SESSION'}</div></div>`;
+                bodyEl.innerHTML = `<div style="text-align:center; padding:24px;"><div id="pomo-clock" style="font-size:52px; font-weight:700; color:var(--theme-color);">${initMin}:${initSec}</div><div style="font-size:13px; color:var(--text-muted); letter-spacing:1.5px; margin-top:6px;">${payload.task || payload.label || 'FOCUS SESSION'}</div></div>`;
                 const pEl = document.getElementById('pomo-clock');
                 const iv = setInterval(() => {
                     if (!document.getElementById('pomo-clock')) { clearInterval(iv); return; }
@@ -3542,7 +4623,7 @@
         window.renderHudCard = renderHudCard;
         window.showHudCard = renderHudCard;
 
-        // --- MODALS: QR REMOTE DASHBOARD, LIVE HUE-WHEEL THEME CUSTOMIZER, PLUGIN MANAGER, MEMORY VAULT ---
+        // --- MODALS: QR REMOTE DASHBOARD, 2D CONICAL HUE-WHEEL THEME CUSTOMIZER, PLUGIN MANAGER, MEMORY VAULT ---
         function closeHudModal() {
             document.getElementById('hud-modal-backdrop')?.classList.remove('active');
         }
@@ -3554,6 +4635,8 @@
             document.documentElement.style.setProperty('--theme-color', hex);
             document.documentElement.style.setProperty('--panel-border', `hsla(${h}, 100%, 50%, 0.22)`);
             setOrbColor(parseInt(hex.replace('#', '0x'), 16));
+            const hexOut = document.getElementById('hue-hex-readout');
+            if (hexOut) hexOut.innerText = hex.toUpperCase();
         }
         window.applyCustomHue = applyCustomHue;
 
@@ -3568,7 +4651,40 @@
             return `#${f(0)}${f(8)}${f(4)}`;
         }
 
-        // Compact Deterministic Visual QR Matrix + High-Contrast Scannable QR Renderer for Smartphone Pairing
+        function initConicalHueWheel() {
+            const can = document.getElementById('hue-wheel-canvas');
+            if (!can) return;
+            const ctx = can.getContext('2d');
+            const cx = can.width / 2, cy = can.height / 2, R = 64;
+            for (let deg = 0; deg < 360; deg += 2) {
+                const a0 = (deg - 1) * Math.PI / 180;
+                const a1 = (deg + 1.5) * Math.PI / 180;
+                ctx.fillStyle = `hsl(${deg}, 100%, 50%)`;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, R, a0, a1);
+                ctx.closePath();
+                ctx.fill();
+            }
+            ctx.fillStyle = '#080e18';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 34, 0, Math.PI * 2);
+            ctx.fill();
+
+            const pickHue = (e) => {
+                const rect = can.getBoundingClientRect();
+                const dx = e.clientX - rect.left - cx;
+                const dy = e.clientY - rect.top - cy;
+                const deg = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+                applyCustomHue(Math.round(deg));
+            };
+            can.onmousedown = (e) => {
+                pickHue(e);
+                can.onmousemove = pickHue;
+            };
+            window.addEventListener('mouseup', () => { can.onmousemove = null; }, { once: false });
+        }
+
         function buildQrSvgMarkup(urlText) {
             const size = 25;
             const grid = Array.from({ length: size }, () => Array(size).fill(0));
@@ -3626,26 +4742,33 @@
             backdrop.classList.add('active');
 
             if (kind === 'customize') {
-                title.innerText = '🎨 CUSTOMIZE HUD · LIVE THEME & CENTERPIECE';
+                title.innerText = '◈ CUSTOMIZE HUD · LIVE HUE WHEEL & CENTERPIECE';
                 body.innerHTML = `
-                    <div style="font-size:13px; color:var(--text-muted); margin-bottom:6px;">Drag the 360° Hue Wheel slider or pick a Stark HUD preset for instant zero-reload theming:</div>
-                    <input type="range" min="0" max="360" value="180" oninput="applyCustomHue(this.value)" style="width:100%; accent-color:var(--theme-color); cursor:pointer;">
-                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-                        <button class="cp-pill" onclick="switchMode('JARVIS')">J.A.R.V.I.S CYAN</button>
-                        <button class="cp-pill" onclick="switchMode('FRIDAY')">F.R.I.D.A.Y CRIMSON</button>
-                        <button class="cp-pill" onclick="applyCustomHue(42)">STARK GOLD</button>
-                        <button class="cp-pill" onclick="applyCustomHue(145)">EMERALD MATRIX</button>
-                        <button class="cp-pill" onclick="applyCustomHue(275)">ULTRON VIOLET</button>
+                    <div style="display:flex; gap:18px; align-items:center;">
+                        <canvas id="hue-wheel-canvas" width="140" height="140" style="width:140px; height:140px; cursor:crosshair; flex-shrink:0;"></canvas>
+                        <div style="flex:1;">
+                            <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">Click or drag the 360° Conical Hue Wheel or slider for zero-reload live theming:</div>
+                            <input type="range" min="0" max="360" value="180" oninput="applyCustomHue(this.value)" style="width:100%; accent-color:var(--theme-color); cursor:pointer;">
+                            <div style="font-size:12px; margin-top:6px;">ACTIVE HEX: <strong id="hue-hex-readout" style="color:var(--theme-color);">#00FFFF</strong></div>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+                                <button class="cp-pill" onclick="switchMode('JARVIS')">J.A.R.V.I.S CYAN</button>
+                                <button class="cp-pill" onclick="switchMode('FRIDAY')">F.R.I.D.A.Y CRIMSON</button>
+                                <button class="cp-pill" onclick="applyCustomHue(42)">STARK GOLD</button>
+                                <button class="cp-pill" onclick="applyCustomHue(145)">EMERALD MATRIX</button>
+                                <button class="cp-pill" onclick="applyCustomHue(275)">ULTRON VIOLET</button>
+                            </div>
+                        </div>
                     </div>
-                    <div style="font-size:13px; color:var(--text-muted); margin-top:12px;">Select Active 3D/2D HUD Centerpiece:</div>
-                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:8px;">Select Active 3D/2D HUD Centerpiece:</div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;">
                         <button class="cp-pill" onclick="setCenterpieceMode('SPHERE')">◎ 3D ORBITAL SPHERE</button>
-                        <button class="cp-pill" onclick="setCenterpieceMode('FACE')">◈ 3D HOLOGRAPHIC FACE (LIP-SYNC)</button>
-                        <button class="cp-pill" onclick="setCenterpieceMode('REACTOR')">⚛ ARC REACTOR CORE</button>
-                        <button class="cp-pill" onclick="setCenterpieceMode('CIRCUIT')">⛁ LIVING CIRCUIT BOARD</button>
+                        <button class="cp-pill" onclick="setCenterpieceMode('FACE')">◈ 810V 3D HOLO HEAD (VISEME LIP-SYNC)</button>
+                        <button class="cp-pill" onclick="setCenterpieceMode('REACTOR')">◉ 72-TICK ARC REACTOR CORE</button>
+                        <button class="cp-pill" onclick="setCenterpieceMode('CIRCUIT')">▣ LIVING CIRCUIT DIE</button>
                     </div>`;
+                setTimeout(initConicalHueWheel, 20);
             } else if (kind === 'remote') {
-                title.innerText = '📱 SMARTPHONE QR REMOTE DASHBOARD';
+                title.innerText = '▣ SMARTPHONE QR REMOTE DASHBOARD';
                 let info = { url: 'http://127.0.0.1:8787/?key=JARVIS', pin: 'JARVIS', ip: '127.0.0.1', port: 8787 };
                 if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.get_remote_pairing) {
                     try { info = JSON.parse(await pywebview.api.get_remote_pairing()); } catch (e) {}
@@ -3657,12 +4780,12 @@
                         <div style="font-size:14px; font-weight:700; color:var(--theme-color); background:rgba(0,255,255,0.08); padding:8px 14px; border-radius:8px; border:1px solid var(--panel-border); user-select:all;">${info.url}</div>
                         <div style="font-size:12px; color:var(--text-muted);">PAIRING PIN: <strong style="color:#00ff88; letter-spacing:2px;">${info.pin}</strong> · LAN IP: ${info.ip}:${info.port}</div>
                         <div style="display:flex; gap:10px;">
-                            <button class="cp-pill active" onclick="navigator.clipboard.writeText('${info.url}'); addLog('SYSTEM', 'Remote Dashboard URL copied to clipboard.');">📋 COPY LINK</button>
+                            <button class="cp-pill active" onclick="navigator.clipboard.writeText('${info.url}'); addLog('SYSTEM', 'Remote Dashboard URL copied to clipboard.');">▣ COPY LINK</button>
                             <button class="cp-pill" onclick="regenerateRemotePinModal()">⟳ NEW PIN</button>
                         </div>
                     </div>`;
             } else if (kind === 'plugins') {
-                title.innerText = '🧩 SINGLE-FILE PLUGIN ENGINE (5x FAST LOADER)';
+                title.innerText = '▣ SINGLE-FILE PLUGIN ENGINE (5x FAST LOADER)';
                 let data = { load_ms: 1.5, plugins: [] };
                 if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.get_plugins_list) {
                     try { data = JSON.parse(await pywebview.api.get_plugins_list()); } catch (e) {}
@@ -3670,7 +4793,7 @@
                 body.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-muted);">
                         <span>Drop any <code style="color:var(--theme-color)">.py</code> file into <code style="color:var(--theme-color)">D:\\JARVIS\\plugins\\</code> · Scanned in <strong style="color:#00ff88">${data.load_ms} ms</strong></span>
-                        <button class="cp-pill active" onclick="reloadPluginsModal()">⚡ HOT-RELOAD</button>
+                        <button class="cp-pill active" onclick="reloadPluginsModal()">◈ HOT-RELOAD</button>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
                         ${(data.plugins || []).map(p => `
@@ -3680,14 +4803,14 @@
                                     <div style="font-size:11px; color:var(--text-muted);">${p.description}</div>
                                 </div>
                                 <div style="display:flex; gap:6px; align-items:center;">
-                                    <button class="cp-pill" onclick="runPluginCard('${p.name}'); closeHudModal();">▶ RUN</button>
+                                    <button class="cp-pill" onclick="runPluginCard('${p.name}'); closeHudModal();">▸ RUN</button>
                                     <span class="drawer-pill ${p.enabled ? 'on' : ''}" style="cursor:pointer;" onclick="togglePluginModal('${p.name}', ${!p.enabled})">${p.enabled ? 'ON' : 'OFF'}</span>
                                 </div>
                             </div>
                         `).join('')}
                     </div>`;
             } else if (kind === 'memory') {
-                title.innerText = '🧠 PERSISTENT MEMORY VAULT & VAULT-INDEX.md';
+                title.innerText = '◈ PERSISTENT MEMORY VAULT & VAULT-INDEX.md';
                 let mem = { entries: [], vault_index: '' };
                 if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.get_memory_vault_items) {
                     try { mem = JSON.parse(await pywebview.api.get_memory_vault_items()); } catch (e) {}
@@ -3700,7 +4823,7 @@
                         ${(mem.entries || []).length === 0 ? '<div style="font-size:12px; color:var(--text-muted);">Say "Remember that..." to store facts across sessions.</div>' : (mem.entries || []).map(e => `
                             <div class="drawer-item" style="cursor:default;">
                                 <span><strong style="color:var(--theme-color)">${e.category}.${e.key}:</strong> ${e.value}</span>
-                                <span class="drawer-pill" style="cursor:pointer; color:#ff3355;" onclick="deleteVaultItemModal('${e.category}', '${e.key}')">✕</span>
+                                <span class="drawer-pill" style="cursor:pointer; color:#ff3355;" onclick="deleteVaultItemModal('${e.category}', '${e.key}')">X</span>
                             </div>
                         `).join('')}
                     </div>`;
@@ -3753,7 +4876,7 @@
                 const wData = (await wRes.json()).current;
                 const code = wData.weather_code;
                 const desc = code === 0 ? 'clear sky' : code < 4 ? 'partly cloudy' : code < 50 ? 'overcast clouds' : code < 80 ? 'rain showers' : 'thunderstorm';
-                const icon = code === 0 ? '☼' : code < 4 ? '◐' : code < 50 ? '☁\uFE0E' : code < 80 ? '☂\uFE0E' : '↯';
+                const icon = code === 0 ? '◉' : code < 4 ? '◐' : code < 50 ? '◎' : code < 80 ? '◈' : '▲';
                 updateWeather(
                     `${wData.temperature_2m}°C`,
                     `${city}, ${country}`,
