@@ -303,7 +303,7 @@ class JarvisPipeline:
         return 0
 
     def _configure_native_transparency(self) -> None:
-        """Ensure the underlying WinForms Form uses a chroma TransparencyKey instead of painting #F0F0F0 light gray behind WebView2."""
+        """Ensure the WinForms Form has a solid #05080c BackColor and NO TransparencyKey so WebView2 never becomes click-through."""
         if self._transparency_configured:
             return
         try:
@@ -313,9 +313,8 @@ class JarvisPipeline:
                 from System.Drawing import Color
 
                 def _apply() -> None:
-                    key_col = Color.FromArgb(255, 1, 2, 3)
-                    native_form.BackColor = key_col
-                    native_form.TransparencyKey = key_col
+                    native_form.TransparencyKey = Color.Empty
+                    native_form.BackColor = Color.FromArgb(255, 5, 8, 12)
 
                 if native_form.InvokeRequired:
                     native_form.BeginInvoke(Action(_apply))
@@ -323,7 +322,25 @@ class JarvisPipeline:
                     _apply()
                 self._transparency_configured = True
         except Exception as e:
-            print(f"Native transparency config warning: {e}")
+            print(f"Native form config warning: {e}")
+
+    def _apply_window_region(self, circular_orb: bool, w: int = 320, h: int = 320) -> None:
+        """Apply circular Win32 region in Mini Orb mode or reset to full rectangular window in Full HUD mode."""
+        if os.name != "nt":
+            return
+        try:
+            hwnd = self._get_hwnd()
+            if not hwnd:
+                return
+            user32 = ctypes.windll.user32
+            gdi32 = ctypes.windll.gdi32
+            if circular_orb:
+                hrgn = gdi32.CreateEllipticRgn(4, 4, int(w) - 4, int(h) - 4)
+                user32.SetWindowRgn(hwnd, hrgn, True)
+            else:
+                user32.SetWindowRgn(hwnd, 0, True)
+        except Exception as e:
+            print(f"SetWindowRgn warning: {e}")
 
     def _is_window_minimized(self) -> bool:
         if os.name == "nt":
@@ -336,7 +353,7 @@ class JarvisPipeline:
         return False
 
     def _safe_evaluate_js(self, script: str, *args: Any, **kwargs: Any) -> Any:
-        """Non-blocking evaluate_js wrapper that prevents WebView2 semaphore deadlocks in Minimize / Orb mode."""
+        """Non-blocking JS dispatcher that preserves instant pywebview.api Promise callbacks and prevents semaphore deadlocks."""
         if isinstance(script, str) and script.startswith("updateState("):
             try:
                 st = script.split("(", 1)[1].split(")", 1)[0].strip("'\"")
@@ -344,7 +361,18 @@ class JarvisPipeline:
                     self.current_hud_state = st
             except Exception:
                 pass
-        if not script or not isinstance(script, str) or self._is_window_minimized():
+        if not script or not isinstance(script, str):
+            return None
+        # Always immediately execute pywebview's internal Promise resolution callbacks so UI clicks never stall
+        if "_returnValuesCallbacks" in script:
+            try:
+                return self.window.run_js(script)
+            except Exception:
+                try:
+                    return self._orig_evaluate_js(script, *args, **kwargs)
+                except Exception:
+                    return None
+        if self._is_window_minimized():
             return None
         # Synchronous path only for queries that expect a return value (e.g. captureCameraFrameBase64)
         if "captureCameraFrameBase64" in script or kwargs or args:
@@ -366,13 +394,13 @@ class JarvisPipeline:
         return None
 
     def _js_worker(self) -> None:
-        """Dedicated background dispatcher for WebView2 JS calls so STT/LLM/TTS/API threads never block."""
+        """Dedicated background dispatcher for WebView2 JS calls using non-blocking run_js."""
         while self.running:
             try:
                 script = self._js_queue.get(timeout=0.5)
                 try:
                     if not self._is_window_minimized():
-                        self._orig_evaluate_js(script)
+                        self.window.run_js(script)
                 except Exception:
                     pass
                 finally:
@@ -392,8 +420,8 @@ class JarvisPipeline:
                 if hwnd:
                     if user32.IsIconic(hwnd):
                         user32.ShowWindowAsync(hwnd, 9)  # SW_RESTORE
-                    # Pass 0 (NULL) for hWndInsertAfter with SWP_NOZORDER (0x0004) | SWP_SHOWWINDOW (0x0040) | SWP_NOACTIVATE (0x0010)
-                    if user32.SetWindowPos(hwnd, 0, int(x), int(y), int(w), int(h), 0x0004 | 0x0040 | 0x0010):
+                    # Pass 0 (NULL) for hWndInsertAfter with SWP_NOZORDER (0x0004) | SWP_SHOWWINDOW (0x0040)
+                    if user32.SetWindowPos(hwnd, 0, int(x), int(y), int(w), int(h), 0x0004 | 0x0040):
                         return
             except Exception as e:
                 print(f"Win32 SetWindowPos warning: {e}")
@@ -527,7 +555,7 @@ class JarvisPipeline:
             pass
 
     def enter_orb_only_mode(self, sleep_mode: bool = False, vision_mode: bool = False) -> None:
-        """Collapse HUD so ONLY the 3D Holographic Orb floats on a 100% transparent background."""
+        """Collapse HUD so ONLY the 3D Holographic Orb floats in a circular region."""
         try:
             # Do not collapse HUD while an in-HUD video is actively playing
             if hasattr(self, "tool_suite") and self.tool_suite and self.tool_suite.ui.video_is_playing():
@@ -540,11 +568,12 @@ class JarvisPipeline:
             self.window.evaluate_js("toggleMiniMode(true)")
             sw, sh = _get_screen_size()
             self._set_window_rect(max(20, sw - 340), max(20, sh - 380), 320, 320)
+            self._apply_window_region(circular_orb=True, w=320, h=320)
         except Exception as e:
             print(f"enter_orb_only_mode warning: {e}")
 
     def exit_orb_only_mode(self) -> None:
-        """Restore the full HUD from Orb-Only Transparent Mode."""
+        """Restore the full HUD from Orb-Only Mode."""
         try:
             self.is_orb_only = False
             self.is_sleeping = False
@@ -552,6 +581,7 @@ class JarvisPipeline:
             self.is_fullscreen = True
             self.last_active = time.time()
             sw, sh = _get_screen_size()
+            self._apply_window_region(circular_orb=False, w=sw, h=sh)
             self._set_window_rect(0, 0, sw, sh)
             self.window.evaluate_js("toggleMiniMode(false)")
         except Exception as e:
@@ -1778,6 +1808,24 @@ class Api:
 
 
 if __name__ == "__main__":
+    # Single-instance guard: terminate any stale jarvis_master.py Python instances (excluding self & parent venv launcher)
+    safe_pids = {os.getpid(), os.getppid()}
+    try:
+        curr_p = psutil.Process(os.getpid())
+        for anc in curr_p.parents():
+            safe_pids.add(anc.pid)
+    except Exception:
+        pass
+    for _proc in psutil.process_iter(["pid", "name"]):
+        try:
+            pname = (_proc.info.get("name") or "").lower()
+            if _proc.info["pid"] not in safe_pids and "python" in pname:
+                cmdline = _proc.cmdline()
+                if any(os.path.basename(arg).lower() == "jarvis_master.py" for arg in cmdline):
+                    _proc.terminate()
+        except Exception:
+            pass
+
     html_path = os.path.join(_ROOT_DIR, "hud.html")
     sw, sh = _get_screen_size()
     window = webview.create_window(
@@ -1787,8 +1835,11 @@ if __name__ == "__main__":
         y=0,
         width=sw,
         height=sh,
-        transparent=True,
+        transparent=False,
+        background_color="#05080c",
         frameless=True,
+        easy_drag=False,
+        text_select=True,
         fullscreen=False,
         on_top=True,
     )

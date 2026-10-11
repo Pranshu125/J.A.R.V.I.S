@@ -35,7 +35,6 @@
             padding: 0 20px;
             border-bottom: 1px solid var(--panel-border);
             background: var(--panel-bg);
-            -webkit-app-region: drag; /* Allows window dragging */
         }
 
         .top-left, .top-center, .top-right {
@@ -290,15 +289,16 @@
         .send-btn { background: var(--theme-color); color: #000; border: none; padding: 0 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .send-btn:hover { box-shadow: 0 0 15px var(--theme-color); transform: scale(1.05); }
 
-        /* ORB-ONLY TRANSPARENT MODE (App Open / Screen Vision / PiP) */
+        /* ORB-ONLY FLOATING MODE (App Open / Screen Vision / PiP) */
         html.orb-only,
         body.orb-only {
-            background: transparent !important;
-            background-color: transparent !important;
+            background: #05080c !important;
+            background-color: #05080c !important;
         }
         body.orb-only .top-bar,
         body.orb-only .left-panel,
         body.orb-only .right-panel,
+        body.orb-only .hud-footer-bar,
         body.orb-only .radar-ring,
         body.orb-only .center-panel > *:not(#center-stage-slot):not(#orb-mount) {
             display: none !important;
@@ -311,12 +311,13 @@
             margin: 0 !important;
             width: 100vw !important;
             height: 100vh !important;
-            background: transparent !important;
+            max-height: 100vh !important;
+            background: #05080c !important;
         }
         body.orb-only .center-panel {
             width: 100% !important;
             height: 100% !important;
-            background: transparent !important;
+            background: #05080c !important;
         }
         body.orb-only #orb-mount {
             -webkit-app-region: no-drag !important;
@@ -1376,7 +1377,7 @@
         }
         window.toggleCenterCameraMode = toggleCenterCameraMode;
 
-        // Orb-Only Transparent Mode (App Open / Screen Vision / PiP)
+        // Orb-Only Floating Mode (App Open / Screen Vision / PiP)
         function toggleMiniMode(on) {
             if (on) {
                 if (isCameraCentered) {
@@ -1384,7 +1385,7 @@
                 }
                 document.documentElement.classList.add('orb-only');
                 document.body.classList.add('orb-only');
-                document.body.style.backgroundColor = 'transparent';
+                document.body.style.backgroundColor = '#05080c';
             } else {
                 document.documentElement.classList.remove('orb-only');
                 document.body.classList.remove('orb-only');
